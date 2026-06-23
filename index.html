@@ -115,23 +115,28 @@ body {
 
 .app-bar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 8px; position: sticky; top: 0; z-index: 100;
+  padding: 12px 20px 8px; position: sticky; top: 0; z-index: 100;
   background: var(--md-sys-color-background);
 }
 .app-bar-title { font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; }
+
+/* Optimierte Touch-Zielgröße für Icons (mind. 48x48px) */
 .icon-btn {
-  width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent;
+  width: 48px; height: 48px; border-radius: 50%; border: none; background: transparent;
   color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  touch-action: manipulation;
 }
 
 .tab-bar {
   display: flex; border-bottom: 1px solid var(--md-sys-color-outline-variant);
   padding: 0 20px; position: relative; margin-bottom: 16px;
 }
+/* Erhöhtes Padding für leichtere Bedienung per Touch */
 .tab-item {
-  flex: 1; text-align: center; padding: 14px 4px 13px;
+  flex: 1; text-align: center; padding: 16px 4px;
   font-size: .875rem; font-weight: 600; color: var(--md-sys-color-on-surface-variant);
   cursor: pointer; position: relative; -webkit-tap-highlight-color: transparent; transition: color var(--ts);
+  touch-action: manipulation;
 }
 .tab-item.active { color: var(--md-sys-color-primary); }
 .tab-indicator {
@@ -162,9 +167,12 @@ body {
   min-height: 172px; padding: 20px 16px 16px; display: flex; flex-direction: column; justify-content: flex-end;
   box-shadow: var(--md-elevation-1); background: var(--md-sys-color-surface-variant);
   -webkit-tap-highlight-color: transparent; transition: transform 200ms, box-shadow 200ms;
+  touch-action: manipulation;
 }
 .event-card:active { transform: scale(.98); box-shadow: none; }
-.card-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 400ms; pointer-events: none; }
+
+/* Bild füllt die Karte vollständig aus */
+.card-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; transition: transform 400ms; pointer-events: none; }
 .event-card:hover .card-bg { transform: scale(1.03); }
 .card-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 60%, transparent 100%); pointer-events: none; }
 .card-content { position: relative; z-index: 1; display: flex; flex-direction: column; width: 100%; }
@@ -217,6 +225,7 @@ body {
   font-family: var(--font); font-size: .875rem; font-weight: 700; letter-spacing: .006em;
   display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: var(--md-elevation-3);
   transition: transform var(--ts), box-shadow var(--ts);
+  touch-action: manipulation;
 }
 .fab:active { transform: scale(.93); box-shadow: var(--md-elevation-1); }
 .fab svg { width: 22px; height: 22px; }
@@ -225,9 +234,11 @@ body {
 .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.54); z-index: 300; opacity: 0; pointer-events: none; transition: opacity var(--ts); }
 .backdrop.open { opacity: 1; pointer-events: all; }
 
+/* Flüssiges Scrolling auf iOS Touchgeräten hinzugefügt */
 .sheet {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
   max-height: 93dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--md-shape-xl) var(--md-shape-xl) 0 0;
   background: var(--md-sys-color-surface); box-shadow: var(--md-elevation-3);
   transform: translateY(100%); transition: transform var(--te);
@@ -241,12 +252,13 @@ body {
 }
 
 /* Detail Sheet */
-.detail-hero { position: relative; height: 240px; background: var(--md-sys-color-surface-variant); }
-.detail-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.detail-hero { position: relative; height: 240px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+/* Ausfüllende Bildskalierung im Hero-Header */
+.detail-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
 .detail-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 70%); }
 .detail-hero-text { position: absolute; bottom: 0; padding: 20px; }
 .detail-hero-title { font-size: 1.375rem; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
-.detail-close-btn { position: absolute; top: 12px; left: 12px; width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.4); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
+.detail-close-btn { position: absolute; top: 12px; left: 12px; width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.4); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; touch-action: manipulation; }
 
 .detail-progress-wrap { margin: 20px 20px 0; background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); padding: 14px 16px; }
 .detail-progress-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
@@ -270,7 +282,6 @@ body {
 .detail-body { padding: 8px 20px 32px; }
 .detail-section-label { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-sys-color-primary); padding: 16px 0 8px; }
 .detail-card { background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); overflow: hidden; }
-.detail-card { background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); overflow: hidden; }
 .detail-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent); }
 .detail-row:last-child { border-bottom: none; }
 .detail-row-icon { color: var(--md-sys-color-on-surface-variant); margin-top: 1px; }
@@ -290,15 +301,15 @@ body {
 .m3-input:focus + .m3-field-label, .m3-input:not(:placeholder-shown) + .m3-field-label { top: -8px; font-size: .6875rem; font-weight: 600; color: var(--md-sys-color-primary); }
 textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 
-/* Unit Chips */
+/* Unit Chips - Optimierte Höhe für mobile Fingereingabe */
 .unit-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
-.unit-chip { height: 36px; padding: 0 16px; border-radius: 18px; border: 1.5px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .8125rem; font-weight: 600; cursor: pointer; transition: all var(--ts); display: flex; align-items: center; gap: 6px; }
+.unit-chip { height: 40px; padding: 0 16px; border-radius: 20px; border: 1.5px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .8125rem; font-weight: 600; cursor: pointer; transition: all var(--ts); display: flex; align-items: center; gap: 6px; touch-action: manipulation; }
 .unit-chip.selected { background: var(--md-sys-color-secondary-container); border-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary-container); }
 .chip-check { display: none; width: 16px; height: 16px; }
 .unit-chip.selected .chip-check { display: block; }
 
 /* Buttons */
-.m3-btn { flex: 1; height: 44px; border-radius: var(--md-shape-medium); border: 1px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); }
+.m3-btn { flex: 1; height: 44px; border-radius: var(--md-shape-medium); border: 1px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); touch-action: manipulation; }
 .m3-btn:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent); }
 .m3-btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
 .m3-btn.filled { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
@@ -307,17 +318,19 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 .img-input-wrap { display: flex; gap: 8px; align-items: stretch; margin-bottom: 18px; }
 .img-url-input { flex: 1; margin-bottom: 0 !important; }
 .img-or-divider { display: flex; align-items: center; font-size: .75rem; font-weight: 700; color: var(--md-sys-color-outline); }
-.img-file-btn { padding: 0 18px; border-radius: var(--md-shape-small); border: 1.5px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-primary); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); }
-.img-preview-wrap { margin-bottom: 18px; border-radius: var(--md-shape-medium); overflow: hidden; height: 120px; display: none; }
+.img-file-btn { padding: 0 18px; border-radius: var(--md-shape-small); border: 1.5px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-primary); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); touch-action: manipulation; }
+
+/* Optimierte Bildvorschau (Ausfüllend skaliert) */
+.img-preview-wrap { margin-bottom: 18px; border-radius: var(--md-shape-medium); overflow: hidden; height: 160px; display: none; }
 .img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
-.img-clear-btn { display: none; font-size: .75rem; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; margin-top: -12px; margin-bottom: 14px; }
+.img-clear-btn { display: none; font-size: .75rem; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; margin-top: -12px; margin-bottom: 14px; touch-action: manipulation; }
 .form-actions { display: flex; gap: 10px; margin-top: 8px; }
 
 /* Menu Popup */
 .menu-popup { position: fixed; top: 64px; right: 20px; z-index: 500; background: var(--md-sys-color-surface); border-radius: var(--md-shape-medium); box-shadow: var(--md-elevation-3); min-width: 220px; overflow: hidden; transform-origin: top right; transform: scale(.8); opacity: 0; pointer-events: none; transition: transform var(--te), opacity var(--te); padding-bottom: 8px; }
 .menu-popup.open { transform: scale(1); opacity: 1; pointer-events: all; }
 .menu-section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--md-sys-color-primary); padding: 16px 18px 8px; }
-.menu-popup-item { padding: 12px 18px; font-size: .9rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface); transition: background var(--ts); }
+.menu-popup-item { padding: 12px 18px; font-size: .9rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface); transition: background var(--ts); touch-action: manipulation; }
 .menu-popup-item:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
 .menu-popup-item svg { width: 20px; height: 20px; stroke: var(--md-sys-color-on-surface-variant); }
 .menu-popup-item.danger { color: var(--md-sys-color-error); border-top: 1px solid var(--md-sys-color-outline-variant); margin-top: 8px; }
@@ -325,11 +338,11 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 
 /* Theme Toggles inside Menu */
 .theme-options { display: flex; gap: 8px; padding: 0 18px 8px; }
-.theme-btn { flex: 1; padding: 6px 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; background: transparent; color: var(--md-sys-color-on-surface); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.theme-btn { flex: 1; padding: 8px 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; background: transparent; color: var(--md-sys-color-on-surface); font-size: 0.75rem; font-weight: 600; cursor: pointer; touch-action: manipulation; }
 .theme-btn.active { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border-color: var(--md-sys-color-primary); }
 
 .color-options { display: flex; gap: 12px; padding: 0 18px 8px; }
-.color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+.color-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; touch-action: manipulation; }
 .color-btn:hover { transform: scale(1.1); }
 .color-btn.active { border-color: var(--md-sys-color-on-surface); }
 .c-purple { background: #6750A4; }
@@ -605,8 +618,8 @@ function init() {
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
 
-  // Ripple Effect Setup
-  document.addEventListener('mousedown', function(e) {
+  // Pointerdown verwendet für latenzfreie Touch-Reaktion des Ripple-Effekts
+  document.addEventListener('pointerdown', function(e) {
     const target = e.target.closest('.ripple-host');
     if (!target) return;
     const rect = target.getBoundingClientRect();
@@ -657,7 +670,6 @@ function renderEvents() {
     el.className = 'event-card stagger-enter';
     el.style.animationDelay = `${(isPast ? pastCount : futureCount) * 0.05}s`;
 
-    // Fortschrittsberechnung bezogen auf Referenzdatum bis Zielzeitpunkt
     let pct = 0;
     if (ev.refDate) {
       const ref = new Date(ev.refDate + 'T00:00').getTime();
@@ -672,7 +684,6 @@ function renderEvents() {
     let bgStyle = '';
     if (ev.img) bgStyle = `background-image: url('${ev.img}')`;
 
-    // Zeige Fortschrittsbalken nur an, wenn ein Referenzdatum angegeben wurde
     let progressHtml = '';
     if (ev.refDate) {
       progressHtml = `
@@ -699,7 +710,7 @@ function renderEvents() {
 
   if (futureCount === 0) futureList.innerHTML = emptyStateHTML('Keine zukünftigen Ereignisse', 'Erstelle ein neues Ereignis mit dem Plus-Button.');
   if (pastCount === 0) pastList.innerHTML = emptyStateHTML('Keine vergangenen Ereignisse', 'Hier erscheinen Ereignisse, deren Datum erreicht wurde.');
-  tick(); // Clocks sofort aktualisieren
+  tick();
 }
 
 function emptyStateHTML(title, body) {
@@ -721,11 +732,9 @@ function tick() {
     const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
     const diffObj = getDiff(target, now, ev.units);
 
-    // Update der Stepuhr (Zeitraum zwischen JETZT und ZIEL)
     const cardContainer = document.getElementById(`clock-card-${ev.id}`);
     if (cardContainer) renderFlipClock(cardContainer, diffObj, false);
 
-    // Live-Update des Fortschritts auf den Übersichtskarten
     const cardProgress = document.getElementById(`progress-bar-card-${ev.id}`);
     if (cardProgress && ev.refDate) {
       const ref = new Date(ev.refDate + 'T00:00').getTime();
@@ -739,12 +748,10 @@ function tick() {
       cardProgress.style.width = pct + '%';
     }
 
-    // Update Detailansicht (falls geöffnet)
     if (currentDetailId === ev.id) {
       const detailContainer = document.getElementById('detail-flip-clock');
       if (detailContainer) renderFlipClock(detailContainer, diffObj, true);
 
-      // Live Fortschritt in der Detailansicht
       if (ev.refDate) {
         const ref = new Date(ev.refDate + 'T00:00').getTime();
         let pct = 0;
@@ -784,7 +791,6 @@ function renderFlipClock(container, diffObj, isWide) {
     const idStr = container.id + '-' + item.unit;
     let col = document.getElementById(idStr);
 
-    // Spalte erstellen, falls nicht vorhanden
     if (!col) {
       col = document.createElement('div');
       col.className = 'flip-col';
@@ -805,7 +811,6 @@ function renderFlipClock(container, diffObj, isWide) {
     const row = col.firstElementChild;
     const valStr = String(item.val).padStart(2, '0');
 
-    // Korrekte Menge an Digits sichern
     while (row.children.length < valStr.length) {
       const wrap = document.createElement('div');
       wrap.className = (isWide ? 'detail-flip-digit-wrap wide' : 'flip-digit-wrap');
@@ -819,7 +824,6 @@ function renderFlipClock(container, diffObj, isWide) {
     }
     while (row.children.length > valStr.length) { row.lastElementChild.remove(); }
 
-    // Update & Animation
     for (let d = 0; d < valStr.length; d++) {
       const digitWrap = row.children[d];
       const newVal = valStr[d];
@@ -828,25 +832,22 @@ function renderFlipClock(container, diffObj, isWide) {
       if (newVal !== oldVal) {
         digitWrap.dataset.val = newVal;
         if (oldVal !== undefined) {
-          // Trigger Flip
           digitWrap.classList.remove('flipping');
-          void digitWrap.offsetWidth; // Reflow
+          void digitWrap.offsetWidth;
 
-          digitWrap.children[0].innerText = oldVal; // Top Front
-          digitWrap.children[1].innerText = oldVal; // Bottom Front
-          digitWrap.children[2].innerText = newVal; // Top Back
-          digitWrap.children[3].innerText = newVal; // Bottom Back
+          digitWrap.children[0].innerText = oldVal;
+          digitWrap.children[1].innerText = oldVal;
+          digitWrap.children[2].innerText = newVal;
+          digitWrap.children[3].innerText = newVal;
 
           digitWrap.classList.add('flipping');
 
-          // Bereinigung nach Animation
           setTimeout(() => {
             digitWrap.children[0].innerText = newVal;
             digitWrap.children[1].innerText = newVal;
             digitWrap.classList.remove('flipping');
           }, 340);
         } else {
-          // Init
           digitWrap.children[0].innerText = newVal;
           digitWrap.children[1].innerText = newVal;
           digitWrap.children[2].innerText = newVal;
@@ -884,7 +885,7 @@ function openDetailSheet(id) {
     pWrap.style.display = 'none';
   }
 
-  document.getElementById('detail-flip-clock').innerHTML = ''; // clear clock
+  document.getElementById('detail-flip-clock').innerHTML = '';
   backdrop.classList.add('open');
   detailSheet.classList.add('open');
   tick();
@@ -920,7 +921,6 @@ function openEditSheet(id = null) {
     document.getElementById('f-time').value = '';
     document.getElementById('f-refdate').value = '';
     document.getElementById('f-desc').value = '';
-    // Standard Einheiten
     document.querySelectorAll('.unit-chip').forEach(c => {
       const u = c.dataset.unit;
       if (['years','months','weeks','days','seconds'].includes(u)) c.classList.add('selected'); else c.classList.remove('selected');
