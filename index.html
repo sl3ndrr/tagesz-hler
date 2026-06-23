@@ -1,26 +1,37 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="system" data-color="purple">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tageszähler</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏲️</text></svg>">
 <style>
+/* ── Dynamische Farbschemata ── */
 :root {
-  --md-sys-color-primary:              #6750A4;
-  --md-sys-color-on-primary:           #FFFFFF;
-  --md-sys-color-primary-container:    #EADDFF;
-  --md-sys-color-on-primary-container: #21005D;
-  --md-sys-color-secondary:            #625B71;
-  --md-sys-color-secondary-container:  #E8DEF8;
-  --md-sys-color-surface:              #FEF7FF;
-  --md-sys-color-surface-variant:      #E7E0EC;
-  --md-sys-color-on-surface:           #1C1B1F;
-  --md-sys-color-on-surface-variant:   #49454F;
-  --md-sys-color-outline:              #79747E;
-  --md-sys-color-outline-variant:      #CAC4D0;
-  --md-sys-color-background:           #FEF7FF;
-  --md-sys-color-error:                #B3261E;
+  /* Basis-Farben (Default: Lila) */
+  --hue-primary: 257;
+  --hue-sat: 35%;
+
+  /* System Light */
+  --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 48%);
+  --md-sys-color-on-primary:         #FFFFFF;
+  --md-sys-color-primary-container:  hsl(var(--hue-primary), var(--hue-sat), 90%);
+  --md-sys-color-on-primary-container: hsl(var(--hue-primary), var(--hue-sat), 20%);
+  --md-sys-color-secondary:          #625B71;
+  --md-sys-color-secondary-container:#E8DEF8;
+  --md-sys-color-surface:            #FEF7FF;
+  --md-sys-color-surface-variant:    #E7E0EC;
+  --md-sys-color-on-surface:         #1C1B1F;
+  --md-sys-color-on-surface-variant: #49454F;
+  --md-sys-color-outline:            #79747E;
+  --md-sys-color-outline-variant:    #CAC4D0;
+  --md-sys-color-background:         #FEF7FF;
+  --md-sys-color-error:              #B3261E;
+
+  --flip-bg:    #1C1B1F;
+  --flip-text:  #EADDFF;
+  --flip-split: hsl(var(--hue-primary), var(--hue-sat), 48%);
+
   --md-elevation-1: 0 1px 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.08);
   --md-elevation-2: 0 1px 2px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.10);
   --md-elevation-3: 0 2px 6px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.12);
@@ -31,29 +42,53 @@
   --font: 'Google Sans', 'Roboto Flex', Roboto, system-ui, sans-serif;
   --ts: 300ms cubic-bezier(0.2, 0, 0, 1);
   --te: 400ms cubic-bezier(0.05, 0.7, 0.1, 1);
-  --flip-bg:    #1C1B1F;
-  --flip-text:  #EADDFF;
-  --flip-split: #6750A4;
 }
+
+/* System Dark */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --md-sys-color-primary:              #D0BCFF;
-    --md-sys-color-on-primary:           #381E72;
-    --md-sys-color-primary-container:    #4F378B;
-    --md-sys-color-on-primary-container: #EADDFF;
-    --md-sys-color-secondary:            #CCC2DC;
-    --md-sys-color-secondary-container:  #4A4458;
-    --md-sys-color-surface:              #141218;
-    --md-sys-color-surface-variant:      #49454F;
-    --md-sys-color-on-surface:           #E6E1E5;
-    --md-sys-color-on-surface-variant:   #CAC4D0;
-    --md-sys-color-outline:              #938F99;
-    --md-sys-color-outline-variant:      #49454F;
-    --md-sys-color-background:           #141218;
-    --md-sys-color-error:                #F2B8B5;
+  html[data-theme="system"] {
+    --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 80%);
+    --md-sys-color-on-primary:         hsl(var(--hue-primary), var(--hue-sat), 20%);
+    --md-sys-color-primary-container:  hsl(var(--hue-primary), var(--hue-sat), 30%);
+    --md-sys-color-on-primary-container: hsl(var(--hue-primary), var(--hue-sat), 90%);
+    --md-sys-color-secondary:          #CCC2DC;
+    --md-sys-color-secondary-container:#4A4458;
+    --md-sys-color-surface:            #141218;
+    --md-sys-color-surface-variant:    #2A2831;
+    --md-sys-color-on-surface:         #E6E1E5;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-outline:            #938F99;
+    --md-sys-color-outline-variant:    #49454F;
+    --md-sys-color-background:         #141218;
+    --md-sys-color-error:              #F2B8B5;
     --flip-bg: #2B2930;
   }
 }
+
+/* Force Dark */
+html[data-theme="dark"] {
+  --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 80%);
+  --md-sys-color-on-primary:         hsl(var(--hue-primary), var(--hue-sat), 20%);
+  --md-sys-color-primary-container:  hsl(var(--hue-primary), var(--hue-sat), 30%);
+  --md-sys-color-on-primary-container: hsl(var(--hue-primary), var(--hue-sat), 90%);
+  --md-sys-color-secondary:          #CCC2DC;
+  --md-sys-color-secondary-container:#4A4458;
+  --md-sys-color-surface:            #141218;
+  --md-sys-color-surface-variant:    #2A2831;
+  --md-sys-color-on-surface:         #E6E1E5;
+  --md-sys-color-on-surface-variant: #CAC4D0;
+  --md-sys-color-outline:            #938F99;
+  --md-sys-color-outline-variant:    #49454F;
+  --md-sys-color-background:         #141218;
+  --md-sys-color-error:              #F2B8B5;
+  --flip-bg: #2B2930;
+}
+
+/* Colors */
+html[data-color="purple"] { --hue-primary: 257; --hue-sat: 35%; }
+html[data-color="blue"]   { --hue-primary: 210; --hue-sat: 60%; }
+html[data-color="green"]  { --hue-primary: 150; --hue-sat: 50%; }
+html[data-color="orange"] { --hue-primary: 25;  --hue-sat: 80%; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
@@ -64,6 +99,7 @@ body {
   min-height: 100dvh;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
+  transition: background var(--ts), color var(--ts);
 }
 
 .ripple-host { position: relative; overflow: hidden; }
@@ -75,16 +111,11 @@ body {
 @keyframes ripple { 0% { transform:scale(0); opacity:.22; } 100% { transform:scale(4); opacity:0; } }
 
 /* ── Unified Layout ── */
-.app-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding-bottom: 96px;
-}
+.app-container { max-width: 1400px; margin: 0 auto; padding-bottom: 96px; }
 
 .app-bar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 8px;
-  position: sticky; top: 0; z-index: 100;
+  padding: 16px 20px 8px; position: sticky; top: 0; z-index: 100;
   background: var(--md-sys-color-background);
 }
 .app-bar-title { font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; }
@@ -105,24 +136,30 @@ body {
 .tab-item.active { color: var(--md-sys-color-primary); }
 .tab-indicator {
   position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 3px 3px 0 0;
-  background: var(--md-sys-color-primary); transition: left var(--ts), width var(--ts);
+  background: var(--md-sys-color-primary); transition: transform var(--ts), width var(--ts);
+  width: 0; transform: translateX(0);
 }
 
 .tab-content { display: none; padding: 0 20px; }
 .tab-content.active { display: block; }
 
 .event-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;
+}
+
+/* ── Staggered Animation ── */
+.stagger-enter {
+  animation: slideUp 0.4s cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ── Event Card ── */
 .event-card {
-  border-radius: var(--md-shape-large);
-  overflow: hidden; cursor: pointer; position: relative;
-  min-height: 172px; padding: 20px 16px 16px;
-  display: flex; flex-direction: column; justify-content: flex-end;
+  border-radius: var(--md-shape-large); overflow: hidden; cursor: pointer; position: relative;
+  min-height: 172px; padding: 20px 16px 16px; display: flex; flex-direction: column; justify-content: flex-end;
   box-shadow: var(--md-elevation-1); background: var(--md-sys-color-surface-variant);
   -webkit-tap-highlight-color: transparent; transition: transform 200ms, box-shadow 200ms;
 }
@@ -132,18 +169,18 @@ body {
 .card-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 60%, transparent 100%); pointer-events: none; }
 .card-content { position: relative; z-index: 1; display: flex; flex-direction: column; width: 100%; }
 
-.card-name { font-size: .875rem; font-weight: 600; color: rgba(255,255,255,.9); margin-bottom: 6px; line-height: 1.2; }
+.card-name { font-size: 1rem; font-weight: 600; color: rgba(255,255,255,.95); margin-bottom: 12px; line-height: 1.2; }
 
 .card-progress-wrap { width: 100%; height: 4px; background: rgba(255,255,255,.18); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
-.card-progress-bar { height: 100%; border-radius: 2px; background: var(--md-sys-color-primary); transition: width 1s linear; min-width: 2px; }
+.card-progress-bar { height: 100%; border-radius: 2px; background: var(--md-sys-color-primary); transition: width 0.3s linear; min-width: 2px; }
 .card-progress-label { font-size: .65rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 4px; }
-.event-card.past-card .card-progress-bar { background: #69D189; }
 
 /* ── Flip Clock ── */
-.flip-clock { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.flip-clock { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.flip-clock:children:last-child { margin-bottom: 0; }
 .flip-col { display: flex; flex-direction: column; align-items: center; }
 .flip-digits-row { display: flex; gap: 1px; }
-.flip-digit-wrap { position: relative; width: 26px; height: 34px; perspective: 80px; }
+.flip-digit-wrap { position: relative; width: 26px; height: 34px; perspective: 150px; }
 .flip-digit-wrap.wide { width: 34px; }
 .flip-face {
   position: absolute; inset: 0; border-radius: 4px; background: var(--flip-bg);
@@ -160,15 +197,9 @@ body {
 .flip-digit-wrap.flipping .flip-face-front { animation: flip-top 340ms ease-in forwards; }
 .flip-digit-wrap.flipping .flip-face-back  { animation: flip-bot 340ms ease-out forwards; }
 @keyframes flip-top { 0%{transform:rotateX(0deg)} 100%{transform:rotateX(-90deg)} }
-@keyframes flip-bot { 0%{transform:rotateX(180deg)} 100%{transform:rotateX(90deg)} }
+@keyframes flip-bot { 0%{transform:rotateX(180deg)} 100%{transform:rotateX(0deg)} }
 
 .flip-label { font-size: .5rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); margin-top: 2px; }
-.flip-unit-sep { width: 4px; }
-
-.card-direction-badge {
-  display: inline-flex; align-items: center; gap: 4px; font-size: .65rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #69D189; margin-bottom: 4px;
-}
-.card-direction-badge svg { width: 12px; height: 12px; }
 
 /* ── Empty State ── */
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 64px 20px; color: var(--md-sys-color-on-surface-variant); text-align: center; grid-column: 1 / -1; max-width: 440px; margin: 0 auto; }
@@ -177,7 +208,7 @@ body {
 .empty-headline { font-size: 1rem; font-weight: 600; color: var(--md-sys-color-on-surface); margin-bottom: 6px; }
 .empty-body { font-size: .875rem; line-height: 1.6; }
 
-/* ── FAB (Bottom Right) ── */
+/* ── FAB ── */
 .fab {
   position: fixed; bottom: 24px; right: 24px; z-index: 200;
   height: 56px; padding: 0 20px 0 16px;
@@ -185,7 +216,7 @@ body {
   background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);
   font-family: var(--font); font-size: .875rem; font-weight: 700; letter-spacing: .006em;
   display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: var(--md-elevation-3);
-  -webkit-tap-highlight-color: transparent; transition: transform var(--ts), box-shadow var(--ts);
+  transition: transform var(--ts), box-shadow var(--ts);
 }
 .fab:active { transform: scale(.93); box-shadow: var(--md-elevation-1); }
 .fab svg { width: 22px; height: 22px; }
@@ -222,23 +253,19 @@ body {
 .detail-progress-label { font-size: .75rem; font-weight: 700; color: var(--md-sys-color-on-surface-variant); }
 .detail-progress-pct { font-size: 1.1rem; font-weight: 800; color: var(--md-sys-color-primary); }
 .detail-progress-track { height: 6px; border-radius: 3px; background: var(--md-sys-color-outline-variant); overflow: hidden; }
-.detail-progress-fill { height: 100%; border-radius: 3px; background: var(--md-sys-color-primary); transition: width 1s ease; min-width: 3px; }
-.detail-progress-wrap.past-progress .detail-progress-fill { background: #4CAF50; }
-.detail-progress-wrap.past-progress .detail-progress-pct { color: #4CAF50; }
+.detail-progress-fill { height: 100%; border-radius: 3px; background: var(--md-sys-color-primary); transition: width 0.3s linear; min-width: 3px; }
 
-.detail-flip-clock { padding: 20px 20px 4px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.detail-flip-clock { padding: 20px 20px 4px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 .detail-flip-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .detail-flip-digits-row { display: flex; gap: 2px; }
-.detail-flip-digit-wrap { position: relative; width: 44px; height: 58px; perspective: 120px; }
+.detail-flip-digit-wrap { position: relative; width: 44px; height: 58px; perspective: 200px; }
 .detail-flip-digit-wrap.wide { width: 56px; }
 .detail-flip-face { position: absolute; inset: 0; border-radius: 8px; background: var(--flip-bg); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; font-weight: 700; color: var(--flip-text); font-variant-numeric: tabular-nums; overflow: hidden; backface-visibility: hidden; }
-.detail-flip-face::after { content:''; position:absolute; left:0; right:0; top:50%; height:1.5px; background:var(--flip-split); opacity:.65; }
 .detail-flip-face.flip-face-top { clip-path: polygon(0 0,100% 0,100% 50%,0 50%); }
 .detail-flip-face.flip-face-bottom { clip-path: polygon(0 50%,100% 50%,100% 100%,0 100%); }
 .detail-flip-face.flip-face-front { z-index: 2; }
 .detail-flip-face.flip-face-back { z-index: 1; transform: rotateX(180deg); }
 .detail-flip-label { font-size: .6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-sys-color-on-surface-variant); }
-.detail-flip-sep { display: flex; align-items: center; padding-bottom: 20px; color: var(--md-sys-color-outline); font-size: 1.5rem; font-weight: 700; }
 
 .detail-body { padding: 8px 20px 32px; }
 .detail-section-label { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-sys-color-primary); padding: 16px 0 8px; }
@@ -261,7 +288,6 @@ body {
 .m3-input:focus { border-color: var(--md-sys-color-primary); border-width: 2px; }
 .m3-input:focus + .m3-field-label, .m3-input:not(:placeholder-shown) + .m3-field-label { top: -8px; font-size: .6875rem; font-weight: 600; color: var(--md-sys-color-primary); }
 textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
-.m3-input[type=date]::-webkit-calendar-picker-indicator, .m3-input[type=time]::-webkit-calendar-picker-indicator { opacity: .5; cursor: pointer; }
 
 /* Unit Chips */
 .unit-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
@@ -281,20 +307,34 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 .img-url-input { flex: 1; margin-bottom: 0 !important; }
 .img-or-divider { display: flex; align-items: center; font-size: .75rem; font-weight: 700; color: var(--md-sys-color-outline); }
 .img-file-btn { padding: 0 18px; border-radius: var(--md-shape-small); border: 1.5px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-primary); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); }
-.img-file-btn:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent); }
 .img-preview-wrap { margin-bottom: 18px; border-radius: var(--md-shape-medium); overflow: hidden; height: 120px; display: none; }
 .img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
 .img-clear-btn { display: none; font-size: .75rem; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; margin-top: -12px; margin-bottom: 14px; }
 .form-actions { display: flex; gap: 10px; margin-top: 8px; }
 
 /* Menu Popup */
-.menu-popup { position: fixed; top: 64px; right: 20px; z-index: 500; background: var(--md-sys-color-surface); border-radius: var(--md-shape-medium); box-shadow: var(--md-elevation-3); min-width: 196px; overflow: hidden; transform-origin: top right; transform: scale(.8); opacity: 0; pointer-events: none; transition: transform var(--te), opacity var(--te); }
+.menu-popup { position: fixed; top: 64px; right: 20px; z-index: 500; background: var(--md-sys-color-surface); border-radius: var(--md-shape-medium); box-shadow: var(--md-elevation-3); min-width: 220px; overflow: hidden; transform-origin: top right; transform: scale(.8); opacity: 0; pointer-events: none; transition: transform var(--te), opacity var(--te); padding-bottom: 8px; }
 .menu-popup.open { transform: scale(1); opacity: 1; pointer-events: all; }
-.menu-popup-item { padding: 14px 18px; font-size: .9rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface); transition: background var(--ts); }
+.menu-section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--md-sys-color-primary); padding: 16px 18px 8px; }
+.menu-popup-item { padding: 12px 18px; font-size: .9rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface); transition: background var(--ts); }
 .menu-popup-item:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
 .menu-popup-item svg { width: 20px; height: 20px; stroke: var(--md-sys-color-on-surface-variant); }
-.menu-popup-item.danger { color: var(--md-sys-color-error); }
+.menu-popup-item.danger { color: var(--md-sys-color-error); border-top: 1px solid var(--md-sys-color-outline-variant); margin-top: 8px; }
 .menu-popup-item.danger svg { stroke: var(--md-sys-color-error); }
+
+/* Theme Toggles inside Menu */
+.theme-options { display: flex; gap: 8px; padding: 0 18px 8px; }
+.theme-btn { flex: 1; padding: 6px 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; background: transparent; color: var(--md-sys-color-on-surface); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.theme-btn.active { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border-color: var(--md-sys-color-primary); }
+
+.color-options { display: flex; gap: 12px; padding: 0 18px 8px; }
+.color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
+.color-btn:hover { transform: scale(1.1); }
+.color-btn.active { border-color: var(--md-sys-color-on-surface); }
+.c-purple { background: #6750A4; }
+.c-blue { background: #006494; }
+.c-green { background: #1B5E20; }
+.c-orange { background: #E65100; }
 
 /* Snackbar */
 .snackbar { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%) translateY(16px); background: #323232; color: #fff; padding: 12px 22px; border-radius: 8px; font-size: .875rem; font-weight: 500; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 600; box-shadow: var(--md-elevation-3); transition: opacity .22s, transform .22s; }
@@ -336,6 +376,20 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 </button>
 
 <div class="menu-popup" id="menu-popup">
+  <div class="menu-section-title">Darstellung</div>
+  <div class="theme-options">
+    <button class="theme-btn active" data-theme-val="system">System</button>
+    <button class="theme-btn" data-theme-val="light">Light</button>
+    <button class="theme-btn" data-theme-val="dark">Dark</button>
+  </div>
+  <div class="color-options">
+    <div class="color-btn c-purple active" data-color-val="purple"></div>
+    <div class="color-btn c-blue" data-color-val="blue"></div>
+    <div class="color-btn c-green" data-color-val="green"></div>
+    <div class="color-btn c-orange" data-color-val="orange"></div>
+  </div>
+
+  <div class="menu-section-title">Daten</div>
   <div class="menu-popup-item ripple-host" id="import-btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
     Importieren
@@ -417,6 +471,7 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
       <textarea class="m3-input" id="f-desc" placeholder=" "></textarea>
       <label class="m3-field-label">Beschreibung (optional)</label>
     </div>
+
     <div class="detail-section-label" style="margin-bottom:10px">Zeiteinheiten</div>
     <div class="unit-wrap" id="unit-wrap">
       <button class="unit-chip selected ripple-host" data-unit="years"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Jahre</button>
@@ -425,8 +480,9 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
       <button class="unit-chip selected ripple-host" data-unit="days"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tage</button>
       <button class="unit-chip ripple-host" data-unit="hours"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Stunden</button>
       <button class="unit-chip ripple-host" data-unit="minutes"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Minuten</button>
-      <button class="unit-chip ripple-host" data-unit="seconds"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Sekunden</button>
+      <button class="unit-chip selected ripple-host" data-unit="seconds"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Sekunden</button>
     </div>
+
     <div class="detail-section-label" style="margin-bottom:10px">Hintergrundbild</div>
     <div class="img-input-wrap">
       <div class="m3-field img-url-input"><input class="m3-input" type="url" id="f-img-url" placeholder=" "><label class="m3-field-label">Bild-URL</label></div>
@@ -447,496 +503,545 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 <input type="file" id="img-file-input" accept="image/*">
 
 <script>
-let events = [];
-let editingId = null;
-let detailId  = null;
-let editImgData = null;
-let editImgUrl  = null;
-let currentTab = 0;
+/* ── APP STATE ── */
+let events = JSON.parse(localStorage.getItem('events')) || [];
+let activeTab = 0;
+let currentDetailId = null;
+let currentEditId = null;
+let imgData = null;
 
-const save = () => { try { localStorage.setItem('tz_v4', JSON.stringify(events)); } catch(e){} };
-function load() {
-  try { const r = localStorage.getItem('tz_v4') || localStorage.getItem('tz_v3'); if(r) events = JSON.parse(r); } catch(e){}
+const unitTranslations = {
+  years: 'Jahre', months: 'Monate', weeks: 'Wochen',
+  days: 'Tage', hours: 'Std', minutes: 'Min', seconds: 'Sek'
+};
+
+/* ── DOM ELEMENTS ── */
+const tabItems = document.querySelectorAll('.tab-item');
+const tabContents = document.querySelectorAll('.tab-content');
+const tabIndicator = document.getElementById('tab-indicator');
+const backdrop = document.getElementById('backdrop');
+const menuPopup = document.getElementById('menu-popup');
+const detailSheet = document.getElementById('detail-sheet');
+const editSheet = document.getElementById('edit-sheet');
+
+/* ── INITIALIZE ── */
+function init() {
+  updateTabIndicator();
+  renderEvents();
+  setInterval(tick, 1000);
+  applyThemeAndColor();
+
+  window.addEventListener('resize', updateTabIndicator);
+
+  // Tabs
+  tabItems.forEach((tab, index) => {
+    tab.addEventListener('click', () => {
+      activeTab = index;
+      tabItems.forEach(t => t.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      tabContents[index].classList.add('active');
+      updateTabIndicator();
+    });
+  });
+
+  // Buttons
+  document.getElementById('add-btn').addEventListener('click', () => openEditSheet());
+  document.getElementById('menu-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    menuPopup.classList.toggle('open');
+  });
+  document.getElementById('detail-close-btn').addEventListener('click', closeSheets);
+  document.getElementById('detail-edit-btn').addEventListener('click', () => openEditSheet(currentDetailId));
+  document.getElementById('detail-delete-btn').addEventListener('click', deleteCurrentEvent);
+  document.getElementById('edit-cancel-btn').addEventListener('click', closeEditSheet);
+  document.getElementById('edit-save-btn').addEventListener('click', saveEvent);
+
+  backdrop.addEventListener('click', () => {
+    closeSheets();
+    menuPopup.classList.remove('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!menuPopup.contains(e.target) && e.target.id !== 'menu-btn') menuPopup.classList.remove('open');
+  });
+
+  // Settings
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const val = e.target.getAttribute('data-theme-val');
+      document.documentElement.setAttribute('data-theme', val);
+      localStorage.setItem('theme', val);
+    });
+  });
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const val = e.target.getAttribute('data-color-val');
+      document.documentElement.setAttribute('data-color', val);
+      localStorage.setItem('color', val);
+    });
+  });
+
+  // Unit Toggle
+  document.querySelectorAll('.unit-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+
+  // Image Inputs
+  document.getElementById('img-file-btn').addEventListener('click', () => document.getElementById('img-file-input').click());
+  document.getElementById('img-file-input').addEventListener('change', handleImageUpload);
+  document.getElementById('f-img-url').addEventListener('input', (e) => setPreview(e.target.value));
+  document.getElementById('img-clear-btn').addEventListener('click', clearImage);
+
+  // Data Tools
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (confirm("Wirklich alle Ereignisse löschen?")) { events = []; saveToLocal(); renderEvents(); menuPopup.classList.remove('open'); }
+  });
+  document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
+  document.getElementById('file-input').addEventListener('change', importData);
+
+  // Ripple Effect Setup
+  document.addEventListener('mousedown', function(e) {
+    const target = e.target.closest('.ripple-host');
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    const diameter = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = `${diameter}px`;
+    ripple.style.left = `${e.clientX - rect.left - diameter/2}px`;
+    ripple.style.top = `${e.clientY - rect.top - diameter/2}px`;
+    ripple.classList.add('ripple-wave');
+    target.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
 }
 
-// ── Ripple Engine ──
-document.addEventListener('pointerdown', e => {
-  const host = e.target.closest('.ripple-host'); if (!host) return;
-  const rect = host.getBoundingClientRect();
-  const w = document.createElement('span'); w.className = 'ripple-wave';
-  const sz = Math.max(rect.width, rect.height) * 2;
-  w.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px`;
-  host.appendChild(w); w.addEventListener('animationend', () => w.remove());
-});
-
-// ── Helpers ──
-function getTargetDate(ev) {
-  const t = ev.time ? ev.time : '00:00';
-  return new Date(`${ev.date}T${t}:00`);
+function applyThemeAndColor() {
+  const theme = localStorage.getItem('theme') || 'system';
+  const color = localStorage.getItem('color') || 'purple';
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-color', color);
+  document.querySelector(`.theme-btn[data-theme-val="${theme}"]`)?.click();
+  document.querySelector(`.color-btn[data-color-val="${color}"]`)?.click();
 }
 
-function isFuture(ev) { return getTargetDate(ev) >= new Date(); }
-
-function formatDateTime(ev) {
-  const d = getTargetDate(ev);
-  const dateStr = d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
-  return ev.time ? `${dateStr}, ${ev.time} Uhr` : dateStr;
+function updateTabIndicator() {
+  const active = tabItems[activeTab];
+  tabIndicator.style.width = active.offsetWidth + 'px';
+  tabIndicator.style.transform = `translateX(${active.offsetLeft}px)`;
 }
 
-function showSnackbar(txt) {
-  const s = document.getElementById('snackbar'); s.textContent = txt; s.classList.add('show');
-  setTimeout(() => s.classList.remove('show'), 3000);
+/* ── RENDER & DATA ── */
+function saveToLocal() {
+  localStorage.setItem('events', JSON.stringify(events));
 }
 
-function calcParts(ev) {
-  const now = new Date();
-  const target = getTargetDate(ev);
-  let a = target < now ? new Date(target) : new Date(now);
-  let b = target < now ? new Date(now) : new Date(target);
-  
-  let years = b.getFullYear() - a.getFullYear();
-  let months = b.getMonth() - a.getMonth();
-  if (months < 0) { years--; months += 12; }
-  
-  let adv = new Date(a); 
-  adv.setFullYear(adv.getFullYear() + years); 
-  adv.setMonth(adv.getMonth() + months);
-  
-  let rem = b - adv;
-  let weeks = Math.floor(rem / 604800000); rem -= weeks * 604800000;
-  let days = Math.floor(rem / 86400000);   rem -= days * 86400000;
-  let hours = Math.floor(rem / 3600000);   rem -= hours * 3600000;
-  let minutes = Math.floor(rem / 60000);   rem -= minutes * 60000;
-  let seconds = Math.floor(rem / 1000);
-  
-  return { years, months, weeks, days, hours, minutes, seconds };
-}
-
-function calcProgress(ev) {
-  if (!ev.refDate) return null;
+function renderEvents() {
+  const futureList = document.getElementById('future-list');
+  const pastList = document.getElementById('past-list');
+  futureList.innerHTML = '';
+  pastList.innerHTML = '';
   const now = new Date().getTime();
-  const target = getTargetDate(ev).getTime();
-  const ref = new Date(ev.refDate + 'T00:00:00').getTime();
-  const total = target - ref;
-  if (total <= 0) return null;
 
-  if (target >= now) {
-    const done = now - ref;
-    const pct = Math.min(100, Math.max(0, Math.round((done / total) * 100)));
-    return { pct, label: 'Fortschritt' };
-  } else {
-    const elapsed = target - ref;
-    const spanSince = now - ref;
-    const pct = Math.min(100, Math.max(0, Math.round((elapsed / spanSince) * 100)));
-    return { pct, label: 'Vergangen' };
-  }
-}
+  let futureCount = 0; let pastCount = 0;
 
-const unitMeta = [
-  { key:'years', label:'Jahre', digits:2 }, { key:'months', label:'Monate', digits:2 },
-  { key:'weeks', label:'Wochen', digits:2 }, { key:'days', label:'Tage', digits:3 },
-  { key:'hours', label:'Stunden', digits:2 }, { key:'minutes', label:'Minuten', digits:2 },
-  { key:'seconds', label:'Sekunden', digits:2 }
-];
+  events.forEach((ev, i) => {
+    const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
+    const isPast = target <= now;
+    const el = document.createElement('div');
+    el.className = 'event-card stagger-enter';
+    el.style.animationDelay = `${(isPast ? pastCount : futureCount) * 0.05}s`;
 
-// ── Flip Clock Skeleton Builder (Einmaliger Aufruf pro Container) ──
-function buildFlipClockStructure(container, units, large) {
-  container.innerHTML = '';
-  const wC = large ? 'detail-flip-digit-wrap' : 'flip-digit-wrap';
-  const fC = large ? 'detail-flip-face' : 'flip-face';
-  const active = unitMeta.filter(m => units.includes(m.key));
-
-  active.forEach((meta, i) => {
-    if (i > 0 && large) {
-      const sep = document.createElement('div'); sep.className = 'detail-flip-sep'; sep.textContent = ':';
-      container.appendChild(sep);
-    } else if (i > 0 && !large) {
-      const sep = document.createElement('div'); sep.className = 'flip-unit-sep';
-      container.appendChild(sep);
+    // Progress calculation for card
+    let pct = 0;
+    if (ev.refDate) {
+      const ref = new Date(ev.refDate + 'T00:00').getTime();
+      const total = Math.abs(target - ref);
+      const passed = Math.abs(now - ref);
+      pct = Math.max(0, Math.min(100, (passed / total) * 100));
+    } else {
+      pct = isPast ? 100 : 0;
     }
 
-    const col = document.createElement('div'); 
-    col.className = large ? 'detail-flip-col' : 'flip-col';
-    
-    const row = document.createElement('div'); 
-    row.className = large ? 'detail-flip-digits-row' : 'flip-digits-row';
-    row.setAttribute('data-unit', meta.key);
+    let bgStyle = '';
+    if (ev.img) bgStyle = `background-image: url('${ev.img}')`;
 
-    for (let d = 0; d < meta.digits; d++) {
+    // Fortschrittsbalken nur bei zukünftigen Events einblenden, wenn ein Referenzdatum existiert
+    let progressHtml = '';
+    if (!isPast && ev.refDate) {
+      progressHtml = `
+        <div class="card-progress-wrap">
+          <div class="card-progress-bar" style="width: ${pct}%"></div>
+        </div>
+      `;
+    }
+
+    el.innerHTML = `
+      <div class="card-bg" style="${bgStyle}"></div>
+      <div class="card-scrim"></div>
+      <div class="card-content">
+        <div class="card-name">${ev.name}</div>
+        <div class="flip-clock" id="clock-card-${ev.id}"></div>
+        ${progressHtml}
+      </div>
+    `;
+    el.onclick = () => openDetailSheet(ev.id);
+
+    if (isPast) { pastList.appendChild(el); pastCount++; }
+    else { futureList.appendChild(el); futureCount++; }
+  });
+
+  if (futureCount === 0) futureList.innerHTML = emptyStateHTML('Keine zukünftigen Ereignisse', 'Erstelle ein neues Ereignis mit dem Plus-Button.');
+  if (pastCount === 0) pastList.innerHTML = emptyStateHTML('Keine vergangenen Ereignisse', 'Hier erscheinen Ereignisse, deren Datum erreicht wurde.');
+  tick(); // Update clocks immediately
+}
+
+function emptyStateHTML(title, body) {
+  return `
+    <div class="empty-state">
+      <div class="empty-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="empty-headline">${title}</div>
+      <div class="empty-body">${body}</div>
+    </div>`;
+}
+
+/* ── TIME LOGIC ── */
+function tick() {
+  const now = new Date().getTime();
+
+  events.forEach(ev => {
+    const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
+    const diffObj = getDiff(target, now, ev.units);
+
+    // Update card clock
+    const cardContainer = document.getElementById(`clock-card-${ev.id}`);
+    if (cardContainer) renderFlipClock(cardContainer, diffObj, false);
+
+    // Update Detail Sheet if open
+    if (currentDetailId === ev.id) {
+      const detailContainer = document.getElementById('detail-flip-clock');
+      if (detailContainer) renderFlipClock(detailContainer, diffObj, true);
+
+      // Update Live Progress in detail view
+      if (ev.refDate) {
+        const ref = new Date(ev.refDate + 'T00:00').getTime();
+        const total = Math.abs(target - ref);
+        const passed = Math.abs(now - ref);
+        const pct = Math.max(0, Math.min(100, (passed / total) * 100));
+
+        document.getElementById('detail-progress-fill').style.width = pct + '%';
+        document.getElementById('detail-progress-pct').innerText = pct.toFixed(1) + '%';
+      }
+    }
+  });
+}
+
+function getDiff(target, now, unitsList) {
+  let diff = Math.abs(target - now);
+  const isPast = target <= now;
+  const res = [];
+
+  const sec = 1000, min = sec * 60, hr = min * 60, day = hr * 24, wk = day * 7, mo = day * 30.436875, yr = day * 365.25;
+  const map = { years: yr, months: mo, weeks: wk, days: day, hours: hr, minutes: min, seconds: sec };
+
+  unitsList.forEach(u => {
+    const val = Math.floor(diff / map[u]);
+    res.push({ unit: u, val: val });
+    diff -= val * map[u];
+  });
+  return res;
+}
+
+/* ── FLIP CLOCK RENDERER ── */
+function renderFlipClock(container, diffObj, isWide) {
+  diffObj.forEach((item, i) => {
+    const idStr = container.id + '-' + item.unit;
+    let col = document.getElementById(idStr);
+
+    // Create column if doesn't exist
+    if (!col) {
+      col = document.createElement('div');
+      col.className = 'flip-col';
+      col.id = idStr;
+
+      const row = document.createElement('div');
+      row.className = isWide ? 'detail-flip-digits-row' : 'flip-digits-row';
+      col.appendChild(row);
+
+      const label = document.createElement('div');
+      label.className = isWide ? 'detail-flip-label' : 'flip-label';
+      label.innerText = unitTranslations[item.unit];
+      col.appendChild(label);
+
+      container.appendChild(col);
+    }
+
+    const row = col.firstElementChild;
+    const valStr = String(item.val).padStart(2, '0');
+
+    // Ensure correct number of digit elements
+    while (row.children.length < valStr.length) {
       const wrap = document.createElement('div');
-      wrap.className = `${wC} ${meta.key === 'days' && d===0 && meta.digits===3 ? 'wide' : ''}`;
+      wrap.className = (isWide ? 'detail-flip-digit-wrap wide' : 'flip-digit-wrap');
       wrap.innerHTML = `
-        <div class="${fC} flip-face-top flip-face-front">0</div>
-        <div class="${fC} flip-face-bottom flip-face-front">0</div>
-        <div class="${fC} flip-face-top flip-face-back">0</div>
-        <div class="${fC} flip-face-bottom flip-face-back">0</div>
+        <div class="${isWide ? 'detail-flip-face flip-face-top flip-face-front' : 'flip-face flip-face-top flip-face-front'}">0</div>
+        <div class="${isWide ? 'detail-flip-face flip-face-bottom flip-face-front' : 'flip-face flip-face-bottom flip-face-front'}">0</div>
+        <div class="${isWide ? 'detail-flip-face flip-face-top flip-face-back' : 'flip-face flip-face-top flip-face-back'}">0</div>
+        <div class="${isWide ? 'detail-flip-face flip-face-bottom flip-face-back' : 'flip-face flip-face-bottom flip-face-back'}">0</div>
       `;
       row.appendChild(wrap);
     }
+    while (row.children.length > valStr.length) { row.lastElementChild.remove(); }
 
-    const lbl = document.createElement('div');
-    lbl.className = large ? 'detail-flip-label' : 'flip-label';
-    lbl.textContent = meta.label;
+    // Update digits & animate
+    for (let d = 0; d < valStr.length; d++) {
+      const digitWrap = row.children[d];
+      const newVal = valStr[d];
+      const oldVal = digitWrap.dataset.val;
 
-    col.appendChild(row);
-    col.appendChild(lbl);
-    container.appendChild(col);
-  });
-}
+      if (newVal !== oldVal) {
+        digitWrap.dataset.val = newVal;
+        if (oldVal !== undefined) {
+          // Trigger flip
+          digitWrap.classList.remove('flipping');
+          void digitWrap.offsetWidth; // Reflow
 
-// ── Flip Clock Values Updater (Sekündlicher Aufruf, performant ohne innerHTML-Reset) ──
-function updateFlipClockValues(container, parts) {
-  const rows = container.querySelectorAll('[data-unit]');
-  rows.forEach(row => {
-    const unit = row.getAttribute('data-unit');
-    let val = String(parts[unit] || 0);
-    const wraps = row.children;
-    while (val.length < wraps.length) val = '0' + val;
+          digitWrap.children[0].innerText = oldVal; // Top Front
+          digitWrap.children[1].innerText = oldVal; // Bottom Front
+          digitWrap.children[2].innerText = newVal; // Top Back
+          digitWrap.children[3].innerText = newVal; // Bottom Back
 
-    for (let i = 0; i < wraps.length; i++) {
-      const wrap = wraps[i];
-      const nextDigit = val[i];
-      const fronts = wrap.querySelectorAll('.flip-face-front');
-      const backs = wrap.querySelectorAll('.flip-face-back');
-      
-      if (fronts[0].textContent !== nextDigit) {
-        backs.forEach(b => b.textContent = nextDigit);
-        wrap.classList.add('flipping');
-        
-        setTimeout(() => {
-          fronts.forEach(f => f.textContent = nextDigit);
-          wrap.classList.remove('flipping');
-        }, 340);
+          digitWrap.classList.add('flipping');
+
+          // Clean up front faces after animation
+          setTimeout(() => {
+            digitWrap.children[0].innerText = newVal;
+            digitWrap.children[1].innerText = newVal;
+            digitWrap.classList.remove('flipping');
+          }, 340);
+        } else {
+          // Init
+          digitWrap.children[0].innerText = newVal;
+          digitWrap.children[1].innerText = newVal;
+          digitWrap.children[2].innerText = newVal;
+          digitWrap.children[3].innerText = newVal;
+        }
       }
     }
   });
 }
 
-// ── Rendering View Loops ──
-function renderLists() {
-  const futList = document.getElementById('future-list');
-  const pastList = document.getElementById('past-list');
-  futList.innerHTML = ''; pastList.innerHTML = '';
 
-  let futCount = 0, pastCount = 0;
+/* ── MODALS & FORMS ── */
+function openDetailSheet(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  currentDetailId = id;
 
-  events.forEach(ev => {
-    const isFut = isFuture(ev);
-    const card = document.createElement('div');
-    card.className = `event-card ${!isFut ? 'past-card' : ''}`;
-    card.setAttribute('data-id', ev.id);
-    
-    let bgStyle = '';
-    if (ev.imgData) bgStyle = `background-image:url(${ev.imgData})`;
-    else if (ev.imgUrl) bgStyle = `background-image:url(${encodeURI(ev.imgUrl)})`;
+  document.getElementById('detail-name').innerText = ev.name;
+  document.getElementById('detail-hero-bg').style.backgroundImage = ev.img ? `url('${ev.img}')` : '';
 
-    card.innerHTML = `
-      ${bgStyle ? `<div class="card-bg" style="${bgStyle}"></div><div class="card-scrim"></div>` : ''}
-      <div class="card-content">
-        ${!isFut ? `<div class="card-direction-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Erledigt</div>` : ''}
-        <div class="card-name">${ev.name}</div>
-        <div class="flip-clock" id="clock-${ev.id}"></div>
-        <div id="prog-wrap-${ev.id}" style="display:none">
-          <div class="card-progress-label" id="prog-lbl-${ev.id}"></div>
-          <div class="card-progress-wrap"><div class="card-progress-bar" id="prog-bar-${ev.id}"></div></div>
-        </div>
-      </div>
-    `;
+  const d = new Date(ev.date + (ev.time ? 'T'+ev.time : ''));
+  document.getElementById('detail-date').innerText = d.toLocaleDateString('de-DE', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) + (ev.time ? `, ${ev.time} Uhr` : '');
 
-    card.addEventListener('click', () => openDetail(ev.id));
-
-    if (isFut) { futList.appendChild(card); futCount++; } 
-    else { pastList.appendChild(card); pastCount++; }
-
-    const clockContainer = card.querySelector(`#clock-${ev.id}`);
-    buildFlipClockStructure(clockContainer, ev.units || ['days', 'hours', 'minutes', 'seconds'], false);
-  });
-
-  toggleEmptyState(0, futCount);
-  toggleEmptyState(1, pastCount);
-  updateAllClocks();
-}
-
-function toggleEmptyState(tabIdx, count) {
-  const container = document.getElementById(`tab-${tabIdx}`);
-  let existing = container.querySelector('.empty-state');
-  if (count === 0 && !existing) {
-    const e = document.createElement('div'); e.className = 'empty-state';
-    e.innerHTML = `
-      <div class="empty-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-      <div class="empty-headline">Keine Ereignisse</div>
-      <div class="empty-body">Tippe auf "Erstellen" unten rechts, um dein erstes Ereignis anzulegen.</div>
-    `;
-    container.querySelector('.event-list').appendChild(e);
-  } else if (count > 0 && existing) {
-    existing.remove();
+  if (ev.desc) {
+    document.getElementById('detail-desc-row').style.display = 'flex';
+    document.getElementById('detail-desc').innerText = ev.desc;
+  } else {
+    document.getElementById('detail-desc-row').style.display = 'none';
   }
-}
-
-function updateAllClocks() {
-  const now = new Date();
-  events.forEach(ev => {
-    const parts = calcParts(ev);
-    const clockContainer = document.getElementById(`clock-${ev.id}`);
-    if (clockContainer) updateFlipClockValues(clockContainer, parts);
-
-    // Progress updates
-    const p = calcProgress(ev);
-    const pWrap = document.getElementById(`prog-wrap-${ev.id}`);
-    if (p && pWrap) {
-      pWrap.style.display = 'block';
-      document.getElementById(`prog-lbl-${ev.id}`).textContent = `${p.label} • ${p.pct}%`;
-      document.getElementById(`prog-bar-${ev.id}`).style.width = `${p.pct}%`;
-    } else if (pWrap) {
-      pWrap.style.display = 'none';
-    }
-  });
-
-  // BUGFIX: Aktualisiere das Detail-Panel live im Sekundentakt
-  if (detailId !== null && document.getElementById('detail-sheet').classList.contains('open')) {
-    const dev = events.find(e => e.id === detailId);
-    if (dev) {
-      const dParts = calcParts(dev);
-      updateFlipClockValues(document.getElementById('detail-flip-clock'), dParts);
-      
-      const dp = calcProgress(dev);
-      const dpWrap = document.getElementById('detail-progress-wrap');
-      if (dp) {
-        dpWrap.style.display = 'block';
-        document.getElementById('detail-progress-label').textContent = dp.label;
-        document.getElementById('detail-progress-pct').textContent = `${dp.pct}%`;
-        document.getElementById('detail-progress-fill').style.width = `${dp.pct}%`;
-      } else {
-        dpWrap.style.display = 'none';
-      }
-    }
-  }
-}
-
-// Taktgeber jede Sekunde
-setInterval(updateAllClocks, 1000);
-
-// ── Sheets Engine ──
-function openSheet(id) {
-  document.getElementById('backdrop').classList.add('open');
-  document.getElementById(id).classList.add('open');
-}
-function closeSheets() {
-  document.getElementById('backdrop').classList.remove('open');
-  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open'));
-  document.getElementById('menu-popup').classList.remove('open');
-  detailId = null; editingId = null;
-}
-document.getElementById('backdrop').addEventListener('click', closeSheets);
-document.querySelectorAll('.sheet-handle').forEach(h => h.addEventListener('click', closeSheets));
-
-// ── Detail View Trigger ──
-function openDetail(id) {
-  const ev = events.find(e => e.id === id); if (!ev) return;
-  detailId = id;
-  
-  document.getElementById('detail-name').textContent = ev.name;
-  document.getElementById('detail-date').textContent = formatDateTime(ev);
-  
-  const dDesc = document.getElementById('detail-desc');
-  const dRow = document.getElementById('detail-desc-row');
-  if(ev.desc && ev.desc.trim()) { dDesc.textContent = ev.desc; dRow.style.display = 'flex'; }
-  else { dRow.style.display = 'none'; }
-
-  const hero = document.getElementById('detail-hero-bg');
-  if (ev.imgData) hero.style.backgroundImage = `url(${ev.imgData})`;
-  else if (ev.imgUrl) hero.style.backgroundImage = `url(${encodeURI(ev.imgUrl)})`;
-  else hero.style.backgroundImage = 'none';
 
   const pWrap = document.getElementById('detail-progress-wrap');
-  if (!isFuture(ev)) pWrap.classList.add('past-progress'); else pWrap.classList.remove('past-progress');
+  if (ev.refDate) {
+    pWrap.style.display = 'block';
+  } else {
+    pWrap.style.display = 'none';
+  }
 
-  // Initialisiere die Großansicht der Flip Clock strukturell einmalig vor dem Öffnen
-  buildFlipClockStructure(document.getElementById('detail-flip-clock'), ev.units || ['days', 'hours', 'minutes', 'seconds'], true);
-  
-  // Sofortige erste Befüllung
-  const dParts = calcParts(ev);
-  updateFlipClockValues(document.getElementById('detail-flip-clock'), dParts);
-
-  openSheet('detail-sheet');
+  document.getElementById('detail-flip-clock').innerHTML = ''; // clear clock
+  backdrop.classList.add('open');
+  detailSheet.classList.add('open');
+  tick();
 }
 
-// ── Form Engine ──
-document.getElementById('add-btn').addEventListener('click', () => {
-  editingId = null; editImgData = null; editImgUrl = null;
-  document.getElementById('edit-headline').textContent = 'Neues Ereignis';
-  document.getElementById('f-name').value = '';
-  document.getElementById('f-date').value = '';
-  document.getElementById('f-time').value = '';
-  document.getElementById('f-refdate').value = '';
-  document.getElementById('f-desc').value = '';
-  document.getElementById('f-img-url').value = '';
-  document.getElementById('img-preview-wrap').style.display = 'none';
-  document.getElementById('img-clear-btn').style.display = 'none';
-  
-  document.querySelectorAll('#unit-wrap .unit-chip').forEach((c, idx) => {
-    if(idx < 4) c.classList.add('selected'); else c.classList.remove('selected');
-  });
-  
-  openSheet('edit-sheet');
-});
+function openEditSheet(id = null) {
+  closeSheets();
+  currentEditId = id;
+  imgData = null;
+  clearImage();
+  document.getElementById('edit-headline').innerText = id ? 'Ereignis bearbeiten' : 'Neues Ereignis';
 
-document.getElementById('unit-wrap').addEventListener('click', e => {
-  const chip = e.target.closest('.unit-chip'); if (!chip) return;
-  chip.classList.toggle('selected');
-});
+  if (id) {
+    const ev = events.find(e => e.id === id);
+    document.getElementById('f-name').value = ev.name;
+    document.getElementById('f-date').value = ev.date;
+    document.getElementById('f-time').value = ev.time || '';
+    document.getElementById('f-refdate').value = ev.refDate || '';
+    document.getElementById('f-desc').value = ev.desc || '';
 
-// Image Handling
-document.getElementById('img-file-btn').addEventListener('click', () => document.getElementById('img-file-input').click());
-document.getElementById('img-file-input').addEventListener('change', e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    editImgData = ev.target.result;
-    showImgPreview(editImgData);
-  };
-  reader.readAsDataURL(file);
-});
+    document.querySelectorAll('.unit-chip').forEach(c => {
+      if (ev.units.includes(c.dataset.unit)) c.classList.add('selected'); else c.classList.remove('selected');
+    });
 
-function showImgPreview(src) {
-  const w = document.getElementById('img-preview-wrap');
-  document.getElementById('img-preview').src = src; w.style.display = 'block';
-  document.getElementById('img-clear-btn').style.display = 'inline-block';
+    if (ev.img) {
+      document.getElementById('f-img-url').value = ev.img.startsWith('http') ? ev.img : '';
+      setPreview(ev.img);
+      if (!ev.img.startsWith('http')) imgData = ev.img;
+    }
+  } else {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-date').value = '';
+    document.getElementById('f-time').value = '';
+    document.getElementById('f-refdate').value = '';
+    document.getElementById('f-desc').value = '';
+    // default units
+    document.querySelectorAll('.unit-chip').forEach(c => {
+      const u = c.dataset.unit;
+      if (['years','months','weeks','days','seconds'].includes(u)) c.classList.add('selected'); else c.classList.remove('selected');
+    });
+  }
+
+  setTimeout(() => {
+    backdrop.classList.add('open');
+    editSheet.classList.add('open');
+  }, 100);
 }
 
-document.getElementById('img-clear-btn').addEventListener('click', () => {
-  editImgData = null; editImgUrl = null;
-  document.getElementById('f-img-url').value = '';
-  document.getElementById('img-preview-wrap').style.display = 'none';
-  document.getElementById('img-clear-btn').style.display = 'none';
-});
+function closeSheets() {
+  backdrop.classList.remove('open');
+  detailSheet.classList.remove('open');
+  editSheet.classList.remove('open');
+  currentDetailId = null;
+}
 
-// CRUD Save Operation
-document.getElementById('edit-save-btn').addEventListener('click', () => {
+function closeEditSheet() {
+  closeSheets();
+  if (currentEditId) openDetailSheet(currentEditId);
+}
+
+function saveEvent() {
   const name = document.getElementById('f-name').value.trim();
   const date = document.getElementById('f-date').value;
   const time = document.getElementById('f-time').value;
   const refDate = document.getElementById('f-refdate').value;
-  const desc = document.getElementById('f-desc').value;
-  const urlVal = document.getElementById('f-img-url').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
+  const imgUrl = document.getElementById('f-img-url').value.trim();
 
-  if(!name || !date) { showSnackbar('Name und Datum sind Pflichtfelder.'); return; }
+  const units = Array.from(document.querySelectorAll('.unit-chip.selected')).map(c => c.dataset.unit);
 
-  const chosenUnits = Array.from(document.querySelectorAll('#unit-wrap .unit-chip.selected')).map(c => c.getAttribute('data-unit'));
-  if(chosenUnits.length === 0) { showSnackbar('Wähle mindestens eine Zeiteinheit.'); return; }
+  if (!name || !date) return showSnackbar('Bitte Name und Datum ausfüllen.');
+  if (units.length === 0) return showSnackbar('Mindestens eine Zeiteinheit auswählen.');
 
-  if(urlVal) editImgUrl = urlVal;
-
-  const data = {
-    id: editingId || 'ev_' + Date.now(),
-    name, date, time, refDate, desc,
-    units: chosenUnits,
-    imgUrl: editImgUrl, imgData: editImgData
+  const ev = {
+    id: currentEditId || Date.now().toString(),
+    name, date, time, refDate, desc, units,
+    img: imgUrl || imgData || null
   };
 
-  if(editingId) {
-    const idx = events.findIndex(e => e.id === editingId);
-    if(idx !== -1) events[idx] = data;
+  if (currentEditId) {
+    const idx = events.findIndex(e => e.id === currentEditId);
+    events[idx] = ev;
+    showSnackbar('Geändert!');
   } else {
-    events.push(data);
+    events.push(ev);
+    showSnackbar('Erstellt!');
   }
 
-  save(); renderLists(); closeSheets();
-  showSnackbar(editingId ? 'Ereignis aktualisiert' : 'Ereignis erstellt');
-});
-
-document.getElementById('edit-cancel-btn').addEventListener('click', closeSheets);
-
-// Edit Triggered from Details
-document.getElementById('detail-edit-btn').addEventListener('click', () => {
-  const ev = events.find(e => e.id === detailId); if(!ev) return;
-  editingId = detailId;
-  
-  document.getElementById('edit-headline').textContent = 'Ereignis bearbeiten';
-  document.getElementById('f-name').value = ev.name;
-  document.getElementById('f-date').value = ev.date;
-  document.getElementById('f-time').value = ev.time || '';
-  document.getElementById('f-refdate').value = ev.refDate || '';
-  document.getElementById('f-desc').value = ev.desc || '';
-  document.getElementById('f-img-url').value = ev.imgUrl || '';
-  
-  editImgData = ev.imgData; editImgUrl = ev.imgUrl;
-  if(ev.imgData) showImgPreview(ev.imgData);
-  else if(ev.imgUrl) showImgPreview(ev.imgUrl);
-  else { document.getElementById('img-preview-wrap').style.display = 'none'; document.getElementById('img-clear-btn').style.display = 'none'; }
-
-  document.querySelectorAll('#unit-wrap .unit-chip').forEach(c => {
-    if(ev.units && ev.units.includes(c.getAttribute('data-unit'))) c.classList.add('selected');
-    else c.classList.remove('selected');
-  });
-
-  document.getElementById('detail-sheet').classList.remove('open');
-  document.getElementById('edit-sheet').classList.add('open');
-});
-
-// Delete Actions
-const performDelete = (id) => {
-  events = events.filter(e => e.id !== id); save(); renderLists(); closeSheets(); showSnackbar('Ereignis gelöscht');
-};
-document.getElementById('detail-delete-btn').addEventListener('click', () => { if(confirm('Soll dieses Ereignis gelöscht werden?')) performDelete(detailId); });
-
-// ── Top Bar Menu Popup ──
-document.getElementById('menu-btn').addEventListener('click', e => {
-  e.stopPropagation(); document.getElementById('menu-popup').classList.toggle('open');
-});
-document.addEventListener('click', () => document.getElementById('menu-popup').classList.remove('open'));
-
-document.getElementById('clear-btn').addEventListener('click', () => {
-  if(confirm('Wirklich ALLE Ereignisse unwiderruflich löschen?')) { events = []; save(); renderLists(); showSnackbar('Alle Daten gelöscht'); }
-});
-
-// JSON Export/Import
-document.getElementById('export-btn').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a');
-  a.href = url; a.download = `tageszaehler_backup_${Date.now()}.json`; a.click();
-  showSnackbar('Backup exportiert');
-});
-document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
-document.getElementById('file-input').addEventListener('change', e => {
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const parsed = JSON.parse(ev.target.result);
-      if(Array.isArray(parsed)) { events = parsed; save(); renderLists(); showSnackbar('Daten erfolgreich importiert'); } 
-      else showSnackbar('Ungültiges Dateiformat.');
-    } catch(err) { showSnackbar('Fehler beim Lesen der Datei.'); }
-  };
-  reader.readAsText(file);
-});
-
-// ── Tabs Navigation ──
-const tabBar = document.getElementById('tab-bar');
-const indicator = document.getElementById('tab-indicator');
-function updateTabIndicator() {
-  const activeTab = tabBar.querySelector(`.tab-item[data-tab="${currentTab}"]`);
-  if (activeTab) { indicator.style.left = `${activeTab.offsetLeft}px`; indicator.style.width = `${activeTab.offsetWidth}px`; }
+  saveToLocal();
+  renderEvents();
+  closeSheets();
 }
 
-tabBar.addEventListener('click', e => {
-  const item = e.target.closest('.tab-item'); if(!item) return;
-  tabBar.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-  item.classList.add('active');
-  
-  currentTab = parseInt(item.getAttribute('data-tab'));
-  document.querySelectorAll('.tab-content').forEach((c, idx) => {
-    if(idx === currentTab) c.classList.add('active'); else c.classList.remove('active');
-  });
-  updateTabIndicator();
-});
+function deleteCurrentEvent() {
+  if (confirm('Dieses Ereignis löschen?')) {
+    events = events.filter(e => e.id !== currentDetailId);
+    saveToLocal();
+    renderEvents();
+    closeSheets();
+    showSnackbar('Gelöscht.');
+  }
+}
 
-window.addEventListener('resize', updateTabIndicator);
+/* ── IMAGE HANDLING ── */
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    imgData = ev.target.result;
+    document.getElementById('f-img-url').value = '';
+    setPreview(imgData);
+  };
+  reader.readAsDataURL(file);
+}
 
-// ── App Init ──
-load();
-renderLists();
-setTimeout(updateTabIndicator, 150);
+function setPreview(src) {
+  const wrap = document.getElementById('img-preview-wrap');
+  const img = document.getElementById('img-preview');
+  const clear = document.getElementById('img-clear-btn');
+  if (src) {
+    img.src = src;
+    wrap.style.display = 'block';
+    clear.style.display = 'block';
+  } else {
+    clearImage();
+  }
+}
+
+function clearImage() {
+  imgData = null;
+  document.getElementById('f-img-url').value = '';
+  document.getElementById('img-file-input').value = '';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-clear-btn').style.display = 'none';
+}
+
+/* ── UTILS ── */
+function showSnackbar(msg) {
+  const sb = document.getElementById('snackbar');
+  sb.innerText = msg;
+  sb.classList.add('show');
+  setTimeout(() => sb.classList.remove('show'), 3000);
+}
+
+function exportData() {
+  const data = JSON.stringify(events);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tageszaehler_export.json';
+  a.click();
+  menuPopup.classList.remove('open');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        events = data;
+        saveToLocal();
+        renderEvents();
+        showSnackbar('Erfolgreich importiert!');
+      } else throw new Error();
+    } catch {
+      showSnackbar('Fehler beim Importieren der Datei.');
+    }
+  };
+  reader.readAsText(file);
+  menuPopup.classList.remove('open');
+}
+
+init();
 </script>
 </body>
 </html>
