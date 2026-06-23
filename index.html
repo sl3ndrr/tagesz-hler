@@ -270,6 +270,7 @@ body {
 .detail-body { padding: 8px 20px 32px; }
 .detail-section-label { font-size: .6875rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--md-sys-color-primary); padding: 16px 0 8px; }
 .detail-card { background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); overflow: hidden; }
+.detail-card { background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); overflow: hidden; }
 .detail-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px; border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent); }
 .detail-row:last-child { border-bottom: none; }
 .detail-row-icon { color: var(--md-sys-color-on-surface-variant); margin-top: 1px; }
@@ -656,26 +657,27 @@ function renderEvents() {
     el.className = 'event-card stagger-enter';
     el.style.animationDelay = `${(isPast ? pastCount : futureCount) * 0.05}s`;
 
-    // Progress calculation for card
+    // Fortschrittsberechnung bezogen auf Referenzdatum bis Zielzeitpunkt
     let pct = 0;
     if (ev.refDate) {
       const ref = new Date(ev.refDate + 'T00:00').getTime();
-      const total = Math.abs(target - ref);
-      const passed = Math.abs(now - ref);
-      pct = Math.max(0, Math.min(100, (passed / total) * 100));
-    } else {
-      pct = isPast ? 100 : 0;
+      if (now < ref) {
+        pct = 0;
+      } else {
+        const total = target - ref;
+        pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
+      }
     }
 
     let bgStyle = '';
     if (ev.img) bgStyle = `background-image: url('${ev.img}')`;
 
-    // Fortschrittsbalken nur bei zukünftigen Events einblenden, wenn ein Referenzdatum existiert
+    // Zeige Fortschrittsbalken nur an, wenn ein Referenzdatum angegeben wurde
     let progressHtml = '';
-    if (!isPast && ev.refDate) {
+    if (ev.refDate) {
       progressHtml = `
         <div class="card-progress-wrap">
-          <div class="card-progress-bar" style="width: ${pct}%"></div>
+          <div class="card-progress-bar" id="progress-bar-card-${ev.id}" style="width: ${pct}%"></div>
         </div>
       `;
     }
@@ -697,7 +699,7 @@ function renderEvents() {
 
   if (futureCount === 0) futureList.innerHTML = emptyStateHTML('Keine zukünftigen Ereignisse', 'Erstelle ein neues Ereignis mit dem Plus-Button.');
   if (pastCount === 0) pastList.innerHTML = emptyStateHTML('Keine vergangenen Ereignisse', 'Hier erscheinen Ereignisse, deren Datum erreicht wurde.');
-  tick(); // Update clocks immediately
+  tick(); // Clocks sofort aktualisieren
 }
 
 function emptyStateHTML(title, body) {
@@ -719,21 +721,39 @@ function tick() {
     const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
     const diffObj = getDiff(target, now, ev.units);
 
-    // Update card clock
+    // Update der Stepuhr (Zeitraum zwischen JETZT und ZIEL)
     const cardContainer = document.getElementById(`clock-card-${ev.id}`);
     if (cardContainer) renderFlipClock(cardContainer, diffObj, false);
 
-    // Update Detail Sheet if open
+    // Live-Update des Fortschritts auf den Übersichtskarten
+    const cardProgress = document.getElementById(`progress-bar-card-${ev.id}`);
+    if (cardProgress && ev.refDate) {
+      const ref = new Date(ev.refDate + 'T00:00').getTime();
+      let pct = 0;
+      if (now < ref) {
+        pct = 0;
+      } else {
+        const total = target - ref;
+        pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
+      }
+      cardProgress.style.width = pct + '%';
+    }
+
+    // Update Detailansicht (falls geöffnet)
     if (currentDetailId === ev.id) {
       const detailContainer = document.getElementById('detail-flip-clock');
       if (detailContainer) renderFlipClock(detailContainer, diffObj, true);
 
-      // Update Live Progress in detail view
+      // Live Fortschritt in der Detailansicht
       if (ev.refDate) {
         const ref = new Date(ev.refDate + 'T00:00').getTime();
-        const total = Math.abs(target - ref);
-        const passed = Math.abs(now - ref);
-        const pct = Math.max(0, Math.min(100, (passed / total) * 100));
+        let pct = 0;
+        if (now < ref) {
+          pct = 0;
+        } else {
+          const total = target - ref;
+          pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
+        }
 
         document.getElementById('detail-progress-fill').style.width = pct + '%';
         document.getElementById('detail-progress-pct').innerText = pct.toFixed(1) + '%';
@@ -764,7 +784,7 @@ function renderFlipClock(container, diffObj, isWide) {
     const idStr = container.id + '-' + item.unit;
     let col = document.getElementById(idStr);
 
-    // Create column if doesn't exist
+    // Spalte erstellen, falls nicht vorhanden
     if (!col) {
       col = document.createElement('div');
       col.className = 'flip-col';
@@ -785,7 +805,7 @@ function renderFlipClock(container, diffObj, isWide) {
     const row = col.firstElementChild;
     const valStr = String(item.val).padStart(2, '0');
 
-    // Ensure correct number of digit elements
+    // Korrekte Menge an Digits sichern
     while (row.children.length < valStr.length) {
       const wrap = document.createElement('div');
       wrap.className = (isWide ? 'detail-flip-digit-wrap wide' : 'flip-digit-wrap');
@@ -799,7 +819,7 @@ function renderFlipClock(container, diffObj, isWide) {
     }
     while (row.children.length > valStr.length) { row.lastElementChild.remove(); }
 
-    // Update digits & animate
+    // Update & Animation
     for (let d = 0; d < valStr.length; d++) {
       const digitWrap = row.children[d];
       const newVal = valStr[d];
@@ -808,7 +828,7 @@ function renderFlipClock(container, diffObj, isWide) {
       if (newVal !== oldVal) {
         digitWrap.dataset.val = newVal;
         if (oldVal !== undefined) {
-          // Trigger flip
+          // Trigger Flip
           digitWrap.classList.remove('flipping');
           void digitWrap.offsetWidth; // Reflow
 
@@ -819,7 +839,7 @@ function renderFlipClock(container, diffObj, isWide) {
 
           digitWrap.classList.add('flipping');
 
-          // Clean up front faces after animation
+          // Bereinigung nach Animation
           setTimeout(() => {
             digitWrap.children[0].innerText = newVal;
             digitWrap.children[1].innerText = newVal;
@@ -900,7 +920,7 @@ function openEditSheet(id = null) {
     document.getElementById('f-time').value = '';
     document.getElementById('f-refdate').value = '';
     document.getElementById('f-desc').value = '';
-    // default units
+    // Standard Einheiten
     document.querySelectorAll('.unit-chip').forEach(c => {
       const u = c.dataset.unit;
       if (['years','months','weeks','days','seconds'].includes(u)) c.classList.add('selected'); else c.classList.remove('selected');
