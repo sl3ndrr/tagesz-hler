@@ -156,10 +156,12 @@ body {
 .flip-face-bottom { clip-path: polygon(0 50%,100% 50%,100% 100%,0 100%); }
 .flip-face-front  { z-index: 2; }
 .flip-face-back   { z-index: 1; transform: rotateX(180deg); }
+
 .flip-digit-wrap.flipping .flip-face-front { animation: flip-top 340ms ease-in forwards; }
 .flip-digit-wrap.flipping .flip-face-back  { animation: flip-bot 340ms ease-out forwards; }
 @keyframes flip-top { 0%{transform:rotateX(0deg)} 100%{transform:rotateX(-90deg)} }
 @keyframes flip-bot { 0%{transform:rotateX(180deg)} 100%{transform:rotateX(90deg)} }
+
 .flip-label { font-size: .5rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.55); margin-top: 2px; }
 .flip-unit-sep { width: 4px; }
 
@@ -169,7 +171,7 @@ body {
 .card-direction-badge svg { width: 12px; height: 12px; }
 
 /* ── Empty State ── */
-.empty-state { display: flex; flex-direction: column; align-items: center; padding: 64px 20px; color: var(--md-sys-color-on-surface-variant); text-align: center; grid-column: 1 / -1; }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 64px 20px; color: var(--md-sys-color-on-surface-variant); text-align: center; grid-column: 1 / -1; max-width: 440px; margin: 0 auto; }
 .empty-icon-circle { width: 68px; height: 68px; border-radius: 50%; background: var(--md-sys-color-secondary-container); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
 .empty-icon-circle svg { width: 34px; height: 34px; stroke: var(--md-sys-color-secondary); }
 .empty-headline { font-size: 1rem; font-weight: 600; color: var(--md-sys-color-on-surface); margin-bottom: 6px; }
@@ -213,7 +215,7 @@ body {
 .detail-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 70%); }
 .detail-hero-text { position: absolute; bottom: 0; padding: 20px; }
 .detail-hero-title { font-size: 1.375rem; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
-.detail-close-btn { position: absolute; top: 12px; left: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,.4); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.detail-close-btn { position: absolute; top: 12px; left: 12px; width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.4); border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
 
 .detail-progress-wrap { margin: 20px 20px 0; background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-medium); padding: 14px 16px; }
 .detail-progress-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
@@ -309,7 +311,7 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 <div class="app-container">
   <header class="app-bar">
     <span class="app-bar-title">Tageszähler</span>
-    <button class="icon-btn ripple-host" id="menu-btn">
+    <button class="icon-btn ripple-host" id="menu-btn" aria-label="Menü öffnen">
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
     </button>
   </header>
@@ -355,7 +357,7 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
   <div class="detail-hero" id="detail-hero">
     <div class="detail-hero-bg" id="detail-hero-bg"></div>
     <div class="detail-scrim"></div>
-    <button class="detail-close-btn" id="detail-close-btn"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+    <button class="detail-close-btn" id="detail-close-btn" aria-label="Schließen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
     <div class="detail-hero-text"><div class="detail-hero-title" id="detail-name"></div></div>
   </div>
   <div class="detail-progress-wrap" id="detail-progress-wrap">
@@ -409,7 +411,7 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
     </div>
     <div class="m3-field">
       <input class="m3-input" type="date" id="f-refdate" placeholder=" ">
-      <label class="m3-field-label">Referenzdatum (für Fortschrittsbalken, optional)</label>
+      <label class="m3-field-label">Referenzdatum (für Progress, optional)</label>
     </div>
     <div class="m3-field">
       <textarea class="m3-input" id="f-desc" placeholder=" "></textarea>
@@ -450,13 +452,14 @@ let editingId = null;
 let detailId  = null;
 let editImgData = null;
 let editImgUrl  = null;
-let openSheets  = [];
+let currentTab = 0;
 
 const save = () => { try { localStorage.setItem('tz_v4', JSON.stringify(events)); } catch(e){} };
 function load() {
   try { const r = localStorage.getItem('tz_v4') || localStorage.getItem('tz_v3'); if(r) events = JSON.parse(r); } catch(e){}
 }
 
+// ── Ripple Engine ──
 document.addEventListener('pointerdown', e => {
   const host = e.target.closest('.ripple-host'); if (!host) return;
   const rect = host.getBoundingClientRect();
@@ -466,6 +469,7 @@ document.addEventListener('pointerdown', e => {
   host.appendChild(w); w.addEventListener('animationend', () => w.remove());
 });
 
+// ── Helpers ──
 function getTargetDate(ev) {
   const t = ev.time ? ev.time : '00:00';
   return new Date(`${ev.date}T${t}:00`);
@@ -479,21 +483,32 @@ function formatDateTime(ev) {
   return ev.time ? `${dateStr}, ${ev.time} Uhr` : dateStr;
 }
 
+function showSnackbar(txt) {
+  const s = document.getElementById('snackbar'); s.textContent = txt; s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 3000);
+}
+
 function calcParts(ev) {
   const now = new Date();
   const target = getTargetDate(ev);
   let a = target < now ? new Date(target) : new Date(now);
   let b = target < now ? new Date(now) : new Date(target);
+  
   let years = b.getFullYear() - a.getFullYear();
   let months = b.getMonth() - a.getMonth();
   if (months < 0) { years--; months += 12; }
-  let adv = new Date(a); adv.setFullYear(adv.getFullYear()+years); adv.setMonth(adv.getMonth()+months);
+  
+  let adv = new Date(a); 
+  adv.setFullYear(adv.getFullYear() + years); 
+  adv.setMonth(adv.getMonth() + months);
+  
   let rem = b - adv;
-  let weeks = Math.floor(rem/604800000); rem -= weeks*604800000;
-  let days = Math.floor(rem/86400000);   rem -= days*86400000;
-  let hours = Math.floor(rem/3600000);   rem -= hours*3600000;
-  let minutes = Math.floor(rem/60000);   rem -= minutes*60000;
-  let seconds = Math.floor(rem/1000);
+  let weeks = Math.floor(rem / 604800000); rem -= weeks * 604800000;
+  let days = Math.floor(rem / 86400000);   rem -= days * 86400000;
+  let hours = Math.floor(rem / 3600000);   rem -= hours * 3600000;
+  let minutes = Math.floor(rem / 60000);   rem -= minutes * 60000;
+  let seconds = Math.floor(rem / 1000);
+  
   return { years, months, weeks, days, hours, minutes, seconds };
 }
 
@@ -524,7 +539,8 @@ const unitMeta = [
   { key:'seconds', label:'Sekunden', digits:2 }
 ];
 
-function buildFlipClock(container, units, large) {
+// ── Flip Clock Skeleton Builder (Einmaliger Aufruf pro Container) ──
+function buildFlipClockStructure(container, units, large) {
   container.innerHTML = '';
   const wC = large ? 'detail-flip-digit-wrap' : 'flip-digit-wrap';
   const fC = large ? 'detail-flip-face' : 'flip-face';
@@ -532,254 +548,395 @@ function buildFlipClock(container, units, large) {
 
   active.forEach((meta, i) => {
     if (i > 0 && large) {
-      const sep = document.createElement('div'); sep.className = 'detail-flip-sep'; sep.textContent = ':'; container.appendChild(sep);
+      const sep = document.createElement('div'); sep.className = 'detail-flip-sep'; sep.textContent = ':';
+      container.appendChild(sep);
+    } else if (i > 0 && !large) {
+      const sep = document.createElement('div'); sep.className = 'flip-unit-sep';
+      container.appendChild(sep);
     }
-    const col = document.createElement('div'); col.className = large ? 'detail-flip-col' : 'flip-col';
-    const row = document.createElement('div'); row.className = large ? 'detail-flip-digits-row' : 'flip-digits-row';
+
+    const col = document.createElement('div'); 
+    col.className = large ? 'detail-flip-col' : 'flip-col';
+    
+    const row = document.createElement('div'); 
+    row.className = large ? 'detail-flip-digits-row' : 'flip-digits-row';
+    row.setAttribute('data-unit', meta.key);
 
     for (let d = 0; d < meta.digits; d++) {
-      const wrap = document.createElement('div'); wrap.className = wC + (meta.digits > 2 ? ' wide' : '');
-      wrap.dataset.unit = meta.key; wrap.dataset.digit = d; wrap.dataset.val = '?';
-      ['top','bottom'].forEach(half => {
-        ['front','back'].forEach(fb => {
-          const face = document.createElement('div'); face.className = `${fC} flip-face-${half} flip-face-${fb}`; face.textContent = '0'; wrap.appendChild(face);
-        });
-      });
+      const wrap = document.createElement('div');
+      wrap.className = `${wC} ${meta.key === 'days' && d===0 && meta.digits===3 ? 'wide' : ''}`;
+      wrap.innerHTML = `
+        <div class="${fC} flip-face-top flip-face-front">0</div>
+        <div class="${fC} flip-face-bottom flip-face-front">0</div>
+        <div class="${fC} flip-face-top flip-face-back">0</div>
+        <div class="${fC} flip-face-bottom flip-face-back">0</div>
+      `;
       row.appendChild(wrap);
     }
-    const lbl = document.createElement('div'); lbl.className = large ? 'detail-flip-label' : 'flip-label'; lbl.textContent = meta.label;
-    col.appendChild(row); col.appendChild(lbl); container.appendChild(col);
-    if (!large && i < active.length - 1) { const sp = document.createElement('div'); sp.className = 'flip-unit-sep'; container.appendChild(sp); }
+
+    const lbl = document.createElement('div');
+    lbl.className = large ? 'detail-flip-label' : 'flip-label';
+    lbl.textContent = meta.label;
+
+    col.appendChild(row);
+    col.appendChild(lbl);
+    container.appendChild(col);
   });
 }
 
-function updateFlipClock(container, parts, units, large) {
-  const wC = large ? 'detail-flip-digit-wrap' : 'flip-digit-wrap';
-  const fC = large ? 'detail-flip-face' : 'flip-face';
-  const digMap = { years:2, months:2, weeks:2, days:3, hours:2, minutes:2, seconds:2 };
+// ── Flip Clock Values Updater (Sekündlicher Aufruf, performant ohne innerHTML-Reset) ──
+function updateFlipClockValues(container, parts) {
+  const rows = container.querySelectorAll('[data-unit]');
+  rows.forEach(row => {
+    const unit = row.getAttribute('data-unit');
+    let val = String(parts[unit] || 0);
+    const wraps = row.children;
+    while (val.length < wraps.length) val = '0' + val;
 
-  units.forEach(unit => {
-    const val = parts[unit] || 0; const nd = digMap[unit] || 2;
-    const digits = String(Math.floor(val)).padStart(nd,'0').slice(-nd).split('');
-    container.querySelectorAll(`.${wC}[data-unit="${unit}"]`).forEach((wrap, d) => {
-      const nv = digits[d] || '0'; if (wrap.dataset.val === nv) return;
-      wrap.dataset.val = nv; const faces = wrap.querySelectorAll(`.${fC}`);
-      if (faces[1]) faces[1].textContent = nv; if (faces[3]) faces[3].textContent = nv;
-      wrap.classList.remove('flipping'); void wrap.offsetWidth; wrap.classList.add('flipping');
-      wrap.addEventListener('animationend', () => {
-        wrap.classList.remove('flipping'); if (faces[0]) faces[0].textContent = nv; if (faces[2]) faces[2].textContent = nv;
-      }, { once: true });
-    });
-  });
-}
-
-function render() {
-  const future = events.filter(e => isFuture(e)).sort((a,b) => getTargetDate(a) - getTargetDate(b));
-  const past   = events.filter(e => !isFuture(e)).sort((a,b) => getTargetDate(b) - getTargetDate(a));
-  renderList('future-list', future, true);
-  renderList('past-list', past, false);
-}
-
-function renderList(id, list, isFut) {
-  const container = document.getElementById(id); if (!container) return;
-  container.innerHTML = '';
-  if (!list.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">${isFut?'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'}</svg></div><div class="empty-headline">${isFut?'Keine zukünftigen Ereignisse':'Keine vergangenen Ereignisse'}</div><div class="empty-body">${isFut?'Klicke auf „Erstellen“, um ein Ereignis anzulegen.':'Vergangene Ereignisse erscheinen hier.'}</div></div>`;
-    return;
-  }
-
-  list.forEach(ev => {
-    const isPastCard = !isFuture(ev);
-    const card = document.createElement('div'); card.className = 'event-card ripple-host' + (isPastCard ? ' past-card' : ''); card.dataset.id = ev.id;
-    const bg = document.createElement('div'); bg.className = 'card-bg'; const src = ev.imageDataUrl || ev.imageUrl || ''; if (src) bg.style.backgroundImage = `url(${src})`;
-    const content = document.createElement('div'); content.className = 'card-content';
-
-    if (isPastCard) {
-      content.innerHTML += `<div class="card-direction-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Vergangen</div>`;
+    for (let i = 0; i < wraps.length; i++) {
+      const wrap = wraps[i];
+      const nextDigit = val[i];
+      const fronts = wrap.querySelectorAll('.flip-face-front');
+      const backs = wrap.querySelectorAll('.flip-face-back');
+      
+      if (fronts[0].textContent !== nextDigit) {
+        backs.forEach(b => b.textContent = nextDigit);
+        wrap.classList.add('flipping');
+        
+        setTimeout(() => {
+          fronts.forEach(f => f.textContent = nextDigit);
+          wrap.classList.remove('flipping');
+        }, 340);
+      }
     }
-
-    const name = document.createElement('div'); name.className = 'card-name'; name.textContent = ev.name;
-    const clock = document.createElement('div'); clock.className = 'flip-clock'; clock.dataset.evid = ev.id;
-    const prog = calcProgress(ev);
-    const progWrap = document.createElement('div'); progWrap.className = 'card-progress-wrap';
-
-    if (prog) {
-      progWrap.innerHTML = `<div class="card-progress-bar" style="width:${prog.pct}%"></div>`;
-      const progLabel = document.createElement('div'); progLabel.className = 'card-progress-label'; progLabel.textContent = `${prog.label} ${prog.pct}%`;
-      content.append(progLabel);
-    } else progWrap.style.display = 'none';
-
-    content.append(name, clock, progWrap);
-    card.append(bg, document.createElement('div').className = 'card-scrim', content);
-    card.addEventListener('click', () => openDetail(ev.id));
-    container.appendChild(card);
-
-    const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
-    buildFlipClock(clock, units, false); updateFlipClock(clock, calcParts(ev), units, false);
   });
 }
 
-setInterval(() => {
+// ── Rendering View Loops ──
+function renderLists() {
+  const futList = document.getElementById('future-list');
+  const pastList = document.getElementById('past-list');
+  futList.innerHTML = ''; pastList.innerHTML = '';
+
+  let futCount = 0, pastCount = 0;
+
   events.forEach(ev => {
-    const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days']; const parts = calcParts(ev);
-    document.querySelectorAll(`.flip-clock[data-evid="${ev.id}"]`).forEach(c => updateFlipClock(c, parts, units, false));
-  });
-  if (detailId) {
-    const ev = events.find(e => e.id === detailId);
-    if (ev) {
-      const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
-      const dc = document.getElementById('detail-flip-clock'); if (dc) updateFlipClock(dc, calcParts(ev), units, true);
-      updateDetailProgress(ev);
-    }
-  }
-}, 1000);
+    const isFut = isFuture(ev);
+    const card = document.createElement('div');
+    card.className = `event-card ${!isFut ? 'past-card' : ''}`;
+    card.setAttribute('data-id', ev.id);
+    
+    let bgStyle = '';
+    if (ev.imgData) bgStyle = `background-image:url(${ev.imgData})`;
+    else if (ev.imgUrl) bgStyle = `background-image:url(${encodeURI(ev.imgUrl)})`;
 
-function updateDetailProgress(ev) {
-  const prog = calcProgress(ev); const wrap = document.getElementById('detail-progress-wrap');
-  if (prog) {
-    wrap.style.display = ''; wrap.classList.toggle('past-progress', !isFuture(ev));
-    document.getElementById('detail-progress-fill').style.width = prog.pct + '%';
-    document.getElementById('detail-progress-pct').textContent = prog.pct + '%';
-    document.getElementById('detail-progress-label').textContent = prog.label;
-  } else wrap.style.display = 'none';
+    card.innerHTML = `
+      ${bgStyle ? `<div class="card-bg" style="${bgStyle}"></div><div class="card-scrim"></div>` : ''}
+      <div class="card-content">
+        ${!isFut ? `<div class="card-direction-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Erledigt</div>` : ''}
+        <div class="card-name">${ev.name}</div>
+        <div class="flip-clock" id="clock-${ev.id}"></div>
+        <div id="prog-wrap-${ev.id}" style="display:none">
+          <div class="card-progress-label" id="prog-lbl-${ev.id}"></div>
+          <div class="card-progress-wrap"><div class="card-progress-bar" id="prog-bar-${ev.id}"></div></div>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', () => openDetail(ev.id));
+
+    if (isFut) { futList.appendChild(card); futCount++; } 
+    else { pastList.appendChild(card); pastCount++; }
+
+    const clockContainer = card.querySelector(`#clock-${ev.id}`);
+    buildFlipClockStructure(clockContainer, ev.units || ['days', 'hours', 'minutes', 'seconds'], false);
+  });
+
+  toggleEmptyState(0, futCount);
+  toggleEmptyState(1, pastCount);
+  updateAllClocks();
 }
 
+function toggleEmptyState(tabIdx, count) {
+  const container = document.getElementById(`tab-${tabIdx}`);
+  let existing = container.querySelector('.empty-state');
+  if (count === 0 && !existing) {
+    const e = document.createElement('div'); e.className = 'empty-state';
+    e.innerHTML = `
+      <div class="empty-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="empty-headline">Keine Ereignisse</div>
+      <div class="empty-body">Tippe auf "Erstellen" unten rechts, um dein erstes Ereignis anzulegen.</div>
+    `;
+    container.querySelector('.event-list').appendChild(e);
+  } else if (count > 0 && existing) {
+    existing.remove();
+  }
+}
+
+function updateAllClocks() {
+  const now = new Date();
+  events.forEach(ev => {
+    const parts = calcParts(ev);
+    const clockContainer = document.getElementById(`clock-${ev.id}`);
+    if (clockContainer) updateFlipClockValues(clockContainer, parts);
+
+    // Progress updates
+    const p = calcProgress(ev);
+    const pWrap = document.getElementById(`prog-wrap-${ev.id}`);
+    if (p && pWrap) {
+      pWrap.style.display = 'block';
+      document.getElementById(`prog-lbl-${ev.id}`).textContent = `${p.label} • ${p.pct}%`;
+      document.getElementById(`prog-bar-${ev.id}`).style.width = `${p.pct}%`;
+    } else if (pWrap) {
+      pWrap.style.display = 'none';
+    }
+  });
+
+  // BUGFIX: Aktualisiere das Detail-Panel live im Sekundentakt
+  if (detailId !== null && document.getElementById('detail-sheet').classList.contains('open')) {
+    const dev = events.find(e => e.id === detailId);
+    if (dev) {
+      const dParts = calcParts(dev);
+      updateFlipClockValues(document.getElementById('detail-flip-clock'), dParts);
+      
+      const dp = calcProgress(dev);
+      const dpWrap = document.getElementById('detail-progress-wrap');
+      if (dp) {
+        dpWrap.style.display = 'block';
+        document.getElementById('detail-progress-label').textContent = dp.label;
+        document.getElementById('detail-progress-pct').textContent = `${dp.pct}%`;
+        document.getElementById('detail-progress-fill').style.width = `${dp.pct}%`;
+      } else {
+        dpWrap.style.display = 'none';
+      }
+    }
+  }
+}
+
+// Taktgeber jede Sekunde
+setInterval(updateAllClocks, 1000);
+
+// ── Sheets Engine ──
+function openSheet(id) {
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+function closeSheets() {
+  document.getElementById('backdrop').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open'));
+  document.getElementById('menu-popup').classList.remove('open');
+  detailId = null; editingId = null;
+}
+document.getElementById('backdrop').addEventListener('click', closeSheets);
+document.querySelectorAll('.sheet-handle').forEach(h => h.addEventListener('click', closeSheets));
+
+// ── Detail View Trigger ──
 function openDetail(id) {
   const ev = events.find(e => e.id === id); if (!ev) return;
-  detailId = id; const src = ev.imageDataUrl || ev.imageUrl || '';
-  const heroBg = document.getElementById('detail-hero-bg'); heroBg.style.backgroundImage = src ? `url(${src})` : 'none';
-  if (!src) heroBg.style.background = 'linear-gradient(135deg, var(--md-sys-color-surface-variant), var(--md-sys-color-secondary-container))';
-
+  detailId = id;
+  
   document.getElementById('detail-name').textContent = ev.name;
   document.getElementById('detail-date').textContent = formatDateTime(ev);
-  const descRow = document.getElementById('detail-desc-row');
-  if (ev.description) { descRow.style.display = ''; document.getElementById('detail-desc').textContent = ev.description; } else descRow.style.display = 'none';
+  
+  const dDesc = document.getElementById('detail-desc');
+  const dRow = document.getElementById('detail-desc-row');
+  if(ev.desc && ev.desc.trim()) { dDesc.textContent = ev.desc; dRow.style.display = 'flex'; }
+  else { dRow.style.display = 'none'; }
 
-  updateDetailProgress(ev);
-  const dc = document.getElementById('detail-flip-clock'); const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
-  buildFlipClock(dc, units, true); updateFlipClock(dc, calcParts(ev), units, true);
+  const hero = document.getElementById('detail-hero-bg');
+  if (ev.imgData) hero.style.backgroundImage = `url(${ev.imgData})`;
+  else if (ev.imgUrl) hero.style.backgroundImage = `url(${encodeURI(ev.imgUrl)})`;
+  else hero.style.backgroundImage = 'none';
+
+  const pWrap = document.getElementById('detail-progress-wrap');
+  if (!isFuture(ev)) pWrap.classList.add('past-progress'); else pWrap.classList.remove('past-progress');
+
+  // Initialisiere die Großansicht der Flip Clock strukturell einmalig vor dem Öffnen
+  buildFlipClockStructure(document.getElementById('detail-flip-clock'), ev.units || ['days', 'hours', 'minutes', 'seconds'], true);
+  
+  // Sofortige erste Befüllung
+  const dParts = calcParts(ev);
+  updateFlipClockValues(document.getElementById('detail-flip-clock'), dParts);
+
   openSheet('detail-sheet');
 }
 
-function closeDetail() { detailId = null; closeSheet('detail-sheet'); }
-
-function openAdd() {
+// ── Form Engine ──
+document.getElementById('add-btn').addEventListener('click', () => {
   editingId = null; editImgData = null; editImgUrl = null;
   document.getElementById('edit-headline').textContent = 'Neues Ereignis';
-  ['f-name','f-date','f-time','f-refdate','f-desc','f-img-url'].forEach(id => document.getElementById(id).value = '');
-  setUnits(['years','months','weeks','days']); clearImgPreview(); openSheet('edit-sheet');
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-date').value = '';
+  document.getElementById('f-time').value = '';
+  document.getElementById('f-refdate').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-img-url').value = '';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-clear-btn').style.display = 'none';
+  
+  document.querySelectorAll('#unit-wrap .unit-chip').forEach((c, idx) => {
+    if(idx < 4) c.classList.add('selected'); else c.classList.remove('selected');
+  });
+  
+  openSheet('edit-sheet');
+});
+
+document.getElementById('unit-wrap').addEventListener('click', e => {
+  const chip = e.target.closest('.unit-chip'); if (!chip) return;
+  chip.classList.toggle('selected');
+});
+
+// Image Handling
+document.getElementById('img-file-btn').addEventListener('click', () => document.getElementById('img-file-input').click());
+document.getElementById('img-file-input').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    editImgData = ev.target.result;
+    showImgPreview(editImgData);
+  };
+  reader.readAsDataURL(file);
+});
+
+function showImgPreview(src) {
+  const w = document.getElementById('img-preview-wrap');
+  document.getElementById('img-preview').src = src; w.style.display = 'block';
+  document.getElementById('img-clear-btn').style.display = 'inline-block';
 }
 
-function openEdit(id) {
-  const ev = events.find(e => e.id === id); if (!ev) return;
-  editingId = id; editImgData = ev.imageDataUrl || null; editImgUrl = ev.imageUrl || null;
+document.getElementById('img-clear-btn').addEventListener('click', () => {
+  editImgData = null; editImgUrl = null;
+  document.getElementById('f-img-url').value = '';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-clear-btn').style.display = 'none';
+});
+
+// CRUD Save Operation
+document.getElementById('edit-save-btn').addEventListener('click', () => {
+  const name = document.getElementById('f-name').value.trim();
+  const date = document.getElementById('f-date').value;
+  const time = document.getElementById('f-time').value;
+  const refDate = document.getElementById('f-refdate').value;
+  const desc = document.getElementById('f-desc').value;
+  const urlVal = document.getElementById('f-img-url').value.trim();
+
+  if(!name || !date) { showSnackbar('Name und Datum sind Pflichtfelder.'); return; }
+
+  const chosenUnits = Array.from(document.querySelectorAll('#unit-wrap .unit-chip.selected')).map(c => c.getAttribute('data-unit'));
+  if(chosenUnits.length === 0) { showSnackbar('Wähle mindestens eine Zeiteinheit.'); return; }
+
+  if(urlVal) editImgUrl = urlVal;
+
+  const data = {
+    id: editingId || 'ev_' + Date.now(),
+    name, date, time, refDate, desc,
+    units: chosenUnits,
+    imgUrl: editImgUrl, imgData: editImgData
+  };
+
+  if(editingId) {
+    const idx = events.findIndex(e => e.id === editingId);
+    if(idx !== -1) events[idx] = data;
+  } else {
+    events.push(data);
+  }
+
+  save(); renderLists(); closeSheets();
+  showSnackbar(editingId ? 'Ereignis aktualisiert' : 'Ereignis erstellt');
+});
+
+document.getElementById('edit-cancel-btn').addEventListener('click', closeSheets);
+
+// Edit Triggered from Details
+document.getElementById('detail-edit-btn').addEventListener('click', () => {
+  const ev = events.find(e => e.id === detailId); if(!ev) return;
+  editingId = detailId;
+  
   document.getElementById('edit-headline').textContent = 'Ereignis bearbeiten';
   document.getElementById('f-name').value = ev.name;
   document.getElementById('f-date').value = ev.date;
   document.getElementById('f-time').value = ev.time || '';
   document.getElementById('f-refdate').value = ev.refDate || '';
-  document.getElementById('f-desc').value = ev.description || '';
-  document.getElementById('f-img-url').value = ev.imageUrl || '';
-  setUnits(ev.units && ev.units.length ? ev.units : ['years','months','weeks','days']);
-  const src = ev.imageDataUrl || ev.imageUrl || ''; if (src) showImgPreview(src); else clearImgPreview();
-  closeDetail(); openSheet('edit-sheet');
-}
+  document.getElementById('f-desc').value = ev.desc || '';
+  document.getElementById('f-img-url').value = ev.imgUrl || '';
+  
+  editImgData = ev.imgData; editImgUrl = ev.imgUrl;
+  if(ev.imgData) showImgPreview(ev.imgData);
+  else if(ev.imgUrl) showImgPreview(ev.imgUrl);
+  else { document.getElementById('img-preview-wrap').style.display = 'none'; document.getElementById('img-clear-btn').style.display = 'none'; }
 
-function saveEvent() {
-  const name = document.getElementById('f-name').value.trim(); const date = document.getElementById('f-date').value;
-  if (!name || !date) { snack('Name und Datum sind erforderlich.'); return; }
-  const payload = {
-    id: editingId || Date.now().toString(),
-    name, date, time: document.getElementById('f-time').value || '00:00',
-    refDate: document.getElementById('f-refdate').value || null,
-    units: getUnits(), description: document.getElementById('f-desc').value.trim(),
-    imageDataUrl: editImgData || null, imageUrl: editImgUrl || null,
-  };
-
-  if (editingId) { const i = events.findIndex(e => e.id === editingId); if (i > -1) events[i] = payload; } else events.push(payload);
-  save(); render(); closeSheet('edit-sheet'); snack(editingId ? 'Gespeichert.' : 'Ereignis erstellt.');
-}
-
-function deleteEvent(id) {
-  if (!confirm('Dieses Ereignis wirklich löschen?')) return;
-  events = events.filter(e => e.id !== id); save(); render(); closeDetail(); snack('Gelöscht.');
-}
-
-const setUnits = u => document.querySelectorAll('.unit-chip').forEach(c => c.classList.toggle('selected', u.includes(c.dataset.unit)));
-const getUnits = () => { const u=[]; document.querySelectorAll('.unit-chip.selected').forEach(c=>u.push(c.dataset.unit)); return u.length?u:['days']; };
-document.querySelectorAll('.unit-chip').forEach(c => c.addEventListener('click', () => c.classList.toggle('selected')));
-
-const showImgPreview = src => { document.getElementById('img-preview').src=src; document.getElementById('img-preview-wrap').style.display='block'; document.getElementById('img-clear-btn').style.display='block'; };
-function clearImgPreview() { document.getElementById('img-preview').src=''; document.getElementById('img-preview-wrap').style.display='none'; document.getElementById('img-clear-btn').style.display='none'; editImgData=null; editImgUrl=null; }
-document.getElementById('img-file-btn').addEventListener('click', () => document.getElementById('img-file-input').click());
-document.getElementById('img-file-input').addEventListener('change', function() {
-  const f = this.files[0]; if (!f) return; const r = new FileReader();
-  r.onload = e => { editImgData=e.target.result; editImgUrl=null; document.getElementById('f-img-url').value=''; showImgPreview(editImgData); };
-  r.readAsDataURL(f); this.value='';
-});
-document.getElementById('f-img-url').addEventListener('input', function() { if(this.value.trim()){ editImgUrl=this.value.trim(); editImgData=null; showImgPreview(this.value.trim()); } else clearImgPreview(); });
-document.getElementById('img-clear-btn').addEventListener('click', () => { document.getElementById('f-img-url').value=''; clearImgPreview(); });
-
-function openSheet(id) { document.getElementById(id).classList.add('open'); document.getElementById('backdrop').classList.add('open'); if(!openSheets.includes(id)) openSheets.push(id); }
-function closeSheet(id) { document.getElementById(id).classList.remove('open'); openSheets = openSheets.filter(s => s !== id); if(!openSheets.length) document.getElementById('backdrop').classList.remove('open'); }
-
-document.getElementById('backdrop').addEventListener('click', () => { const top = openSheets[openSheets.length-1]; if (top) closeSheet(top); });
-document.getElementById('detail-close-btn').addEventListener('click', closeDetail);
-document.getElementById('detail-edit-btn').addEventListener('click', () => openEdit(detailId));
-document.getElementById('detail-delete-btn').addEventListener('click', () => deleteEvent(detailId));
-document.getElementById('edit-cancel-btn').addEventListener('click', () => closeSheet('edit-sheet'));
-document.getElementById('edit-save-btn').addEventListener('click', saveEvent);
-document.getElementById('add-btn').addEventListener('click', openAdd);
-
-function updateTabIndicator() {
-  const activeTab = document.querySelector('.tab-item.active'); if (!activeTab) return;
-  const ind = document.getElementById('tab-indicator');
-  ind.style.left = activeTab.offsetLeft + 'px'; ind.style.width = activeTab.offsetWidth + 'px';
-}
-document.querySelectorAll('.tab-item').forEach((tab, i) => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    tab.classList.add('active'); document.getElementById('tab-'+i).classList.add('active'); updateTabIndicator();
+  document.querySelectorAll('#unit-wrap .unit-chip').forEach(c => {
+    if(ev.units && ev.units.includes(c.getAttribute('data-unit'))) c.classList.add('selected');
+    else c.classList.remove('selected');
   });
-});
-window.addEventListener('resize', updateTabIndicator); setTimeout(updateTabIndicator, 0);
 
-function doExport() {
-  const data = events.map(({ imageDataUrl, ...rest }) => rest);
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tageszaehler.json'; a.click(); URL.revokeObjectURL(a.href); snack('Exportiert.');
-}
-function doImport() { document.getElementById('file-input').click(); }
-function doClear() { if(!confirm('Wirklich alle Ereignisse löschen?')) return; events=[]; save(); render(); snack('Alle Ereignisse gelöscht.'); }
-
-document.getElementById('export-btn').addEventListener('click', () => { document.getElementById('menu-popup').classList.remove('open'); doExport(); });
-document.getElementById('import-btn').addEventListener('click', () => { document.getElementById('menu-popup').classList.remove('open'); doImport(); });
-document.getElementById('clear-btn').addEventListener('click', () => { document.getElementById('menu-popup').classList.remove('open'); doClear(); });
-
-document.getElementById('file-input').addEventListener('change', function() {
-  const f = this.files[0]; if(!f) return; const r = new FileReader();
-  r.onload = e => {
-    try {
-      const imp = JSON.parse(e.target.result); if (!Array.isArray(imp)) throw new Error();
-      if (!confirm('Vorhandene Ereignisse behalten?\n(Abbrechen = Ersetzen)')) events = imp;
-      else { const ids=new Set(events.map(e=>e.id)); imp.forEach(ev=>{ if(!ids.has(ev.id)) events.push(ev); else { const i=events.findIndex(x=>x.id===ev.id); if(i>-1) events[i]=ev; } }); }
-      save(); render(); snack(`${imp.length} Ereignisse importiert.`);
-    } catch { snack('Fehler beim Import.'); }
-  };
-  r.readAsText(f); this.value='';
+  document.getElementById('detail-sheet').classList.remove('open');
+  document.getElementById('edit-sheet').classList.add('open');
 });
 
-document.getElementById('menu-btn').addEventListener('click', e => { e.stopPropagation(); document.getElementById('menu-popup').classList.toggle('open'); });
+// Delete Actions
+const performDelete = (id) => {
+  events = events.filter(e => e.id !== id); save(); renderLists(); closeSheets(); showSnackbar('Ereignis gelöscht');
+};
+document.getElementById('detail-delete-btn').addEventListener('click', () => { if(confirm('Soll dieses Ereignis gelöscht werden?')) performDelete(detailId); });
+
+// ── Top Bar Menu Popup ──
+document.getElementById('menu-btn').addEventListener('click', e => {
+  e.stopPropagation(); document.getElementById('menu-popup').classList.toggle('open');
+});
 document.addEventListener('click', () => document.getElementById('menu-popup').classList.remove('open'));
 
-let snackT;
-function snack(msg) {
-  const el = document.getElementById('snackbar'); el.textContent = msg; el.classList.add('show');
-  clearTimeout(snackT); snackT = setTimeout(() => el.classList.remove('show'), 2800);
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if(confirm('Wirklich ALLE Ereignisse unwiderruflich löschen?')) { events = []; save(); renderLists(); showSnackbar('Alle Daten gelöscht'); }
+});
+
+// JSON Export/Import
+document.getElementById('export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `tageszaehler_backup_${Date.now()}.json`; a.click();
+  showSnackbar('Backup exportiert');
+});
+document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if(Array.isArray(parsed)) { events = parsed; save(); renderLists(); showSnackbar('Daten erfolgreich importiert'); } 
+      else showSnackbar('Ungültiges Dateiformat.');
+    } catch(err) { showSnackbar('Fehler beim Lesen der Datei.'); }
+  };
+  reader.readAsText(file);
+});
+
+// ── Tabs Navigation ──
+const tabBar = document.getElementById('tab-bar');
+const indicator = document.getElementById('tab-indicator');
+function updateTabIndicator() {
+  const activeTab = tabBar.querySelector(`.tab-item[data-tab="${currentTab}"]`);
+  if (activeTab) { indicator.style.left = `${activeTab.offsetLeft}px`; indicator.style.width = `${activeTab.offsetWidth}px`; }
 }
 
-load(); render();
+tabBar.addEventListener('click', e => {
+  const item = e.target.closest('.tab-item'); if(!item) return;
+  tabBar.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  item.classList.add('active');
+  
+  currentTab = parseInt(item.getAttribute('data-tab'));
+  document.querySelectorAll('.tab-content').forEach((c, idx) => {
+    if(idx === currentTab) c.classList.add('active'); else c.classList.remove('active');
+  });
+  updateTabIndicator();
+});
+
+window.addEventListener('resize', updateTabIndicator);
+
+// ── App Init ──
+load();
+renderLists();
+setTimeout(updateTabIndicator, 150);
 </script>
 </body>
 </html>
