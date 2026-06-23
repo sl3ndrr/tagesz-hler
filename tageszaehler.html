@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tageszähler</title>
+<style>
+/* ── Material You / Android 17 tokens ── */
+:root {
+  --md-sys-color-primary:            #6750A4;
+  --md-sys-color-on-primary:         #FFFFFF;
+  --md-sys-color-primary-container:  #EADDFF;
+  --md-sys-color-on-primary-container: #21005D;
+  --md-sys-color-secondary:          #625B71;
+  --md-sys-color-secondary-container:#E8DEF8;
+  --md-sys-color-surface:            #FEF7FF;
+  --md-sys-color-surface-variant:    #E7E0EC;
+  --md-sys-color-on-surface:         #1C1B1F;
+  --md-sys-color-on-surface-variant: #49454F;
+  --md-sys-color-outline:            #79747E;
+  --md-sys-color-outline-variant:    #CAC4D0;
+  --md-sys-color-background:         #FEF7FF;
+  --md-sys-color-error:              #B3261E;
+  --md-elevation-1: 0 1px 2px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.08);
+  --md-elevation-2: 0 1px 2px rgba(0,0,0,.14), 0 2px 8px rgba(0,0,0,.10);
+  --md-elevation-3: 0 2px 6px rgba(0,0,0,.16), 0 4px 16px rgba(0,0,0,.12);
+  --md-shape-small:  12px;
+  --md-shape-medium: 16px;
+  --md-shape-large:  28px;
+  --md-shape-xl:     36px;
+  --font: 'Google Sans', 'Roboto Flex', Roboto, system-ui, sans-serif;
+  --transition-standard: 300ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-enter:    400ms cubic-bezier(0.05, 0.7, 0.1, 1);
+  --transition-exit:     200ms cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* Flip clock */
+  --flip-bg:    #1C1B1F;
+  --flip-text:  #EADDFF;
+  --flip-split: #6750A4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary:            #D0BCFF;
+    --md-sys-color-on-primary:         #381E72;
+    --md-sys-color-primary-container:  #4F378B;
+    --md-sys-color-on-primary-container:#EADDFF;
+    --md-sys-color-secondary:          #CCC2DC;
+    --md-sys-color-secondary-container:#4A4458;
+    --md-sys-color-surface:            #141218;
+    --md-sys-color-surface-variant:    #49454F;
+    --md-sys-color-on-surface:         #E6E1E5;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-outline:            #938F99;
+    --md-sys-color-outline-variant:    #49454F;
+    --md-sys-color-background:         #141218;
+    --md-sys-color-error:              #F2B8B5;
+    --flip-bg:    #1C1B1F;
+    --flip-text:  #EADDFF;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
+  min-height: 100dvh;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Ripple ── */
+.ripple-host { position: relative; overflow: hidden; }
+.ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple-anim 600ms ease-out forwards;
+}
+@keyframes ripple-anim {
+  0%   { transform: scale(0); opacity: .22; }
+  100% { transform: scale(4); opacity: 0;   }
+}
+
+/* ── App Shell ── */
+.app-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+  position: sticky; top: 0; z-index: 100;
+  background: var(--md-sys-color-background);
+  transition: background var(--transition-standard);
+}
+.app-bar-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--md-sys-color-on-surface);
+}
+.app-bar-actions { display: flex; gap: 4px; }
+
+.icon-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-standard);
+  position: relative;
+  overflow: hidden;
+}
+.icon-btn:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface-variant) 8%, transparent); }
+.icon-btn svg { width: 24px; height: 24px; }
+
+/* ── Tab Bar ── */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0 16px;
+  position: relative;
+}
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 14px 4px 13px;
+  font-size: .875rem;
+  font-weight: 600;
+  letter-spacing: .006em;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition: color var(--transition-standard);
+}
+.tab-item.active { color: var(--md-sys-color-primary); }
+.tab-indicator {
+  position: absolute; bottom: 0; left: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--md-sys-color-primary);
+  transition: left var(--transition-standard), width var(--transition-standard);
+}
+
+/* ── Event List ── */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.event-list {
+  padding: 12px 16px 96px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Card entrance animation */
+.event-card {
+  animation: card-enter var(--transition-enter) both;
+}
+.event-card:nth-child(1) { animation-delay: 0ms; }
+.event-card:nth-child(2) { animation-delay: 60ms; }
+.event-card:nth-child(3) { animation-delay: 120ms; }
+.event-card:nth-child(4) { animation-delay: 180ms; }
+.event-card:nth-child(5) { animation-delay: 240ms; }
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(20px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.event-card {
+  border-radius: var(--md-shape-large);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  height: 168px;
+  box-shadow: var(--md-elevation-1);
+  background: var(--md-sys-color-surface-variant);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 200ms cubic-bezier(.2,0,0,1),
+              box-shadow 200ms cubic-bezier(.2,0,0,1);
+}
+.event-card:active {
+  transform: scale(.975);
+  box-shadow: none;
+}
+
+.card-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: transform 400ms cubic-bezier(.2,0,0,1);
+}
+.event-card:hover .card-bg { transform: scale(1.03); }
+
+.card-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,.78) 0%,
+    rgba(0,0,0,.32) 55%,
+    rgba(0,0,0,.06) 100%
+  );
+}
+.card-content {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 16px 18px;
+}
+.card-name {
+  font-size: .8125rem;
+  font-weight: 500;
+  letter-spacing: .025em;
+  color: rgba(255,255,255,.78);
+  margin-bottom: 4px;
+}
+
+/* ── Flip Clock on card ── */
+.flip-clock {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.flip-group {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.flip-unit-sep {
+  width: 6px;
+}
+.flip-digit-wrap {
+  position: relative;
+  width: 28px; height: 36px;
+  perspective: 80px;
+}
+.flip-digit-wrap.wide { width: 38px; }
+.flip-face {
+  position: absolute; inset: 0;
+  border-radius: 5px;
+  background: var(--flip-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--flip-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+.flip-face::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%; height: 1px;
+  background: var(--flip-split);
+  opacity: .6;
+}
+.flip-face-top    { clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); }
+.flip-face-bottom { clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); }
+.flip-face-front  { z-index: 2; }
+.flip-face-back   { z-index: 1; transform: rotateX(180deg); }
+
+/* Flip animation */
+.flip-digit-wrap.flipping .flip-face-front {
+  animation: flip-top var(--flip-dur, 350ms) ease-in forwards;
+}
+.flip-digit-wrap.flipping .flip-face-back {
+  animation: flip-bot var(--flip-dur, 350ms) ease-out forwards;
+}
+@keyframes flip-top {
+  0%   { transform: rotateX(0deg);    }
+  100% { transform: rotateX(-90deg);  }
+}
+@keyframes flip-bot {
+  0%   { transform: rotateX(180deg);  }
+  100% { transform: rotateX(90deg);   }
+}
+
+.flip-label {
+  font-size: .52rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  margin-top: 3px;
+  text-align: center;
+}
+.flip-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.flip-digits-row {
+  display: flex;
+  gap: 1px;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 72px 24px 32px;
+  color: var(--md-sys-color-on-surface-variant);
+  text-align: center;
+}
+.empty-icon-circle {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--md-sys-color-secondary-container);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px;
+}
+.empty-icon-circle svg {
+  width: 36px; height: 36px;
+  stroke: var(--md-sys-color-secondary);
+}
+.empty-headline {
+  font-size: 1rem; font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 6px;
+}
+.empty-body { font-size: .875rem; line-height: 1.6; }
+
+/* ── FAB ── */
+.fab {
+  position: fixed;
+  bottom: 24px; right: 20px;
+  z-index: 200;
+  height: 56px;
+  padding: 0 20px 0 16px;
+  border-radius: var(--md-shape-large);
+  border: none;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-family: var(--font);
+  font-size: .875rem;
+  font-weight: 700;
+  letter-spacing: .006em;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+  box-shadow: var(--md-elevation-3);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition: transform var(--transition-standard),
+              box-shadow var(--transition-standard),
+              background var(--transition-standard);
+  animation: fab-enter 500ms var(--transition-enter) both;
+}
+@keyframes fab-enter {
+  from { transform: scale(0) rotate(-45deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+.fab:active { transform: scale(.93); box-shadow: var(--md-elevation-1); }
+.fab svg { width: 20px; height: 20px; transition: transform 300ms; }
+.fab:active svg { transform: rotate(90deg); }
+
+/* ── Backdrop ── */
+.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.54);
+  z-index: 300;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--transition-standard);
+}
+.backdrop.open { opacity: 1; pointer-events: all; }
+
+/* ── Bottom Sheet ── */
+.sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 400;
+  max-height: 93dvh;
+  overflow-y: auto;
+  border-radius: var(--md-shape-xl) var(--md-shape-xl) 0 0;
+  background: var(--md-sys-color-surface);
+  box-shadow: var(--md-elevation-3);
+  transform: translateY(100%);
+  transition: transform var(--transition-enter);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.sheet.open { transform: translateY(0); }
+
+.sheet-handle {
+  width: 32px; height: 4px;
+  border-radius: 2px;
+  background: var(--md-sys-color-outline-variant);
+  margin: 12px auto 0;
+}
+
+/* ── Detail Sheet ── */
+.detail-hero {
+  position: relative;
+  height: 240px;
+  background: var(--md-sys-color-surface-variant);
+}
+.detail-hero-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+}
+.detail-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.76) 0%, transparent 60%);
+}
+.detail-hero-text {
+  position: absolute; bottom: 0; padding: 20px;
+}
+.detail-hero-title {
+  font-size: 1.25rem; font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,.4);
+}
+.detail-close-btn {
+  position: absolute; top: 12px; left: 12px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.38);
+  backdrop-filter: blur(8px);
+  border: none; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.detail-close-btn svg { width: 20px; height: 20px; }
+
+/* Large flip clock for detail */
+.detail-flip-clock {
+  padding: 24px 20px 8px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detail-flip-digit-wrap {
+  position: relative;
+  width: 44px; height: 58px;
+  perspective: 120px;
+}
+.detail-flip-digit-wrap.wide { width: 56px; }
+.detail-flip-face {
+  position: absolute; inset: 0;
+  border-radius: 8px;
+  background: var(--flip-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--flip-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.03em;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+.detail-flip-face::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%; height: 1.5px;
+  background: var(--flip-split);
+  opacity: .7;
+}
+.detail-flip-face.flip-face-top    { clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); }
+.detail-flip-face.flip-face-bottom { clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); }
+.detail-flip-face.flip-face-front  { z-index: 2; }
+.detail-flip-face.flip-face-back   { z-index: 1; transform: rotateX(180deg); }
+
+.detail-flip-digit-wrap.flipping .detail-flip-face.flip-face-front {
+  animation: flip-top 350ms ease-in forwards;
+}
+.detail-flip-digit-wrap.flipping .detail-flip-face.flip-face-back {
+  animation: flip-bot 350ms ease-out forwards;
+}
+
+.detail-flip-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.detail-flip-digits-row { display: flex; gap: 2px; }
+.detail-flip-label {
+  font-size: .6rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.detail-flip-sep {
+  display: flex; align-items: center; padding-bottom: 20px;
+  color: var(--md-sys-color-outline);
+  font-size: 1.5rem; font-weight: 700;
+}
+
+.detail-body { padding: 8px 20px 32px; }
+
+.detail-section-label {
+  font-size: .6875rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--md-sys-color-primary);
+  padding: 16px 0 8px;
+}
+.detail-card {
+  background: var(--md-sys-color-surface-variant);
+  border-radius: var(--md-shape-medium);
+  overflow: hidden;
+}
+.detail-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--md-sys-color-outline-variant) 40%, transparent);
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row-icon { color: var(--md-sys-color-on-surface-variant); margin-top: 1px; }
+.detail-row-icon svg { width: 20px; height: 20px; }
+.detail-row-body { flex: 1; }
+.detail-row-label {
+  font-size: .6875rem; color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 2px; font-weight: 500;
+}
+.detail-row-value { font-size: .9375rem; line-height: 1.5; }
+
+.detail-actions {
+  display: flex; gap: 10px; margin-top: 20px;
+}
+.m3-btn {
+  flex: 1; height: 44px;
+  border-radius: var(--md-shape-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--font); font-size: .875rem; font-weight: 700;
+  letter-spacing: .006em;
+  cursor: pointer; overflow: hidden; position: relative;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-standard);
+}
+.m3-btn:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent); }
+.m3-btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
+.m3-btn.filled {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: transparent;
+}
+
+/* ── Edit Sheet ── */
+.edit-sheet-inner {
+  padding: 4px 20px 40px;
+}
+.edit-headline {
+  font-size: 1.125rem; font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  padding: 16px 0 20px;
+}
+
+/* M3 Text field */
+.m3-field {
+  position: relative;
+  margin-bottom: 18px;
+}
+.m3-field-label {
+  position: absolute;
+  top: 14px; left: 14px;
+  font-size: .875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  pointer-events: none;
+  transition: all 200ms cubic-bezier(.4,0,.2,1);
+  background: var(--md-sys-color-surface);
+  padding: 0 2px;
+}
+.m3-input {
+  width: 100%;
+  border: 1.5px solid var(--md-sys-color-outline);
+  border-radius: var(--md-shape-small);
+  padding: 20px 14px 8px;
+  font-size: .9375rem;
+  font-family: var(--font);
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  outline: none;
+  -webkit-appearance: none;
+  transition: border-color 200ms;
+}
+.m3-input:focus { border-color: var(--md-sys-color-primary); border-width: 2px; }
+.m3-input:focus + .m3-field-label,
+.m3-input:not(:placeholder-shown) + .m3-field-label,
+.m3-input[value]:not([value=""]) + .m3-field-label {
+  top: -8px; font-size: .6875rem; font-weight: 600;
+  color: var(--md-sys-color-primary);
+}
+textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
+
+.m3-input[type=date]::-webkit-calendar-picker-indicator { opacity: .5; }
+
+/* Unit chips */
+.unit-wrap {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 18px;
+}
+.unit-chip {
+  height: 36px; padding: 0 16px;
+  border-radius: 18px;
+  border: 1.5px solid var(--md-sys-color-outline-variant);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--font); font-size: .8125rem; font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden; position: relative;
+  transition: background var(--transition-standard),
+              border-color var(--transition-standard),
+              color var(--transition-standard);
+  display: flex; align-items: center; gap: 6px;
+}
+.unit-chip.selected {
+  background: var(--md-sys-color-secondary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary-container);
+}
+.chip-check { display: none; width: 16px; height: 16px; }
+.unit-chip.selected .chip-check { display: block; }
+
+/* Image input */
+.img-input-wrap {
+  display: flex; gap: 8px; align-items: stretch;
+  margin-bottom: 18px;
+}
+.img-url-input { flex: 1; }
+.img-or-divider {
+  display: flex; align-items: center;
+  font-size: .75rem; font-weight: 700;
+  letter-spacing: .06em; color: var(--md-sys-color-outline);
+}
+.img-file-btn {
+  height: 100%; padding: 0 18px;
+  border-radius: var(--md-shape-small);
+  border: 1.5px solid var(--md-sys-color-outline);
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  font-family: var(--font); font-size: .875rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition-standard);
+}
+.img-file-btn:hover { background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent); }
+.img-preview-wrap {
+  margin-bottom: 18px;
+  border-radius: var(--md-shape-medium);
+  overflow: hidden;
+  height: 120px;
+  display: none;
+}
+.img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.img-clear-btn {
+  display: none;
+  font-size: .75rem; color: var(--md-sys-color-error);
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font); font-weight: 600; padding: 0;
+  margin-top: -12px; margin-bottom: 14px;
+}
+
+.form-actions { display: flex; gap: 10px; margin-top: 8px; }
+
+/* ── Menu ── */
+.menu-popup {
+  position: fixed;
+  top: 64px; right: 12px;
+  z-index: 500;
+  background: var(--md-sys-color-surface);
+  border-radius: var(--md-shape-medium);
+  box-shadow: var(--md-elevation-3);
+  min-width: 196px;
+  overflow: hidden;
+  transform-origin: top right;
+  transform: scale(.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--transition-enter), opacity var(--transition-enter);
+}
+.menu-popup.open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: all;
+}
+.menu-popup-item {
+  padding: 14px 18px;
+  font-size: .9rem; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; gap: 12px;
+  color: var(--md-sys-color-on-surface);
+  transition: background var(--transition-standard);
+  -webkit-tap-highlight-color: transparent;
+  position: relative; overflow: hidden;
+}
+.menu-popup-item:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
+.menu-popup-item svg { width: 20px; height: 20px; stroke: var(--md-sys-color-on-surface-variant); }
+.menu-popup-item.danger { color: var(--md-sys-color-error); }
+.menu-popup-item.danger svg { stroke: var(--md-sys-color-error); }
+
+/* ── Snackbar ── */
+.snackbar {
+  position: fixed;
+  bottom: 88px; left: 50%; transform: translateX(-50%) translateY(16px);
+  background: #323232;
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 8px;
+  font-size: .875rem; font-weight: 500;
+  opacity: 0; pointer-events: none;
+  white-space: nowrap;
+  z-index: 600;
+  box-shadow: var(--md-elevation-3);
+  transition: opacity .22s, transform .22s;
+}
+.snackbar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 2px; }
+
+#file-input, #img-file-input { display: none; }
+</style>
+</head>
+<body>
+
+<!-- App Bar -->
+<header class="app-bar">
+  <span class="app-bar-title">Tageszähler</span>
+  <div class="app-bar-actions">
+    <button class="icon-btn ripple-host" id="menu-btn" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Menu -->
+<div class="menu-popup" id="menu-popup">
+  <div class="menu-popup-item ripple-host" id="import-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Importieren
+  </div>
+  <div class="menu-popup-item ripple-host" id="export-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Exportieren
+  </div>
+  <div class="menu-popup-item danger ripple-host" id="clear-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+    Alle löschen
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar">
+  <div class="tab-item active ripple-host" data-tab="0">Zukünftige Ereignisse</div>
+  <div class="tab-item ripple-host" data-tab="1">Vergangene Ereignisse</div>
+  <div class="tab-indicator" id="tab-indicator"></div>
+</div>
+
+<!-- Content -->
+<div class="tab-content active" id="tab-0">
+  <div class="event-list" id="future-list"></div>
+</div>
+<div class="tab-content" id="tab-1">
+  <div class="event-list" id="past-list"></div>
+</div>
+
+<!-- FAB -->
+<button class="fab ripple-host" id="add-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  Schaffen
+</button>
+
+<!-- Backdrop -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Detail Sheet -->
+<div class="sheet" id="detail-sheet">
+  <div class="sheet-handle"></div>
+  <div class="detail-hero" id="detail-hero">
+    <div class="detail-hero-bg" id="detail-hero-bg"></div>
+    <div class="detail-scrim"></div>
+    <button class="detail-close-btn" id="detail-close-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <div class="detail-hero-text">
+      <div class="detail-hero-title" id="detail-name"></div>
+    </div>
+  </div>
+  <div class="detail-flip-clock" id="detail-flip-clock"></div>
+  <div class="detail-body">
+    <div class="detail-section-label">Über</div>
+    <div class="detail-card">
+      <div class="detail-row">
+        <div class="detail-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="detail-row-body">
+          <div class="detail-row-label">Datum</div>
+          <div class="detail-row-value" id="detail-date"></div>
+        </div>
+      </div>
+      <div class="detail-row" id="detail-desc-row" style="display:none">
+        <div class="detail-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="detail-row-body">
+          <div class="detail-row-label">Beschreibung</div>
+          <div class="detail-row-value" id="detail-desc"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button class="m3-btn ripple-host" id="detail-edit-btn">Bearbeiten</button>
+      <button class="m3-btn danger ripple-host" id="detail-delete-btn">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Sheet -->
+<div class="sheet" id="edit-sheet">
+  <div class="sheet-handle"></div>
+  <div class="edit-sheet-inner">
+    <div class="edit-headline" id="edit-headline">Neues Ereignis</div>
+
+    <div class="m3-field">
+      <input class="m3-input" type="text" id="f-name" placeholder=" ">
+      <label class="m3-field-label">Name</label>
+    </div>
+
+    <div class="m3-field">
+      <input class="m3-input" type="date" id="f-date" placeholder=" ">
+      <label class="m3-field-label">Datum</label>
+    </div>
+
+    <div class="m3-field">
+      <textarea class="m3-input" id="f-desc" placeholder=" "></textarea>
+      <label class="m3-field-label">Beschreibung (optional)</label>
+    </div>
+
+    <div class="detail-section-label" style="margin-bottom:10px">Zeiteinheiten</div>
+    <div class="unit-wrap" id="unit-wrap">
+      <button class="unit-chip selected ripple-host" data-unit="years">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Jahre
+      </button>
+      <button class="unit-chip selected ripple-host" data-unit="months">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Monate
+      </button>
+      <button class="unit-chip selected ripple-host" data-unit="weeks">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Wochen
+      </button>
+      <button class="unit-chip selected ripple-host" data-unit="days">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Tage
+      </button>
+      <button class="unit-chip ripple-host" data-unit="hours">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Stunden
+      </button>
+      <button class="unit-chip ripple-host" data-unit="minutes">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Minuten
+      </button>
+      <button class="unit-chip ripple-host" data-unit="seconds">
+        <svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Sekunden
+      </button>
+    </div>
+
+    <div class="detail-section-label" style="margin-bottom:10px">Hintergrundbild</div>
+    <div class="img-input-wrap">
+      <div class="m3-field img-url-input" style="margin-bottom:0">
+        <input class="m3-input" type="url" id="f-img-url" placeholder=" ">
+        <label class="m3-field-label">Bild-URL</label>
+      </div>
+      <div class="img-or-divider">oder</div>
+      <button class="img-file-btn ripple-host" id="img-file-btn">Datei</button>
+    </div>
+    <div class="img-preview-wrap" id="img-preview-wrap">
+      <img id="img-preview" src="" alt="Vorschau">
+    </div>
+    <button class="img-clear-btn" id="img-clear-btn">Bild entfernen</button>
+
+    <div class="form-actions">
+      <button class="m3-btn ripple-host" id="edit-cancel-btn">Abbrechen</button>
+      <button class="m3-btn filled ripple-host" id="edit-save-btn">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="snackbar" id="snackbar"></div>
+<input type="file" id="file-input" accept=".json">
+<input type="file" id="img-file-input" accept="image/*">
+
+<script>
+// ───────────────────────────────────────────────
+// State
+// ───────────────────────────────────────────────
+let events = [];
+let editingId = null;
+let detailId = null;
+let activeTabIdx = 0;
+let editImgData = null;   // base64 (from file pick)
+let editImgUrl  = null;   // URL string
+let detailInterval = null;
+
+// ───────────────────────────────────────────────
+// Persistence
+// ───────────────────────────────────────────────
+function save() {
+  try { localStorage.setItem('tz_v2', JSON.stringify(events)); } catch(e) {}
+}
+function load() {
+  try { const r = localStorage.getItem('tz_v2'); if (r) events = JSON.parse(r); } catch(e) {}
+}
+
+// ───────────────────────────────────────────────
+// Ripple
+// ───────────────────────────────────────────────
+document.addEventListener('pointerdown', e => {
+  const host = e.target.closest('.ripple-host');
+  if (!host) return;
+  const rect = host.getBoundingClientRect();
+  const wave = document.createElement('span');
+  wave.className = 'ripple-wave';
+  const size = Math.max(rect.width, rect.height) * 2;
+  wave.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  host.appendChild(wave);
+  wave.addEventListener('animationend', () => wave.remove());
+});
+
+// ───────────────────────────────────────────────
+// Time helpers
+// ───────────────────────────────────────────────
+function calcParts(dateStr) {
+  const now = new Date();
+  const target = new Date(dateStr + 'T00:00:00');
+  let a = target < now ? new Date(target) : new Date(now);
+  let b = target < now ? new Date(now) : new Date(target);
+
+  let years = b.getFullYear() - a.getFullYear();
+  let months = b.getMonth() - a.getMonth();
+  if (months < 0) { years--; months += 12; }
+  let adv = new Date(a);
+  adv.setFullYear(adv.getFullYear() + years);
+  adv.setMonth(adv.getMonth() + months);
+  let remMs = b - adv;
+  let weeks = Math.floor(remMs / 604800000);
+  remMs -= weeks * 604800000;
+  let days = Math.floor(remMs / 86400000);
+  remMs -= days * 86400000;
+  let hours = Math.floor(remMs / 3600000);
+  remMs -= hours * 3600000;
+  let minutes = Math.floor(remMs / 60000);
+  remMs -= minutes * 60000;
+  let seconds = Math.floor(remMs / 1000);
+
+  return { years, months, weeks, days, hours, minutes, seconds };
+}
+
+function isFuture(dateStr) {
+  const n = new Date(); n.setHours(0,0,0,0);
+  return new Date(dateStr + 'T00:00:00') >= n;
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('de-DE', { day:'numeric', month:'long', year:'numeric' });
+}
+
+const unitMeta = [
+  { key: 'years',   label: 'Jahre',   digits: 2 },
+  { key: 'months',  label: 'Monate',  digits: 2 },
+  { key: 'weeks',   label: 'Wochen',  digits: 2 },
+  { key: 'days',    label: 'Tage',    digits: 3 },
+  { key: 'hours',   label: 'Stunden', digits: 2 },
+  { key: 'minutes', label: 'Minuten', digits: 2 },
+  { key: 'seconds', label: 'Sekunden',digits: 2 },
+];
+
+// ───────────────────────────────────────────────
+// Flip Clock  (compact = card, large = detail)
+// ───────────────────────────────────────────────
+function buildFlipClock(container, units, large) {
+  container.innerHTML = '';
+  const prefix = large ? 'detail-flip-' : 'flip-';
+  const wrapClass = large ? 'detail-flip-digit-wrap' : 'flip-digit-wrap';
+  const faceClass = large ? 'detail-flip-face' : 'flip-face';
+  const colClass  = large ? 'detail-flip-col'  : 'flip-col';
+  const rowClass  = large ? 'detail-flip-digits-row' : 'flip-digits-row';
+  const lblClass  = large ? 'detail-flip-label' : 'flip-label';
+
+  const active = unitMeta.filter(m => units.includes(m.key));
+
+  active.forEach((meta, i) => {
+    if (i > 0 && large) {
+      const sep = document.createElement('div');
+      sep.className = 'detail-flip-sep';
+      sep.textContent = ':';
+      container.appendChild(sep);
+    }
+
+    const col = document.createElement('div');
+    col.className = colClass;
+
+    const row = document.createElement('div');
+    row.className = rowClass;
+
+    const numDigits = meta.digits;
+    for (let d = 0; d < numDigits; d++) {
+      const wrap = document.createElement('div');
+      wrap.className = wrapClass + (numDigits > 2 ? ' wide' : '');
+      wrap.dataset.unit = meta.key;
+      wrap.dataset.digit = d;
+      wrap.dataset.val = '0';
+
+      const front = document.createElement('div');
+      front.className = `${faceClass} flip-face-top flip-face-front`;
+      front.textContent = '0';
+
+      const back = document.createElement('div');
+      back.className = `${faceClass} flip-face-top flip-face-back`;
+      back.textContent = '0';
+
+      const frontB = document.createElement('div');
+      frontB.className = `${faceClass} flip-face-bottom flip-face-front`;
+      frontB.textContent = '0';
+
+      const backB = document.createElement('div');
+      backB.className = `${faceClass} flip-face-bottom flip-face-back`;
+      backB.textContent = '0';
+
+      wrap.appendChild(front);
+      wrap.appendChild(back);
+      wrap.appendChild(frontB);
+      wrap.appendChild(backB);
+      row.appendChild(wrap);
+    }
+
+    const lbl = document.createElement('div');
+    lbl.className = lblClass;
+    lbl.textContent = meta.label;
+
+    col.appendChild(row);
+    col.appendChild(lbl);
+    container.appendChild(col);
+
+    if (!large && i < active.length - 1) {
+      const sp = document.createElement('div');
+      sp.className = 'flip-unit-sep';
+      container.appendChild(sp);
+    }
+  });
+}
+
+function getDigits(val, numDigits) {
+  const s = String(Math.floor(val)).padStart(numDigits, '0');
+  return s.slice(-numDigits).split('');
+}
+
+function updateFlipClock(container, parts, units, large) {
+  const wrapClass = large ? 'detail-flip-digit-wrap' : 'flip-digit-wrap';
+  const faceClass = large ? 'detail-flip-face' : 'flip-face';
+  const numDigitsMap = { years:2, months:2, weeks:2, days:3, hours:2, minutes:2, seconds:2 };
+
+  units.forEach(unit => {
+    const val = parts[unit];
+    const digits = getDigits(val, numDigitsMap[unit] || 2);
+    const wraps = container.querySelectorAll(`.${wrapClass}[data-unit="${unit}"]`);
+    wraps.forEach((wrap, d) => {
+      const newVal = digits[d] || '0';
+      if (wrap.dataset.val === newVal) return;
+      const oldVal = wrap.dataset.val;
+      wrap.dataset.val = newVal;
+
+      // Animate flip
+      const faces = wrap.querySelectorAll(`.${faceClass}`);
+      // faces[0]=top-front, [1]=top-back, [2]=bot-front, [3]=bot-back
+      if (faces[1]) faces[1].textContent = newVal;
+      if (faces[3]) faces[3].textContent = newVal;
+
+      wrap.classList.remove('flipping');
+      void wrap.offsetWidth; // reflow
+      wrap.classList.add('flipping');
+      wrap.addEventListener('animationend', () => {
+        wrap.classList.remove('flipping');
+        if (faces[0]) faces[0].textContent = newVal;
+        if (faces[2]) faces[2].textContent = newVal;
+      }, { once: true });
+    });
+  });
+}
+
+// ───────────────────────────────────────────────
+// Render
+// ───────────────────────────────────────────────
+function render() {
+  const future = events.filter(e => isFuture(e.date)).sort((a,b) => new Date(a.date)-new Date(b.date));
+  const past   = events.filter(e => !isFuture(e.date)).sort((a,b) => new Date(b.date)-new Date(a.date));
+
+  renderList('future-list', future, true);
+  renderList('past-list', past, false);
+}
+
+function renderList(containerId, list, isFutureTab) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  if (!list.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `
+      <div class="empty-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          ${isFutureTab
+            ? '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'
+            : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+        </svg>
+      </div>
+      <div class="empty-headline">${isFutureTab ? 'Keine zukünftigen Ereignisse' : 'Keine vergangenen Ereignisse'}</div>
+      <div class="empty-body">${isFutureTab ? 'Tippe auf „Schaffen", um ein Ereignis anzulegen.' : 'Vergangene Ereignisse erscheinen hier automatisch.'}</div>`;
+    container.appendChild(empty);
+    return;
+  }
+
+  list.forEach(ev => {
+    const card = document.createElement('div');
+    card.className = 'event-card ripple-host';
+    card.dataset.id = ev.id;
+
+    const bg = document.createElement('div');
+    bg.className = 'card-bg';
+    const imgSrc = ev.imageDataUrl || ev.imageUrl || '';
+    if (imgSrc) bg.style.backgroundImage = `url(${CSS.escape ? imgSrc : imgSrc})`;
+
+    const scrim = document.createElement('div');
+    scrim.className = 'card-scrim';
+
+    const content = document.createElement('div');
+    content.className = 'card-content';
+
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = ev.name;
+
+    const clock = document.createElement('div');
+    clock.className = 'flip-clock';
+    clock.dataset.evid = ev.id;
+
+    content.appendChild(name);
+    content.appendChild(clock);
+    card.appendChild(bg);
+    card.appendChild(scrim);
+    card.appendChild(content);
+
+    card.addEventListener('click', () => openDetail(ev.id));
+    container.appendChild(card);
+
+    const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
+    buildFlipClock(clock, units, false);
+    const parts = calcParts(ev.date);
+    updateFlipClock(clock, parts, units, false);
+  });
+}
+
+// ───────────────────────────────────────────────
+// Tick
+// ───────────────────────────────────────────────
+setInterval(() => {
+  events.forEach(ev => {
+    const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
+    const parts = calcParts(ev.date);
+    const clock = document.querySelector(`.flip-clock[data-evid="${ev.id}"]`);
+    if (clock) updateFlipClock(clock, parts, units, false);
+  });
+
+  if (detailId) {
+    const ev = events.find(e => e.id === detailId);
+    if (ev) {
+      const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
+      const parts = calcParts(ev.date);
+      const dc = document.getElementById('detail-flip-clock');
+      if (dc) updateFlipClock(dc, parts, units, true);
+    }
+  }
+}, 1000);
+
+// ───────────────────────────────────────────────
+// Detail Sheet
+// ───────────────────────────────────────────────
+function openDetail(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  detailId = id;
+
+  const bg = document.getElementById('detail-hero-bg');
+  const imgSrc = ev.imageDataUrl || ev.imageUrl || '';
+  bg.style.backgroundImage = imgSrc ? `url(${imgSrc})` : 'none';
+  if (!imgSrc) bg.style.background = 'linear-gradient(135deg, var(--md-sys-color-surface-variant), var(--md-sys-color-secondary-container))';
+
+  document.getElementById('detail-name').textContent = ev.name;
+  document.getElementById('detail-date').textContent = formatDate(ev.date);
+
+  const descRow = document.getElementById('detail-desc-row');
+  if (ev.description) {
+    descRow.style.display = '';
+    document.getElementById('detail-desc').textContent = ev.description;
+  } else {
+    descRow.style.display = 'none';
+  }
+
+  const dc = document.getElementById('detail-flip-clock');
+  const units = ev.units && ev.units.length ? ev.units : ['years','months','weeks','days'];
+  buildFlipClock(dc, units, true);
+  const parts = calcParts(ev.date);
+  updateFlipClock(dc, parts, units, true);
+
+  openSheet('detail-sheet');
+}
+
+function closeDetail() {
+  detailId = null;
+  closeSheet('detail-sheet');
+}
+
+// ───────────────────────────────────────────────
+// Edit Sheet
+// ───────────────────────────────────────────────
+function openAdd() {
+  editingId = null;
+  editImgData = null;
+  editImgUrl = null;
+  document.getElementById('edit-headline').textContent = 'Neues Ereignis';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-date').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-img-url').value = '';
+  setUnits(['years','months','weeks','days']);
+  clearImgPreview();
+  openSheet('edit-sheet');
+}
+
+function openEdit(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  editingId = id;
+  editImgData = ev.imageDataUrl || null;
+  editImgUrl  = ev.imageUrl || null;
+  document.getElementById('edit-headline').textContent = 'Ereignis bearbeiten';
+  document.getElementById('f-name').value = ev.name;
+  document.getElementById('f-date').value = ev.date;
+  document.getElementById('f-desc').value = ev.description || '';
+  document.getElementById('f-img-url').value = ev.imageUrl || '';
+  setUnits(ev.units && ev.units.length ? ev.units : ['years','months','weeks','days']);
+  const src = ev.imageDataUrl || ev.imageUrl || '';
+  if (src) { showImgPreview(src); } else { clearImgPreview(); }
+  closeDetail();
+  openSheet('edit-sheet');
+}
+
+function saveEvent() {
+  const name = document.getElementById('f-name').value.trim();
+  const date = document.getElementById('f-date').value;
+  if (!name || !date) { snack('Name und Datum sind erforderlich.'); return; }
+
+  const units = getUnits();
+  const desc  = document.getElementById('f-desc').value.trim();
+  // URL field may have been updated
+  const urlField = document.getElementById('f-img-url').value.trim();
+  if (urlField) editImgUrl = urlField;
+
+  const payload = {
+    id: editingId || Date.now().toString(),
+    name, date, units,
+    description: desc,
+    imageDataUrl: editImgData || null,
+    imageUrl: editImgUrl || null,
+  };
+
+  if (editingId) {
+    const idx = events.findIndex(e => e.id === editingId);
+    if (idx > -1) events[idx] = payload;
+  } else {
+    events.push(payload);
+  }
+
+  save(); render();
+  closeSheet('edit-sheet');
+  snack(editingId ? 'Gespeichert.' : 'Ereignis angelegt.');
+}
+
+function deleteEvent(id) {
+  if (!confirm('Dieses Ereignis wirklich löschen?')) return;
+  events = events.filter(e => e.id !== id);
+  save(); render(); closeDetail();
+  snack('Gelöscht.');
+}
+
+// ───────────────────────────────────────────────
+// Unit chips
+// ───────────────────────────────────────────────
+function setUnits(units) {
+  document.querySelectorAll('.unit-chip').forEach(chip => {
+    const sel = units.includes(chip.dataset.unit);
+    chip.classList.toggle('selected', sel);
+  });
+}
+function getUnits() {
+  const u = [];
+  document.querySelectorAll('.unit-chip.selected').forEach(chip => u.push(chip.dataset.unit));
+  return u.length ? u : ['days'];
+}
+document.querySelectorAll('.unit-chip').forEach(chip => {
+  chip.addEventListener('click', () => chip.classList.toggle('selected'));
+});
+
+// ───────────────────────────────────────────────
+// Image
+// ───────────────────────────────────────────────
+function showImgPreview(src) {
+  document.getElementById('img-preview').src = src;
+  document.getElementById('img-preview-wrap').style.display = 'block';
+  document.getElementById('img-clear-btn').style.display = 'block';
+}
+function clearImgPreview() {
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-clear-btn').style.display = 'none';
+  editImgData = null; editImgUrl = null;
+}
+
+document.getElementById('img-file-btn').addEventListener('click', () => {
+  document.getElementById('img-file-input').click();
+});
+document.getElementById('img-file-input').addEventListener('change', function() {
+  const f = this.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    editImgData = e.target.result;
+    editImgUrl = null;
+    document.getElementById('f-img-url').value = '';
+    showImgPreview(editImgData);
+  };
+  reader.readAsDataURL(f);
+  this.value = '';
+});
+document.getElementById('f-img-url').addEventListener('input', function() {
+  if (this.value.trim()) {
+    editImgUrl = this.value.trim();
+    editImgData = null;
+    showImgPreview(this.value.trim());
+  } else {
+    clearImgPreview();
+  }
+});
+document.getElementById('img-clear-btn').addEventListener('click', () => {
+  document.getElementById('f-img-url').value = '';
+  clearImgPreview();
+});
+
+// ───────────────────────────────────────────────
+// Sheet open/close
+// ───────────────────────────────────────────────
+let openSheets = [];
+function openSheet(id) {
+  const sheet = document.getElementById(id);
+  sheet.classList.add('open');
+  document.getElementById('backdrop').classList.add('open');
+  if (!openSheets.includes(id)) openSheets.push(id);
+}
+function closeSheet(id) {
+  document.getElementById(id).classList.remove('open');
+  openSheets = openSheets.filter(s => s !== id);
+  if (!openSheets.length) document.getElementById('backdrop').classList.remove('open');
+}
+
+document.getElementById('backdrop').addEventListener('click', () => {
+  const top = openSheets[openSheets.length - 1];
+  if (top) closeSheet(top);
+});
+document.getElementById('detail-close-btn').addEventListener('click', closeDetail);
+document.getElementById('detail-edit-btn').addEventListener('click', () => openEdit(detailId));
+document.getElementById('detail-delete-btn').addEventListener('click', () => deleteEvent(detailId));
+document.getElementById('edit-cancel-btn').addEventListener('click', () => closeSheet('edit-sheet'));
+document.getElementById('edit-save-btn').addEventListener('click', saveEvent);
+document.getElementById('add-btn').addEventListener('click', openAdd);
+
+// ───────────────────────────────────────────────
+// Tabs
+// ───────────────────────────────────────────────
+function updateTabIndicator() {
+  const tabs = document.querySelectorAll('.tab-item');
+  const active = tabs[activeTabIdx];
+  const bar = document.querySelector('.tab-bar');
+  const barRect = bar.getBoundingClientRect();
+  const tabRect = active.getBoundingClientRect();
+  const ind = document.getElementById('tab-indicator');
+  ind.style.left  = (tabRect.left - barRect.left) + 'px';
+  ind.style.width = tabRect.width + 'px';
+}
+document.querySelectorAll('.tab-item').forEach((tab, i) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + i).classList.add('active');
+    activeTabIdx = i;
+    updateTabIndicator();
+  });
+});
+window.addEventListener('resize', updateTabIndicator);
+setTimeout(updateTabIndicator, 0);
+
+// ───────────────────────────────────────────────
+// Menu
+// ───────────────────────────────────────────────
+document.getElementById('menu-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('menu-popup').classList.toggle('open');
+});
+document.addEventListener('click', () => document.getElementById('menu-popup').classList.remove('open'));
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  document.getElementById('menu-popup').classList.remove('open');
+  const data = events.map(({ imageDataUrl, ...rest }) => rest);
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'tageszaehler.json'; a.click(); URL.revokeObjectURL(a.href);
+  snack('Exportiert.');
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('menu-popup').classList.remove('open');
+  document.getElementById('file-input').click();
+});
+
+document.getElementById('file-input').addEventListener('change', function() {
+  const f = this.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error();
+      const keep = confirm('Vorhandene Ereignisse behalten und importierte hinzufügen?\n(Abbrechen = alles ersetzen)');
+      if (!keep) { events = imported; }
+      else {
+        const ids = new Set(events.map(e => e.id));
+        imported.forEach(ev => { if (!ids.has(ev.id)) events.push(ev); else { const i = events.findIndex(x => x.id === ev.id); if (i>-1) events[i]=ev; } });
+      }
+      save(); render(); snack(`${imported.length} Ereignis(se) importiert.`);
+    } catch { snack('Fehler beim Importieren.'); }
+  };
+  reader.readAsText(f); this.value = '';
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  document.getElementById('menu-popup').classList.remove('open');
+  if (!confirm('Wirklich alle Ereignisse löschen?')) return;
+  events = []; save(); render(); snack('Alle Ereignisse gelöscht.');
+});
+
+// ───────────────────────────────────────────────
+// Snackbar
+// ───────────────────────────────────────────────
+let snackTimer;
+function snack(msg) {
+  const el = document.getElementById('snackbar');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ───────────────────────────────────────────────
+// Init
+// ───────────────────────────────────────────────
+load(); render();
+</script>
+</body>
+</html>
