@@ -661,10 +661,30 @@ function renderEvents() {
   pastList.innerHTML = '';
   const now = new Date().getTime();
 
+  let futureEvents = [];
+  let pastEvents = [];
+
+  // 1. Ereignisse in Arrays aufteilen
+  events.forEach(ev => {
+    const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
+    if (target <= now) {
+      pastEvents.push({ ...ev, targetTime: target });
+    } else {
+      futureEvents.push({ ...ev, targetTime: target });
+    }
+  });
+
+  // 2. Sortieren (Zukunft: Aufsteigend, Vergangenheit: Absteigend)
+  futureEvents.sort((a, b) => a.targetTime - b.targetTime);
+  pastEvents.sort((a, b) => b.targetTime - a.targetTime);
+
+  // 3. Zusammenführen für die Darstellungsschleife
+  const sortedEvents = [...futureEvents, ...pastEvents];
+
   let futureCount = 0; let pastCount = 0;
 
-  events.forEach((ev, i) => {
-    const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
+  sortedEvents.forEach((ev, i) => {
+    const target = ev.targetTime;
     const isPast = target <= now;
     const el = document.createElement('div');
     el.className = 'event-card stagger-enter';
