@@ -3,16 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tageszähler</title>
+<title>Tageszähler & Rechner</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏲️</text></svg>">
 <style>
 /* ── Dynamische Farbschemata ── */
 :root {
-  /* Basis-Farben (Default: Lila) */
   --hue-primary: 257;
   --hue-sat: 35%;
 
-  /* System Light */
   --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 48%);
   --md-sys-color-on-primary:         #FFFFFF;
   --md-sys-color-primary-container:  hsl(var(--hue-primary), var(--hue-sat), 90%);
@@ -44,7 +42,6 @@
   --te: 400ms cubic-bezier(0.05, 0.7, 0.1, 1);
 }
 
-/* System Dark */
 @media (prefers-color-scheme: dark) {
   html[data-theme="system"] {
     --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 80%);
@@ -65,7 +62,6 @@
   }
 }
 
-/* Force Dark */
 html[data-theme="dark"] {
   --md-sys-color-primary:            hsl(var(--hue-primary), var(--hue-sat), 80%);
   --md-sys-color-on-primary:         hsl(var(--hue-primary), var(--hue-sat), 20%);
@@ -84,7 +80,6 @@ html[data-theme="dark"] {
   --flip-bg: #2B2930;
 }
 
-/* Colors */
 html[data-color="purple"] { --hue-primary: 257; --hue-sat: 35%; }
 html[data-color="blue"]   { --hue-primary: 210; --hue-sat: 60%; }
 html[data-color="green"]  { --hue-primary: 150; --hue-sat: 50%; }
@@ -110,7 +105,6 @@ body {
 }
 @keyframes ripple { 0% { transform:scale(0); opacity:.22; } 100% { transform:scale(4); opacity:0; } }
 
-/* ── Unified Layout ── */
 .app-container { max-width: 1400px; margin: 0 auto; padding-bottom: 96px; }
 
 .app-bar {
@@ -120,7 +114,6 @@ body {
 }
 .app-bar-title { font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; }
 
-/* Optimierte Touch-Zielgröße für Icons (mind. 48x48px) */
 .icon-btn {
   width: 48px; height: 48px; border-radius: 50%; border: none; background: transparent;
   color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -131,7 +124,6 @@ body {
   display: flex; border-bottom: 1px solid var(--md-sys-color-outline-variant);
   padding: 0 20px; position: relative; margin-bottom: 16px;
 }
-/* Erhöhtes Padding für leichtere Bedienung per Touch */
 .tab-item {
   flex: 1; text-align: center; padding: 16px 4px;
   font-size: .875rem; font-weight: 600; color: var(--md-sys-color-on-surface-variant);
@@ -152,7 +144,6 @@ body {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px;
 }
 
-/* ── Staggered Animation ── */
 .stagger-enter {
   animation: slideUp 0.4s cubic-bezier(0.05, 0.7, 0.1, 1) both;
 }
@@ -171,8 +162,19 @@ body {
 }
 .event-card:active { transform: scale(.98); box-shadow: none; }
 
-/* Bild füllt die Karte vollständig aus */
-.card-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; transition: transform 400ms; pointer-events: none; }
+/* AKTUALISIERT: card-bg */
+.card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  transition: transform 400ms;
+  pointer-events: none;
+}
 .event-card:hover .card-bg { transform: scale(1.03); }
 .card-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.35) 60%, transparent 100%); pointer-events: none; }
 .card-content { position: relative; z-index: 1; display: flex; flex-direction: column; width: 100%; }
@@ -181,11 +183,9 @@ body {
 
 .card-progress-wrap { width: 100%; height: 4px; background: rgba(255,255,255,.18); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
 .card-progress-bar { height: 100%; border-radius: 2px; background: var(--md-sys-color-primary); transition: width 0.3s linear; min-width: 2px; }
-.card-progress-label { font-size: .65rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: rgba(255,255,255,.7); margin-bottom: 4px; }
 
 /* ── Flip Clock ── */
 .flip-clock { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
-.flip-clock:children:last-child { margin-bottom: 0; }
 .flip-col { display: flex; flex-direction: column; align-items: center; }
 .flip-digits-row { display: flex; gap: 1px; }
 .flip-digit-wrap { position: relative; width: 26px; height: 34px; perspective: 150px; }
@@ -202,8 +202,8 @@ body {
 .flip-face-front  { z-index: 2; }
 .flip-face-back   { z-index: 1; transform: rotateX(180deg); }
 
-.flip-digit-wrap.flipping .flip-face-front { animation: flip-top 340ms ease-in forwards; }
-.flip-digit-wrap.flipping .flip-face-back  { animation: flip-bot 340ms ease-out forwards; }
+.flip-digit-wrap.flipping .face-top-front { animation: flip-top 340ms ease-in forwards; }
+.flip-digit-wrap.flipping .face-bot-back  { animation: flip-bot 340ms ease-out forwards; }
 @keyframes flip-top { 0%{transform:rotateX(0deg)} 100%{transform:rotateX(-90deg)} }
 @keyframes flip-bot { 0%{transform:rotateX(180deg)} 100%{transform:rotateX(0deg)} }
 
@@ -234,7 +234,6 @@ body {
 .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.54); z-index: 300; opacity: 0; pointer-events: none; transition: opacity var(--ts); }
 .backdrop.open { opacity: 1; pointer-events: all; }
 
-/* Flüssiges Scrolling auf iOS Touchgeräten hinzugefügt */
 .sheet {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
   max-height: 93dvh; overflow-y: auto;
@@ -251,10 +250,19 @@ body {
   .sheet.open { transform: translateX(-50%) translateY(0); }
 }
 
-/* Detail Sheet */
 .detail-hero { position: relative; height: 240px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
-/* Ausfüllende Bildskalierung im Hero-Header */
-.detail-hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
+
+/* AKTUALISIERT: detail-hero-bg */
+.detail-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+}
 .detail-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 70%); }
 .detail-hero-text { position: absolute; bottom: 0; padding: 20px; }
 .detail-hero-title { font-size: 1.375rem; font-weight: 700; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
@@ -291,7 +299,7 @@ body {
 .detail-row-value { font-size: .9375rem; line-height: 1.5; }
 .detail-actions { display: flex; gap: 10px; margin-top: 20px; }
 
-/* Edit Sheet */
+/* Edit Sheet & Form */
 .edit-sheet-inner { padding: 4px 20px 40px; }
 .edit-headline { font-size: 1.125rem; font-weight: 700; color: var(--md-sys-color-on-surface); padding: 16px 0 20px; }
 .m3-field { position: relative; margin-bottom: 18px; }
@@ -301,26 +309,22 @@ body {
 .m3-input:focus + .m3-field-label, .m3-input:not(:placeholder-shown) + .m3-field-label { top: -8px; font-size: .6875rem; font-weight: 600; color: var(--md-sys-color-primary); }
 textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 
-/* Unit Chips - Optimierte Höhe für mobile Fingereingabe */
 .unit-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .unit-chip { height: 40px; padding: 0 16px; border-radius: 20px; border: 1.5px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .8125rem; font-weight: 600; cursor: pointer; transition: all var(--ts); display: flex; align-items: center; gap: 6px; touch-action: manipulation; }
 .unit-chip.selected { background: var(--md-sys-color-secondary-container); border-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary-container); }
 .chip-check { display: none; width: 16px; height: 16px; }
 .unit-chip.selected .chip-check { display: block; }
 
-/* Buttons */
 .m3-btn { flex: 1; height: 44px; border-radius: var(--md-shape-medium); border: 1px solid var(--md-sys-color-outline-variant); background: transparent; color: var(--md-sys-color-on-surface-variant); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); touch-action: manipulation; }
 .m3-btn:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent); }
 .m3-btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
 .m3-btn.filled { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
 
-/* Image Input */
 .img-input-wrap { display: flex; gap: 8px; align-items: stretch; margin-bottom: 18px; }
 .img-url-input { flex: 1; margin-bottom: 0 !important; }
 .img-or-divider { display: flex; align-items: center; font-size: .75rem; font-weight: 700; color: var(--md-sys-color-outline); }
 .img-file-btn { padding: 0 18px; border-radius: var(--md-shape-small); border: 1.5px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-primary); font-family: var(--font); font-size: .875rem; font-weight: 700; cursor: pointer; transition: background var(--ts); touch-action: manipulation; }
 
-/* Optimierte Bildvorschau (Ausfüllend skaliert) */
 .img-preview-wrap { margin-bottom: 18px; border-radius: var(--md-shape-medium); overflow: hidden; height: 160px; display: none; }
 .img-preview-wrap img { width: 100%; height: 100%; object-fit: cover; }
 .img-clear-btn { display: none; font-size: .75rem; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; margin-top: -12px; margin-bottom: 14px; touch-action: manipulation; }
@@ -336,7 +340,6 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 .menu-popup-item.danger { color: var(--md-sys-color-error); border-top: 1px solid var(--md-sys-color-outline-variant); margin-top: 8px; }
 .menu-popup-item.danger svg { stroke: var(--md-sys-color-error); }
 
-/* Theme Toggles inside Menu */
 .theme-options { display: flex; gap: 8px; padding: 0 18px 8px; }
 .theme-btn { flex: 1; padding: 8px 0; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 8px; background: transparent; color: var(--md-sys-color-on-surface); font-size: 0.75rem; font-weight: 600; cursor: pointer; touch-action: manipulation; }
 .theme-btn.active { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border-color: var(--md-sys-color-primary); }
@@ -350,9 +353,13 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 .c-green { background: #1B5E20; }
 .c-orange { background: #E65100; }
 
-/* Snackbar */
 .snackbar { position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%) translateY(16px); background: #323232; color: #fff; padding: 12px 22px; border-radius: 8px; font-size: .875rem; font-weight: 500; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 600; box-shadow: var(--md-elevation-3); transition: opacity .22s, transform .22s; }
 .snackbar.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Rechner Card Customisation */
+.calc-container { max-width: 680px; margin: 0 auto; background: var(--md-sys-color-surface-variant); border-radius: var(--md-shape-large); padding: 24px; box-shadow: var(--md-elevation-1); }
+.calc-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.calc-row > .m3-field { flex: 1; min-width: 200px; }
 
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 2px; }
@@ -373,6 +380,7 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
   <div class="tab-bar" id="tab-bar">
     <div class="tab-item active ripple-host" data-tab="0">Zukünftige Ereignisse</div>
     <div class="tab-item ripple-host" data-tab="1">Vergangene Ereignisse</div>
+    <div class="tab-item ripple-host" data-tab="2">Rechner</div>
     <div class="tab-indicator" id="tab-indicator"></div>
   </div>
 
@@ -381,6 +389,35 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
   </div>
   <div class="tab-content" id="tab-1">
     <div class="event-list" id="past-list"></div>
+  </div>
+
+  <div class="tab-content" id="tab-2">
+    <div class="calc-container stagger-enter">
+      <div class="calc-row">
+        <div class="m3-field">
+          <input class="m3-input" type="date" id="calc-start" placeholder=" ">
+          <label class="m3-field-label">Startdatum</label>
+        </div>
+        <div class="m3-field">
+          <input class="m3-input" type="date" id="calc-end" placeholder=" ">
+          <label class="m3-field-label">Enddatum</label>
+        </div>
+      </div>
+
+      <div class="detail-section-label" style="margin-bottom:10px">Zeiteinheiten</div>
+      <div class="unit-wrap" id="calc-unit-wrap">
+        <button class="unit-chip selected ripple-host calc-unit-chip" data-unit="years"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Jahre</button>
+        <button class="unit-chip selected ripple-host calc-unit-chip" data-unit="months"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Monate</button>
+        <button class="unit-chip selected ripple-host calc-unit-chip" data-unit="weeks"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Wochen</button>
+        <button class="unit-chip selected ripple-host calc-unit-chip" data-unit="days"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tage</button>
+        <button class="unit-chip ripple-host calc-unit-chip" data-unit="hours"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Stunden</button>
+        <button class="unit-chip ripple-host calc-unit-chip" data-unit="minutes"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Minuten</button>
+        <button class="unit-chip selected ripple-host calc-unit-chip" data-unit="seconds"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Sekunden</button>
+      </div>
+
+      <div class="detail-section-label" style="margin-top:12px">Zeitdifferenz</div>
+      <div class="detail-flip-clock" id="calc-flip-clock" style="padding: 16px 0 0;"></div>
+    </div>
   </div>
 </div>
 
@@ -523,6 +560,7 @@ let activeTab = 0;
 let currentDetailId = null;
 let currentEditId = null;
 let imgData = null;
+let cachedEventElements = [];
 
 const unitTranslations = {
   years: 'Jahre', months: 'Monate', weeks: 'Wochen',
@@ -538,16 +576,23 @@ const menuPopup = document.getElementById('menu-popup');
 const detailSheet = document.getElementById('detail-sheet');
 const editSheet = document.getElementById('edit-sheet');
 
+/* ── HELPER: DRY Fortschrittsberechnung ── */
+function calculateProgress(targetTime, refTime, nowTime) {
+  if (!refTime || nowTime < refTime) return 0;
+  const total = targetTime - refTime;
+  return total > 0 ? Math.max(0, Math.min(100, ((nowTime - refTime) / total) * 100)) : 100;
+}
+
 /* ── INITIALIZE ── */
 function init() {
   updateTabIndicator();
   renderEvents();
+  initCalculator();
   setInterval(tick, 1000);
   applyThemeAndColor();
 
   window.addEventListener('resize', updateTabIndicator);
 
-  // Tabs
   tabItems.forEach((tab, index) => {
     tab.addEventListener('click', () => {
       activeTab = index;
@@ -556,10 +601,10 @@ function init() {
       tab.classList.add('active');
       tabContents[index].classList.add('active');
       updateTabIndicator();
+      if (index === 2) updateCalculator();
     });
   });
 
-  // Buttons
   document.getElementById('add-btn').addEventListener('click', () => openEditSheet());
   document.getElementById('menu-btn').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -579,7 +624,6 @@ function init() {
     if (!menuPopup.contains(e.target) && e.target.id !== 'menu-btn') menuPopup.classList.remove('open');
   });
 
-  // Settings
   document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
@@ -599,18 +643,15 @@ function init() {
     });
   });
 
-  // Unit Toggle
-  document.querySelectorAll('.unit-chip').forEach(chip => {
+  document.querySelectorAll('#unit-wrap .unit-chip').forEach(chip => {
     chip.addEventListener('click', () => chip.classList.toggle('selected'));
   });
 
-  // Image Inputs
   document.getElementById('img-file-btn').addEventListener('click', () => document.getElementById('img-file-input').click());
   document.getElementById('img-file-input').addEventListener('change', handleImageUpload);
   document.getElementById('f-img-url').addEventListener('input', (e) => setPreview(e.target.value));
   document.getElementById('img-clear-btn').addEventListener('click', clearImage);
 
-  // Data Tools
   document.getElementById('clear-btn').addEventListener('click', () => {
     if (confirm("Wirklich alle Ereignisse löschen?")) { events = []; saveToLocal(); renderEvents(); menuPopup.classList.remove('open'); }
   });
@@ -618,7 +659,6 @@ function init() {
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
 
-  // Pointerdown verwendet für latenzfreie Touch-Reaktion des Ripple-Effekts
   document.addEventListener('pointerdown', function(e) {
     const target = e.target.closest('.ripple-host');
     if (!target) return;
@@ -634,6 +674,56 @@ function init() {
   });
 }
 
+function initCalculator() {
+  const startInput = document.getElementById('calc-start');
+  const endInput = document.getElementById('calc-end');
+
+  const today = new Date().toISOString().split('T')[0];
+  startInput.value = today;
+  endInput.value = today;
+
+  startInput.addEventListener('change', updateCalculator);
+  endInput.addEventListener('change', updateCalculator);
+
+  document.querySelectorAll('.calc-unit-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.classList.toggle('selected');
+      updateCalculator();
+    });
+  });
+
+  updateCalculator();
+}
+
+function updateCalculator() {
+  const startVal = document.getElementById('calc-start').value;
+  const endVal = document.getElementById('calc-end').value;
+  const container = document.getElementById('calc-flip-clock');
+
+  if (!startVal || !endVal) {
+    container.innerHTML = '<div style="color:var(--md-sys-color-on-surface-variant); font-size:0.875rem;">Bitte Start- und Enddatum auswählen.</div>';
+    return;
+  }
+
+  const startTime = new Date(startVal + 'T00:00').getTime();
+  const endTime = new Date(endVal + 'T00:00').getTime();
+
+  const units = Array.from(document.querySelectorAll('.calc-unit-chip.selected')).map(c => c.dataset.unit);
+
+  if (units.length === 0) {
+    container.innerHTML = '<div style="color:var(--md-sys-color-on-surface-variant); font-size:0.875rem;">Mindestens eine Zeiteinheit auswählen.</div>';
+    return;
+  }
+
+  Array.from(container.children).forEach(child => {
+    const unit = child.id.replace('calc-flip-clock-', '');
+    if (!units.includes(unit)) child.remove();
+  });
+
+  const diffObj = getDiff(endTime, startTime, units);
+  renderFlipClock(container, diffObj, true);
+}
+
 function applyThemeAndColor() {
   const theme = localStorage.getItem('theme') || 'system';
   const color = localStorage.getItem('color') || 'purple';
@@ -643,15 +733,21 @@ function applyThemeAndColor() {
   document.querySelector(`.color-btn[data-color-val="${color}"]`)?.click();
 }
 
+/* ── OPTIMIERT: Robuste Berechnung des Tab-Indikators ── */
 function updateTabIndicator() {
   const active = tabItems[activeTab];
+  if (!active) return;
   tabIndicator.style.width = active.offsetWidth + 'px';
   tabIndicator.style.transform = `translateX(${active.offsetLeft}px)`;
 }
 
-/* ── RENDER & DATA ── */
+/* ── RENDER & DATA (mit Quota-Error Handling) ── */
 function saveToLocal() {
-  localStorage.setItem('events', JSON.stringify(events));
+  try {
+    localStorage.setItem('events', JSON.stringify(events));
+  } catch (e) {
+    showSnackbar('Fehler: Speicher voll! Bitte kleinere Bilder oder Bild-URLs nutzen.');
+  }
 }
 
 function renderEvents() {
@@ -664,7 +760,6 @@ function renderEvents() {
   let futureEvents = [];
   let pastEvents = [];
 
-  // 1. Ereignisse in Arrays aufteilen
   events.forEach(ev => {
     const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
     if (target <= now) {
@@ -674,32 +769,23 @@ function renderEvents() {
     }
   });
 
-  // 2. Sortieren (Zukunft: Aufsteigend, Vergangenheit: Absteigend)
   futureEvents.sort((a, b) => a.targetTime - b.targetTime);
   pastEvents.sort((a, b) => b.targetTime - a.targetTime);
 
-  // 3. Zusammenführen für die Darstellungsschleife
   const sortedEvents = [...futureEvents, ...pastEvents];
 
   let futureCount = 0; let pastCount = 0;
+  cachedEventElements = [];
 
-  sortedEvents.forEach((ev, i) => {
+  sortedEvents.forEach((ev) => {
     const target = ev.targetTime;
+    const ref = ev.refDate ? new Date(ev.refDate + 'T00:00').getTime() : null;
     const isPast = target <= now;
     const el = document.createElement('div');
     el.className = 'event-card stagger-enter';
     el.style.animationDelay = `${(isPast ? pastCount : futureCount) * 0.05}s`;
 
-    let pct = 0;
-    if (ev.refDate) {
-      const ref = new Date(ev.refDate + 'T00:00').getTime();
-      if (now < ref) {
-        pct = 0;
-      } else {
-        const total = target - ref;
-        pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
-      }
-    }
+    const pct = calculateProgress(target, ref, now);
 
     let bgStyle = '';
     if (ev.img) bgStyle = `background-image: url('${ev.img}')`;
@@ -726,6 +812,16 @@ function renderEvents() {
 
     if (isPast) { pastList.appendChild(el); pastCount++; }
     else { futureList.appendChild(el); futureCount++; }
+
+    // DOM-Referenzen cachen
+    cachedEventElements.push({
+      id: ev.id,
+      targetTime: target,
+      refTime: ref,
+      units: ev.units,
+      clockEl: el.querySelector(`#clock-card-${ev.id}`),
+      progressEl: ev.refDate ? el.querySelector(`#progress-bar-card-${ev.id}`) : null
+    });
   });
 
   if (futureCount === 0) futureList.innerHTML = emptyStateHTML('Keine zukünftigen Ereignisse', 'Erstelle ein neues Ereignis mit dem Plus-Button.');
@@ -744,44 +840,26 @@ function emptyStateHTML(title, body) {
     </div>`;
 }
 
-/* ── TIME LOGIC ── */
+/* ── TIME LOGIC (Optimiert mit DOM-Caching) ── */
 function tick() {
   const now = new Date().getTime();
 
-  events.forEach(ev => {
-    const target = new Date(ev.date + (ev.time ? 'T'+ev.time : 'T00:00')).getTime();
-    const diffObj = getDiff(target, now, ev.units);
+  cachedEventElements.forEach(item => {
+    const diffObj = getDiff(item.targetTime, now, item.units);
 
-    const cardContainer = document.getElementById(`clock-card-${ev.id}`);
-    if (cardContainer) renderFlipClock(cardContainer, diffObj, false);
+    if (item.clockEl) renderFlipClock(item.clockEl, diffObj, false);
 
-    const cardProgress = document.getElementById(`progress-bar-card-${ev.id}`);
-    if (cardProgress && ev.refDate) {
-      const ref = new Date(ev.refDate + 'T00:00').getTime();
-      let pct = 0;
-      if (now < ref) {
-        pct = 0;
-      } else {
-        const total = target - ref;
-        pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
-      }
-      cardProgress.style.width = pct + '%';
+    if (item.progressEl && item.refTime) {
+      const pct = calculateProgress(item.targetTime, item.refTime, now);
+      item.progressEl.style.width = pct + '%';
     }
 
-    if (currentDetailId === ev.id) {
+    if (currentDetailId === item.id) {
       const detailContainer = document.getElementById('detail-flip-clock');
       if (detailContainer) renderFlipClock(detailContainer, diffObj, true);
 
-      if (ev.refDate) {
-        const ref = new Date(ev.refDate + 'T00:00').getTime();
-        let pct = 0;
-        if (now < ref) {
-          pct = 0;
-        } else {
-          const total = target - ref;
-          pct = total > 0 ? Math.max(0, Math.min(100, ((now - ref) / total) * 100)) : 100;
-        }
-
+      if (item.refTime) {
+        const pct = calculateProgress(item.targetTime, item.refTime, now);
         document.getElementById('detail-progress-fill').style.width = pct + '%';
         document.getElementById('detail-progress-pct').innerText = pct.toFixed(1) + '%';
       }
@@ -789,25 +867,55 @@ function tick() {
   });
 }
 
+/* ── OPTIMIERT: Kalenderbasierte exakte Differenzberechnung ── */
 function getDiff(target, now, unitsList) {
-  let diff = Math.abs(target - now);
-  const isPast = target <= now;
   const res = [];
+  let dStart = new Date(Math.min(target, now));
+  const dEnd = new Date(Math.max(target, now));
 
-  const sec = 1000, min = sec * 60, hr = min * 60, day = hr * 24, wk = day * 7, mo = day * 30.436875, yr = day * 365.25;
-  const map = { years: yr, months: mo, weeks: wk, days: day, hours: hr, minutes: min, seconds: sec };
+  if (unitsList.includes('years')) {
+    let years = dEnd.getFullYear() - dStart.getFullYear();
+    let temp = new Date(dStart);
+    temp.setFullYear(dStart.getFullYear() + years);
+    if (temp > dEnd) {
+      years--;
+      temp = new Date(dStart);
+      temp.setFullYear(dStart.getFullYear() + years);
+    }
+    res.push({ unit: 'years', val: years });
+    dStart = temp;
+  }
+
+  if (unitsList.includes('months')) {
+    let months = (dEnd.getFullYear() - dStart.getFullYear()) * 12 + (dEnd.getMonth() - dStart.getMonth());
+    let temp = new Date(dStart);
+    temp.setMonth(dStart.getMonth() + months);
+    if (temp > dEnd) {
+      months--;
+      temp = new Date(dStart);
+      temp.setMonth(dStart.getMonth() + months);
+    }
+    res.push({ unit: 'months', val: months });
+    dStart = temp;
+  }
+
+  let diffMs = dEnd.getTime() - dStart.getTime();
+  const sec = 1000, min = sec * 60, hr = min * 60, day = hr * 24, wk = day * 7;
+  const map = { weeks: wk, days: day, hours: hr, minutes: min, seconds: sec };
 
   unitsList.forEach(u => {
-    const val = Math.floor(diff / map[u]);
+    if (u === 'years' || u === 'months') return;
+    const val = Math.floor(diffMs / map[u]);
     res.push({ unit: u, val: val });
-    diff -= val * map[u];
+    diffMs -= val * map[u];
   });
+
   return res;
 }
 
-/* ── FLIP CLOCK RENDERER ── */
+/* ── OPTIMIERT: Robuste Selektoren & sanftes Animation-Reset ── */
 function renderFlipClock(container, diffObj, isWide) {
-  diffObj.forEach((item, i) => {
+  diffObj.forEach((item) => {
     const idStr = container.id + '-' + item.unit;
     let col = document.getElementById(idStr);
 
@@ -835,10 +943,10 @@ function renderFlipClock(container, diffObj, isWide) {
       const wrap = document.createElement('div');
       wrap.className = (isWide ? 'detail-flip-digit-wrap wide' : 'flip-digit-wrap');
       wrap.innerHTML = `
-        <div class="${isWide ? 'detail-flip-face flip-face-top flip-face-front' : 'flip-face flip-face-top flip-face-front'}">0</div>
-        <div class="${isWide ? 'detail-flip-face flip-face-bottom flip-face-front' : 'flip-face flip-face-bottom flip-face-front'}">0</div>
-        <div class="${isWide ? 'detail-flip-face flip-face-top flip-face-back' : 'flip-face flip-face-top flip-face-back'}">0</div>
-        <div class="${isWide ? 'detail-flip-face flip-face-bottom flip-face-back' : 'flip-face flip-face-bottom flip-face-back'}">0</div>
+        <div class="detail-flip-face flip-face flip-face-top flip-face-front face-top-front">0</div>
+        <div class="detail-flip-face flip-face flip-face-bottom flip-face-front face-bot-front">0</div>
+        <div class="detail-flip-face flip-face flip-face-top flip-face-back face-top-back">0</div>
+        <div class="detail-flip-face flip-face flip-face-bottom flip-face-back face-bot-back">0</div>
       `;
       row.appendChild(wrap);
     }
@@ -849,35 +957,41 @@ function renderFlipClock(container, diffObj, isWide) {
       const newVal = valStr[d];
       const oldVal = digitWrap.dataset.val;
 
+      const elTopFront = digitWrap.querySelector('.face-top-front');
+      const elBotFront = digitWrap.querySelector('.face-bot-front');
+      const elTopBack  = digitWrap.querySelector('.face-top-back');
+      const elBotBack  = digitWrap.querySelector('.face-bot-back');
+
       if (newVal !== oldVal) {
         digitWrap.dataset.val = newVal;
         if (oldVal !== undefined) {
           digitWrap.classList.remove('flipping');
-          void digitWrap.offsetWidth;
+          elTopFront.innerText = oldVal;
+          elBotFront.innerText = oldVal;
+          elTopBack.innerText  = newVal;
+          elBotBack.innerText  = newVal;
 
-          digitWrap.children[0].innerText = oldVal;
-          digitWrap.children[1].innerText = oldVal;
-          digitWrap.children[2].innerText = newVal;
-          digitWrap.children[3].innerText = newVal;
-
-          digitWrap.classList.add('flipping');
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              digitWrap.classList.add('flipping');
+            });
+          });
 
           setTimeout(() => {
-            digitWrap.children[0].innerText = newVal;
-            digitWrap.children[1].innerText = newVal;
+            elTopFront.innerText = newVal;
+            elBotFront.innerText = newVal;
             digitWrap.classList.remove('flipping');
           }, 340);
         } else {
-          digitWrap.children[0].innerText = newVal;
-          digitWrap.children[1].innerText = newVal;
-          digitWrap.children[2].innerText = newVal;
-          digitWrap.children[3].innerText = newVal;
+          elTopFront.innerText = newVal;
+          elBotFront.innerText = newVal;
+          elTopBack.innerText  = newVal;
+          elBotBack.innerText  = newVal;
         }
       }
     }
   });
 }
-
 
 /* ── MODALS & FORMS ── */
 function openDetailSheet(id) {
@@ -926,7 +1040,7 @@ function openEditSheet(id = null) {
     document.getElementById('f-refdate').value = ev.refDate || '';
     document.getElementById('f-desc').value = ev.desc || '';
 
-    document.querySelectorAll('.unit-chip').forEach(c => {
+    document.querySelectorAll('#unit-wrap .unit-chip').forEach(c => {
       if (ev.units.includes(c.dataset.unit)) c.classList.add('selected'); else c.classList.remove('selected');
     });
 
@@ -941,7 +1055,7 @@ function openEditSheet(id = null) {
     document.getElementById('f-time').value = '';
     document.getElementById('f-refdate').value = '';
     document.getElementById('f-desc').value = '';
-    document.querySelectorAll('.unit-chip').forEach(c => {
+    document.querySelectorAll('#unit-wrap .unit-chip').forEach(c => {
       const u = c.dataset.unit;
       if (['years','months','weeks','days','seconds'].includes(u)) c.classList.add('selected'); else c.classList.remove('selected');
     });
@@ -973,7 +1087,7 @@ function saveEvent() {
   const desc = document.getElementById('f-desc').value.trim();
   const imgUrl = document.getElementById('f-img-url').value.trim();
 
-  const units = Array.from(document.querySelectorAll('.unit-chip.selected')).map(c => c.dataset.unit);
+  const units = Array.from(document.querySelectorAll('#unit-wrap .unit-chip.selected')).map(c => c.dataset.unit);
 
   if (!name || !date) return showSnackbar('Bitte Name und Datum ausfüllen.');
   if (units.length === 0) return showSnackbar('Mindestens eine Zeiteinheit auswählen.');
@@ -1008,17 +1122,39 @@ function deleteCurrentEvent() {
   }
 }
 
-/* ── IMAGE HANDLING ── */
+/* ── IMAGE HANDLING (Optimiert mit Canvas-Komprimierung) ── */
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 800;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxW) {
+        h = Math.round((h * maxW) / w);
+        w = maxW;
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handleImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    imgData = ev.target.result;
+  compressImage(file, (compressedDataUrl) => {
+    imgData = compressedDataUrl;
     document.getElementById('f-img-url').value = '';
     setPreview(imgData);
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function setPreview(src) {
