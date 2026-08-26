@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Tageszähler Maskable App-Icon</title>
+  <desc id="desc">Violette Fläche mit einer innerhalb der sicheren Zone liegenden stilisierten Uhr.</desc>
+  <rect width="512" height="512" fill="#65558f"/>
+  <circle cx="256" cy="278" r="118" fill="#eaddff"/>
+  <circle cx="256" cy="278" r="91" fill="none" stroke="#21005d" stroke-width="22"/>
+  <path d="M256 224v60l42 27" fill="none" stroke="#21005d" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="212" y="105" width="88" height="34" rx="17" fill="#eaddff"/>
+  <path d="M256 139v21" stroke="#eaddff" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="379" cy="146" r="19" fill="#ffb1c8"/>
+</svg>
