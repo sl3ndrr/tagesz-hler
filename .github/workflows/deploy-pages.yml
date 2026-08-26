@@ -1,3 +1,4 @@
+# Static deployment without a build step; only runtime files enter the Pages artifact.
 name: Deploy static PWA to GitHub Pages
 
 on:
