@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="system" data-color="purple">
+<head>
+<meta charset="UTF-8">
+<!-- Ausführbarer Code liegt ausschließlich in externen Dateien; Inline-Event-Handler sind gesperrt. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Ein ausdrucksstarker, lokaler Tageszähler für kommende und vergangene Momente.">
+<meta name="application-name" content="Tageszähler">
+<meta name="apple-mobile-web-app-title" content="Tageszähler">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#65558F" id="theme-color-meta">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tageszähler &amp; Rechner</title>
+<script src="./theme.js"></script>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wdth,wght@8..144,75..125,300..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Zum Inhalt springen</a>
+
+<div class="app-container">
+  <header class="app-bar">
+    <div class="app-bar-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/><path d="M8 3h8"/></svg>
+      </div>
+      <div class="app-bar-copy">
+        <div class="app-bar-kicker">Deine Zeit</div>
+        <div class="app-bar-title">Tageszähler</div>
+        <div class="app-bar-date" id="app-bar-date"></div>
+      </div>
+    </div>
+    <button type="button" class="icon-btn ripple-host" id="menu-btn" aria-label="Einstellungen öffnen" aria-expanded="false" aria-controls="menu-popup">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10"/><circle cx="17" cy="7" r="2"/><path d="M20 17H10"/><circle cx="7" cy="17" r="2"/></svg>
+    </button>
+  </header>
+
+  <p class="offline-status" id="offline-status" role="status" aria-live="polite" hidden>
+    Offline-Modus – deine lokal gespeicherten Ereignisse bleiben verfügbar.
+  </p>
+
+  <div class="tab-bar" id="tab-bar" role="tablist" aria-label="Bereiche" aria-orientation="horizontal">
+    <button type="button" class="tab-item active ripple-host" id="tab-future" data-tab="0" role="tab" aria-selected="true" aria-controls="tab-0">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="m9 15 2 2 4-4"/></svg>
+      <span class="nav-label">Zukunft</span>
+    </button>
+    <button type="button" class="tab-item ripple-host" id="tab-past" data-tab="1" role="tab" aria-selected="false" aria-controls="tab-1" tabindex="-1">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+      <span class="nav-label">Vergangen</span>
+    </button>
+    <button type="button" class="tab-item ripple-host" id="tab-calculator" data-tab="2" role="tab" aria-selected="false" aria-controls="tab-2" tabindex="-1">
+      <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2"/></svg>
+      <span class="nav-label">Rechner</span>
+    </button>
+    <div class="tab-indicator" id="tab-indicator" aria-hidden="true"></div>
+  </div>
+
+  <main id="main-content" tabindex="-1">
+    <div class="tab-content active" id="tab-0" role="tabpanel" aria-labelledby="tab-future" tabindex="0">
+      <section class="page-intro" aria-labelledby="future-heading">
+        <div class="intro-eyebrow">Was vor dir liegt</div>
+        <h1 class="intro-title" id="future-heading">Mehr Vorfreude. Weniger Nachzählen.</h1>
+        <p class="intro-copy" id="next-event-copy">Deine nächsten Momente stehen hier im Mittelpunkt.</p>
+        <div class="intro-metrics" role="group" aria-label="Übersicht">
+          <div class="metric-pill"><span class="metric-value" id="future-count">0</span><span>kommende Ereignisse</span></div>
+          <div class="metric-pill"><span aria-hidden="true">●</span><span>lokal gespeichert</span></div>
+        </div>
+      </section>
+      <div class="section-heading-row">
+        <div>
+          <h2 class="section-heading">Als Nächstes</h2>
+          <p class="section-caption">Sekundengenau und immer auf deinem Gerät</p>
+        </div>
+      </div>
+      <div class="event-list" id="future-list"></div>
+    </div>
+    <div class="tab-content" id="tab-1" role="tabpanel" aria-labelledby="tab-past" tabindex="0" hidden>
+      <section class="page-intro past-intro" aria-labelledby="past-heading">
+        <div class="intro-eyebrow">Was dich geprägt hat</div>
+        <h1 class="intro-title" id="past-heading">Momente bleiben. Die Zeit läuft weiter.</h1>
+        <p class="intro-copy">Ein ruhiger Blick zurück auf alles, was du bereits erreicht und erlebt hast.</p>
+        <div class="intro-metrics" role="group" aria-label="Übersicht">
+          <div class="metric-pill"><span class="metric-value" id="past-count">0</span><span>vergangene Ereignisse</span></div>
+        </div>
+      </section>
+      <div class="section-heading-row">
+        <div>
+          <h2 class="section-heading">Rückblick</h2>
+          <p class="section-caption">Neueste Ereignisse zuerst</p>
+        </div>
+      </div>
+      <div class="event-list" id="past-list"></div>
+    </div>
+
+  <div class="tab-content" id="tab-2" role="tabpanel" aria-labelledby="tab-calculator" tabindex="0" hidden>
+    <section class="page-intro calc-intro" aria-labelledby="calc-heading">
+      <div class="intro-eyebrow">Zeit verstehen</div>
+      <h1 class="intro-title" id="calc-heading">Zwei Daten. Eine klare Antwort.</h1>
+      <p class="intro-copy">Berechne den Abstand kalendergenau – inklusive Jahre, Monate und Wochen.</p>
+    </section>
+    <div class="calc-container stagger-enter">
+      <div class="calc-row">
+        <div class="m3-field">
+          <input class="m3-input" type="date" id="calc-start" required>
+          <label class="m3-field-label" for="calc-start">Startdatum</label>
+        </div>
+        <div class="m3-field">
+          <input class="m3-input" type="date" id="calc-end" required>
+          <label class="m3-field-label" for="calc-end">Enddatum</label>
+        </div>
+      </div>
+
+      <div class="detail-section-label section-label-spaced">Zeiteinheiten</div>
+      <div class="unit-wrap" id="calc-unit-wrap">
+        <button type="button" class="unit-chip selected ripple-host calc-unit-chip" data-unit="years"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Jahre</button>
+        <button type="button" class="unit-chip selected ripple-host calc-unit-chip" data-unit="months"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Monate</button>
+        <button type="button" class="unit-chip selected ripple-host calc-unit-chip" data-unit="weeks"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Wochen</button>
+        <button type="button" class="unit-chip selected ripple-host calc-unit-chip" data-unit="days"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tage</button>
+        <button type="button" class="unit-chip ripple-host calc-unit-chip" data-unit="hours"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Stunden</button>
+        <button type="button" class="unit-chip ripple-host calc-unit-chip" data-unit="minutes"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Minuten</button>
+        <button type="button" class="unit-chip selected ripple-host calc-unit-chip" data-unit="seconds"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Sekunden</button>
+      </div>
+
+      <div class="detail-section-label section-label-top">Zeitdifferenz</div>
+      <div class="calc-direction" id="calc-direction" role="status" aria-live="polite"></div>
+      <div class="detail-flip-clock calc-flip-output" id="calc-flip-clock"></div>
+    </div>
+  </div>
+  </main>
+</div>
+
+<button type="button" class="fab ripple-host" id="add-btn">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <span class="fab-label">Ereignis erstellen</span>
+</button>
+
+<div class="menu-popup" id="menu-popup" role="dialog" aria-label="Einstellungen" aria-hidden="true" inert>
+  <div class="menu-section-title">Darstellung</div>
+  <div class="theme-options">
+    <button type="button" class="theme-btn ripple-host active" data-theme-val="system" aria-pressed="true">System</button>
+    <button type="button" class="theme-btn ripple-host" data-theme-val="light" aria-pressed="false">Hell</button>
+    <button type="button" class="theme-btn ripple-host" data-theme-val="dark" aria-pressed="false">Dunkel</button>
+  </div>
+  <div class="color-options">
+    <button type="button" class="color-btn ripple-host c-purple active" data-color-val="purple" aria-label="Akzentfarbe Violett" aria-pressed="true"></button>
+    <button type="button" class="color-btn ripple-host c-blue" data-color-val="blue" aria-label="Akzentfarbe Blau" aria-pressed="false"></button>
+    <button type="button" class="color-btn ripple-host c-green" data-color-val="green" aria-label="Akzentfarbe Grün" aria-pressed="false"></button>
+    <button type="button" class="color-btn ripple-host c-orange" data-color-val="orange" aria-label="Akzentfarbe Orange" aria-pressed="false"></button>
+  </div>
+
+  <div class="menu-section-title">Ansicht</div>
+  <div class="view-options">
+    <button type="button" class="view-btn ripple-host active" data-view-val="cards" aria-pressed="true">Karten</button>
+    <button type="button" class="view-btn ripple-host" data-view-val="compact" aria-pressed="false">Kompakt</button>
+  </div>
+
+  <div class="menu-section-title" id="app-menu-title" hidden>App</div>
+  <button type="button" class="menu-popup-item ripple-host" id="install-btn" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/></svg>
+    App installieren
+  </button>
+
+  <div class="menu-section-title">Daten</div>
+  <button type="button" class="menu-popup-item ripple-host" id="import-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Importieren
+  </button>
+  <button type="button" class="menu-popup-item ripple-host" id="export-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Exportieren
+  </button>
+  <button type="button" class="menu-popup-item danger ripple-host" id="clear-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+    Alle löschen
+  </button>
+</div>
+
+<div class="backdrop" id="backdrop" aria-hidden="true"></div>
+
+<div class="sheet" id="detail-sheet" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="detail-name" tabindex="-1" inert>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <div class="detail-hero" id="detail-hero">
+    <div class="detail-hero-bg" id="detail-hero-bg"></div>
+    <div class="detail-scrim"></div>
+    <button type="button" class="detail-close-btn ripple-host" id="detail-close-btn" aria-label="Schließen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+    <div class="detail-hero-text"><div class="detail-hero-title" id="detail-name"></div></div>
+  </div>
+  <div class="detail-progress-wrap" id="detail-progress-wrap" role="progressbar" aria-label="Fortschritt zum Ereignis" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0 Prozent">
+    <div class="detail-progress-meta">
+      <span class="detail-progress-label" id="detail-progress-label">Fortschritt</span>
+      <span class="detail-progress-pct" id="detail-progress-pct">0%</span>
+    </div>
+    <div class="detail-progress-track" aria-hidden="true"><div class="detail-progress-fill" id="detail-progress-fill"></div></div>
+  </div>
+  <div class="detail-flip-clock" id="detail-flip-clock"></div>
+  <div class="detail-body">
+    <div class="detail-section-label">Über</div>
+    <div class="detail-card">
+      <div class="detail-row">
+        <div class="detail-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+        <div class="detail-row-body">
+          <div class="detail-row-label">Datum &amp; Uhrzeit</div>
+          <div class="detail-row-value" id="detail-date"></div>
+        </div>
+      </div>
+      <div class="detail-row" id="detail-desc-row" hidden>
+        <div class="detail-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+        <div class="detail-row-body">
+          <div class="detail-row-label">Beschreibung</div>
+          <div class="detail-row-value" id="detail-desc"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-actions">
+      <button type="button" class="m3-btn ripple-host" id="detail-edit-btn">Bearbeiten</button>
+      <button type="button" class="m3-btn danger ripple-host" id="detail-delete-btn">Löschen</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="edit-sheet" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="edit-headline" tabindex="-1" inert>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <form class="edit-sheet-inner" id="event-editor-form" novalidate>
+    <div class="edit-header">
+      <h2 class="edit-headline" id="edit-headline">Neues Ereignis</h2>
+      <button type="button" class="icon-btn ripple-host" id="edit-top-close-btn" aria-label="Dialog schließen">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p class="visually-hidden" id="event-editor-status" role="alert" aria-live="assertive"></p>
+    <div class="m3-field">
+      <input class="m3-input" type="text" id="f-name" placeholder=" " required maxlength="200" aria-describedby="f-name-error">
+      <label class="m3-field-label" for="f-name">Name (Pflichtfeld)</label>
+    </div>
+    <p class="field-error" id="f-name-error"></p>
+    <div class="m3-field">
+      <input class="m3-input" type="date" id="f-date" required aria-describedby="f-date-error">
+      <label class="m3-field-label" for="f-date">Datum (Pflichtfeld)</label>
+    </div>
+    <p class="field-error" id="f-date-error"></p>
+    <div class="m3-field">
+      <input class="m3-input" type="time" id="f-time" aria-describedby="f-time-zone-hint f-time-error">
+      <label class="m3-field-label" for="f-time">Uhrzeit (optional)</label>
+    </div>
+    <div class="field-support" id="f-time-zone-hint" aria-live="polite"></div>
+    <p class="field-error" id="f-time-error"></p>
+    <div class="m3-field" id="f-dst-choice-field" hidden>
+      <select class="m3-input" id="f-dst-choice">
+        <option value="earlier">Erstes Vorkommen</option>
+        <option value="later">Zweites Vorkommen</option>
+      </select>
+      <label class="m3-field-label" for="f-dst-choice">Mehrdeutige Uhrzeit</label>
+    </div>
+    <div class="m3-field">
+      <input class="m3-input" type="date" id="f-refdate" aria-describedby="f-refdate-error">
+      <label class="m3-field-label" for="f-refdate">Referenzdatum (für Progress, optional)</label>
+    </div>
+    <p class="field-error" id="f-refdate-error"></p>
+    <div class="m3-field">
+      <textarea class="m3-input" id="f-desc" placeholder=" " maxlength="4000" aria-describedby="f-desc-error"></textarea>
+      <label class="m3-field-label" for="f-desc">Beschreibung (optional)</label>
+    </div>
+    <p class="field-error" id="f-desc-error"></p>
+
+    <div class="detail-section-label section-label-spaced" id="unit-group-label">Zeiteinheiten (mindestens eine)</div>
+    <div class="unit-wrap" id="unit-wrap" role="group" aria-labelledby="unit-group-label" aria-describedby="unit-error">
+      <button type="button" class="unit-chip selected ripple-host" data-unit="years"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Jahre</button>
+      <button type="button" class="unit-chip selected ripple-host" data-unit="months"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Monate</button>
+      <button type="button" class="unit-chip selected ripple-host" data-unit="weeks"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Wochen</button>
+      <button type="button" class="unit-chip selected ripple-host" data-unit="days"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tage</button>
+      <button type="button" class="unit-chip ripple-host" data-unit="hours"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Stunden</button>
+      <button type="button" class="unit-chip ripple-host" data-unit="minutes"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Minuten</button>
+      <button type="button" class="unit-chip selected ripple-host" data-unit="seconds"><svg class="chip-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Sekunden</button>
+    </div>
+    <p class="field-error" id="unit-error"></p>
+
+    <div class="detail-section-label section-label-spaced">Hintergrundbild</div>
+    <div class="img-input-wrap">
+      <div class="m3-field img-url-input"><input class="m3-input" type="url" id="f-img-url" placeholder=" " maxlength="4096" inputmode="url" aria-describedby="f-img-url-error"><label class="m3-field-label" for="f-img-url">Bild-URL</label></div>
+      <div class="img-or-divider">oder</div>
+      <button type="button" class="img-file-btn ripple-host" id="img-file-btn">Datei</button>
+    </div>
+    <p class="field-error" id="f-img-url-error"></p>
+    <div class="img-preview-wrap" id="img-preview-wrap"><img id="img-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Vorschau"></div>
+    <button type="button" class="img-clear-btn ripple-host" id="img-clear-btn">Bild entfernen</button>
+    <div class="form-actions">
+      <button type="button" class="m3-btn ripple-host" id="edit-cancel-btn">Abbrechen</button>
+      <button type="submit" class="m3-btn filled ripple-host" id="edit-save-btn">Speichern</button>
+    </div>
+  </form>
+</div>
+
+<div class="snackbar" id="snackbar" role="status" aria-live="polite" aria-atomic="true"></div>
+<input type="file" id="file-input" accept=".json">
+<input type="file" id="img-file-input" accept="image/*">
+
+<script src="./app.js"></script>
+</body>
+</html>
