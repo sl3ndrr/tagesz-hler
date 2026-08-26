@@ -3064,10 +3064,22 @@ function observeServiceWorker(worker) {
   });
 }
 
+const serviceWorkerScriptUrl = (() => {
+  const source = './sw.js';
+  if (!window.trustedTypes) return source;
+  const policy = window.trustedTypes.createPolicy('tageszaehler-sw', {
+    createScriptURL(value) {
+      if (value !== source) throw new TypeError('Nicht erlaubte Service-Worker-URL.');
+      return value;
+    }
+  });
+  return policy.createScriptURL(source);
+})();
+
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext || !/^https?:$/.test(location.protocol)) return;
   try {
-    const registration = await navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' });
+    const registration = await navigator.serviceWorker.register(serviceWorkerScriptUrl, { scope: './', updateViaCache: 'none' });
     serviceWorkerRegistration = registration;
     observeServiceWorker(registration.installing);
     if (registration.waiting) notifyServiceWorkerUpdate();

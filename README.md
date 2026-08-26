@@ -57,6 +57,8 @@ Danach <http://localhost:8080/> öffnen. `localhost` gilt für Service Worker al
 
 Die CSP steht als Meta-Policy in `index.html`. Ausführbarer Code und Stylesheets liegen in externen, gleichursprünglichen Dateien; daher sind keine SHA-256-Hashes für Inline-Blöcke mehr nötig. Inline-Event-Handler bleiben durch `script-src-attr 'none'` gesperrt. Google Fonts sind ausschließlich über `fonts.googleapis.com` und `fonts.gstatic.com` freigegeben. Vom Nutzer hinterlegte HTTPS-Bilder bleiben über `img-src` zulässig.
 
+Trusted Types bleiben für Script-Sinks erzwungen. Ausschließlich die benannte Policy `tageszaehler-sw` ist zugelassen; sie erzeugt nur für den fest codierten Pfad `./sw.js` eine `TrustedScriptURL`. Dadurch kann der Service Worker registriert werden, ohne die Trusted-Types-Erzwingung aufzugeben.
+
 Bei Änderungen keine Inline-Skripte oder Inline-Stylesheet-Blöcke hinzufügen. Die dynamisch gesetzten Style-Attribute der bestehenden UI benötigen weiterhin `style-src-attr 'unsafe-inline'`.
 
 ## PWA und Offline-Cache

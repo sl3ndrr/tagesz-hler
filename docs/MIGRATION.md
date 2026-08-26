@@ -22,6 +22,10 @@ Die Inhalte der JavaScript- und CSS-Blöcke wurden bei der Extraktion nicht fach
 
 Die drei SHA-256-Freigaben der ehemaligen Inline-Blöcke wurden entfernt. `script-src 'self'` und `style-src-elem 'self' https://fonts.googleapis.com` erlauben die neuen externen Dateien. `script-src-attr 'none'`, Trusted-Types-Vorgaben und die übrigen restriktiven Direktiven bleiben erhalten. `style-src-attr 'unsafe-inline'` bleibt erforderlich, weil die vorhandene UI dynamisch einzelne Style-Eigenschaften setzt.
 
+## Freigegebener PWA-Kompatibilitätsfix
+
+Der erste Live-Test zeigte, dass die bereits in der Ausgangsdatei kombinierte Policy `require-trusted-types-for 'script'; trusted-types 'none'` in Chromium die Übergabe des String-Pfads an `navigator.serviceWorker.register()` blockiert. Nach ausdrücklicher Freigabe wurde deshalb die einzelne Policy `tageszaehler-sw` zugelassen. Sie akzeptiert ausschließlich den fest codierten Pfad `./sw.js` und erzeugt dafür eine `TrustedScriptURL`. Die Trusted-Types-Erzwingung bleibt aktiv; die Änderung stellt die vorgesehene Service-Worker- und Offline-Funktion her. Gleichzeitig wurde die Cache-Version auf `v2` erhöht.
+
 ## Ergänzte PWA-Dateien
 
 Das Repository war vor der Migration leer. Deshalb wurden die bereits referenzierten Dateien `manifest.webmanifest`, `sw.js` und die Icon-Sätze neu angelegt. Alle Pfade sind relativ und damit sowohl lokal als auch unter `/tagesz-hler/` auf GitHub Pages verwendbar.
