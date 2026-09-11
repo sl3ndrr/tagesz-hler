@@ -20,7 +20,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 |---|---|---|---|---|---|
 | P01 | Test- und CI-Grundlage | B1 | Gemergt | keine | [PR #1](https://github.com/sl3ndrr/tagesz-hler/pull/1) / `da260f23d12130272a457ebba41043def39c39cf` |
 | P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Gemergt | P01 | [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2) / `b5847d222e5a5f80ec94a726d4db27cca9c48a7c` |
-| P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | Branch `p03-kalender-uhrwechsel` |
+| P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel` |
 | P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | Geplant | P01 | — |
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Geplant | P01 | — |
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Geplant | P01 | — |
@@ -56,7 +56,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 ### P03 – Kalenderrechnung und Aktualisierung bei Uhränderungen
 
 - **Status:** In Arbeit
-- **PR / Merge-Commit:** Branch `p03-kalender-uhrwechsel`; PR und Merge-Commit werden nach Erstellung beziehungsweise Merge ergänzt.
+- **PR / Merge-Commit:** [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel`; Merge-Commit wird nach dem Merge ergänzt.
 - **Abschlussbericht:** Nulladditionen erhalten den exakten Instant auch in DST-Folds. Ein leichter sichtbarer Prüftakt erkennt Tages-, Systemzeitzonen- und relevante Uhränderungen, invalidiert zeitabhängige Anzeigen und plant Mitternacht sowie Detailfristen neu. Sekündliche Updates laufen nur bei sichtbarem Sekunden- oder Fortschrittsbedarf. Synthetische Regressionen decken beide Fold-Instanzen, Lücken, Einheitenkombinationen, Monatsenden, Schaltjahre, Uhrsprünge, Zeitzonenwechsel, Mitternacht, Sichtbarkeitswechsel und den reduzierten Leerlauftakt ab.
 - **Übergabe an Folgepakete:** Die leichte Erkennung verwendet höchstens einen 30-Sekunden-Takt; entsprechend können Uhr- oder Zeitzonenänderungen im sichtbaren Leerlauf bis zu 30 Sekunden später erscheinen. Gespeicherte Ereigniszeitzonen bleiben unverändert. P11 kann auf `EventListRenderer.needsSecondUpdates()` und den zentralen Neuaufbau in `refreshTemporalViews()` aufsetzen, ohne die Kalendersemantik neu zu definieren.
 
