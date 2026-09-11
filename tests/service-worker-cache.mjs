@@ -65,7 +65,7 @@ class MemoryCacheStorage {
 }
 
 function createWorkerHarness({
-  version = 'v5',
+  version = 'v6',
   caches = new MemoryCacheStorage(),
   scope = 'https://example.test/tagesz-hler/',
   timeoutMs = 20,
@@ -78,7 +78,7 @@ function createWorkerHarness({
     addEventListener: (type, listener) => listeners.set(type, listener)
   };
   const source = serviceWorkerSource
-    .replace("const CACHE_VERSION = 'v5';", `const CACHE_VERSION = '${version}';`)
+    .replace(/const CACHE_VERSION = '[^']+';/, `const CACHE_VERSION = '${version}';`)
     .replace('const NAVIGATION_TIMEOUT_MS = 5000;', `const NAVIGATION_TIMEOUT_MS = ${timeoutMs};`);
   const context = vm.createContext({
     AbortController,
@@ -126,7 +126,7 @@ test('installiert nur eine vollständige App-Shell und nutzt relative Pages-Unte
   const worker = createWorkerHarness({
     fetchImpl: request => {
       requested.push(request.url);
-      return Promise.resolve(new Response(`v5:${request.url}`));
+      return Promise.resolve(new Response(`v6:${request.url}`));
     }
   });
 
@@ -135,7 +135,7 @@ test('installiert nur eine vollständige App-Shell und nutzt relative Pages-Unte
   assert.equal(requested.length, 12);
   assert.ok(requested.every(url => url.startsWith(worker.scope)));
   assert.equal(worker.caches.putCalls.length, 12);
-  assert.deepEqual(await worker.caches.keys(), ['tageszaehler-v5']);
+  assert.deepEqual(await worker.caches.keys(), ['tageszaehler-v6']);
 });
 
 test('verwirft die Installation bei einem fehlenden Precache-Asset', async () => {
@@ -148,7 +148,7 @@ test('verwirft die Installation bei einem fehlenden Precache-Asset', async () =>
 
   await assert.rejects(worker.dispatchExtendable('install'), /App-Shell-Asset nicht verfügbar/);
   assert.deepEqual(await worker.caches.keys(), []);
-  assert.equal(worker.caches.deleteCalls.at(-1), 'tageszaehler-v5');
+  assert.equal(worker.caches.deleteCalls.at(-1), 'tageszaehler-v6');
 });
 
 test('bindet abgelehntes cache.put an die Installation und räumt den Teilcache auf', async () => {
@@ -158,7 +158,7 @@ test('bindet abgelehntes cache.put an die Installation und räumt den Teilcache 
 
   await assert.rejects(worker.dispatchExtendable('install'), /synthetischer cache\.put-Fehler/);
   assert.deepEqual(await caches.keys(), []);
-  assert.equal(caches.deleteCalls.at(-1), 'tageszaehler-v5');
+  assert.equal(caches.deleteCalls.at(-1), 'tageszaehler-v6');
 });
 
 test('hält Version N aktiv, während N+1 mit mehreren offenen Clients wartet', async () => {
