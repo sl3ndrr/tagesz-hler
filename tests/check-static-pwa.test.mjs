@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import './event-write-conflicts.mjs';
 import './calendar-clock-changes.mjs';
+import './service-worker-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');

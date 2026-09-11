@@ -21,7 +21,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P01 | Test- und CI-Grundlage | B1 | Gemergt | keine | [PR #1](https://github.com/sl3ndrr/tagesz-hler/pull/1) / `da260f23d12130272a457ebba41043def39c39cf` |
 | P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Gemergt | P01 | [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2) / `b5847d222e5a5f80ec94a726d4db27cca9c48a7c` |
 | P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel` |
-| P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | Geplant | P01 | — |
+| P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | In Arbeit | P01 | [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen` |
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Geplant | P01 | — |
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Geplant | P01 | — |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Geplant | P02, P06 | — |
@@ -62,10 +62,11 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P04 – Konsistente Offline-Versionen und begrenztes Caching
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen`, getesteter Implementierungscommit `d9f46b60f2ea6a699b85ce0e96cc1430b9a3cae7`; Merge-Commit wird nach dem Merge ergänzt.
+- **Abschlussbericht:** Die App-Shell wird vollständig in `tageszaehler-v5` installiert und ausschließlich aus dem Cache der aktiven Worker-Version gelesen. Fehlende Assets oder Schreibfehler verwerfen die Installation. Kontrollierte Navigationen verwenden die aktive Shell sofort; nur bei einem verlorenen aktiven Cache wird das Netz zeitlich begrenzt versucht. Allgemeines Runtime-Caching entfällt. Wartende Updates werden nicht erzwungen und in der bestehenden zugänglichen Statusmeldung angekündigt. Synthetische Regressionen decken Versionswechsel mit mehreren Clients, Precache- und Schreibfehler, HTTP 503, Netzabbruch, langsames Netz, Offline-Neustart und Pages-Unterpfade ab.
+- **Übergabe an Folgepakete:** App-Shell-Dateien bleiben durch `APP_SHELL` und `CACHE_VERSION` gekoppelt; Folgeänderungen daran müssen die Version weiterhin erhöhen. Der aktive Worker liefert keine Shell-Ressource aus fremden Versionscaches und cached sonstige Laufzeitanfragen nicht. Updates aktivieren regulär erst nach dem Schließen aller App-Tabs; bei einer extern erzwungenen Aktivierung erfolgt aus Rücksicht auf offene Eingaben kein automatisches Neuladen. Die Trusted-Types-Policy bleibt ausschließlich `tageszaehler-sw` für `./sw.js`.
+- **Offener Punkt außerhalb P04:** PR #3 ist nachweislich als Merge-Commit `af1998b62e7c7e8d4aba4634da1b771708829e6b` in `main` enthalten, seine P03-Zeile und sein Paketprotokoll stehen dort jedoch noch auf `In Arbeit`. Der P03-Nachtrag auf `Gemergt` ist außerhalb dieses Pakets weiterhin erforderlich.
 
 ### P05 – Zugängliche und konsistente Darstellung
 
