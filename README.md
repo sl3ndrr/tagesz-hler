@@ -65,7 +65,9 @@ Bei Änderungen keine Inline-Skripte oder Inline-Stylesheet-Blöcke hinzufügen.
 
 ## PWA und Offline-Cache
 
-`manifest.webmanifest` enthält relative `start_url`- und `scope`-Werte, damit die App auch unter dem GitHub-Pages-Unterpfad funktioniert. `sw.js` speichert die lokale App-Shell vorab. Bei Änderungen an ausgelieferten statischen Dateien muss `CACHE_VERSION` in `sw.js` erhöht werden.
+`manifest.webmanifest` enthält relative `start_url`- und `scope`-Werte, damit die App auch unter dem GitHub-Pages-Unterpfad funktioniert. `sw.js` speichert die vollständige lokale App-Shell in einem Cache pro Worker-Version. Ein kontrollierter Tab erhält Navigation, JavaScript und CSS ausschließlich aus diesem aktiven Versionscache; dadurch kann ein bereitstehendes Update keine Shell-Versionen mischen. Navigationen verwenden die gespeicherte Shell auch bei HTTP-Fehlern, Netzabbruch oder langsamem Netz ohne darauf zu warten.
+
+Ein neuer Worker überspringt die Wartephase nicht. Er wird erst aktiv, wenn keine Tabs der bisherigen Version mehr geöffnet sind. Die App meldet ein bereitstehendes Update zugänglich über die vorhandene Statusmeldung. Falls eine Aktivierung außerhalb dieses Ablaufs erzwungen wird, lädt die App nicht automatisch neu und lässt offene Eingaben bestehen. Sonstige gleichursprüngliche GET-Anfragen werden ohne Runtime-Cache direkt aus dem Netz geladen; fehlgeschlagene oder unvollständige Precache-Installationen werden verworfen. Bei Änderungen an ausgelieferten statischen Dateien muss `CACHE_VERSION` in `sw.js` erhöht werden.
 
 ## GitHub Pages
 

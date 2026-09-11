@@ -3259,7 +3259,7 @@ const observedServiceWorkers = new WeakSet();
 function notifyServiceWorkerUpdate() {
   if (serviceWorkerUpdateNotified) return;
   serviceWorkerUpdateNotified = true;
-  showSnackbar('Eine neue App-Version ist verfügbar und wird beim nächsten Start aktiviert.');
+  showSnackbar('Eine neue App-Version ist bereit. Sie wird nach dem Schließen aller App-Tabs aktiviert.');
 }
 
 function observeServiceWorker(worker) {
@@ -3294,7 +3294,7 @@ async function registerServiceWorker() {
     registration.addEventListener('updatefound', () => observeServiceWorker(registration.installing));
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       serviceWorkerUpdateNotified = false;
-      showSnackbar('Die App wurde im Hintergrund aktualisiert.');
+      showSnackbar('Eine neue App-Version ist aktiv. Offene Eingaben bleiben erhalten; bitte danach neu laden.');
     });
     if (navigator.onLine) registration.update().catch(() => {});
   } catch (error) {
