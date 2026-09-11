@@ -22,7 +22,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Gemergt | P01 | [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2) / `b5847d222e5a5f80ec94a726d4db27cca9c48a7c` |
 | P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel` |
 | P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | In Arbeit | P01 | [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen` |
-| P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Geplant | P01 | — |
+| P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | In Arbeit | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Branch `p05-zugaengliche-konsistente-darstellung`; Merge-Commit wird nach dem Merge ergänzt |
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Geplant | P01 | — |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Geplant | P02, P06 | — |
 | P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | Geplant | P06 | — |
@@ -70,10 +70,11 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P05 – Zugängliche und konsistente Darstellung
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Branch `p05-zugaengliche-konsistente-darstellung`, getesteter Implementierungscommit `7ab5d4e92a83029ae9bdf7fe778fb1c88f99ff51`; Merge-Commit wird nach dem Merge ergänzt.
+- **Abschlussbericht:** Die Primärfarbe erreicht mit allen vier Akzenten auf den verwendeten hellen und dunklen Flächen mindestens 4,5:1. Der Rechner verwendet eine dauerhafte Statusregion außerhalb der rein visuellen Flip-Ziffern; Fehler und Ergebnisse werden dort angekündigt. Detailbeschreibungen erhalten Zeilenumbrüche, lange Inhalte brechen um, beide Flip-Varianten animieren und reduzierte Bewegung wartet nicht. Wegen App-Shell-Änderungen ist `CACHE_VERSION` nun `v6`.
+- **Übergabe an Folgepakete:** `#calc-result-status` muss als stabile Rechner-Live-Region erhalten bleiben; `#calc-flip-clock` enthält nur visuelle Ziffern. Änderungen an App-Shell-Dateien bleiben an eine Erhöhung von `CACHE_VERSION` gekoppelt. Reale Browser-, Zoom-, Screenreader- und Bewegungspräferenzprüfungen stehen noch aus.
+- **Offener Punkt außerhalb P05:** P03 und P04 sind laut ihren Merge-Commits in `main`, stehen in Überblick und Paketprotokoll weiterhin auf `In Arbeit`; die Statusnachträge sind außerhalb dieses Pakets zu erledigen.
 
 ### P06 – Einheitliche Daten- und Formularvalidierung
 
@@ -165,3 +166,4 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 - **PR / Merge-Commit:** —
 - **Abschlussbericht:** —
 - **Übergabe an Folgepakete:** —
+
