@@ -108,6 +108,7 @@ const dstChoiceField = document.getElementById('f-dst-choice-field');
 const dstChoiceInput = document.getElementById('f-dst-choice');
 const timeZoneHint = document.getElementById('f-time-zone-hint');
 const calcDirection = document.getElementById('calc-direction');
+const calcResultStatus = document.getElementById('calc-result-status');
 const offlineStatus = document.getElementById('offline-status');
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1464,8 +1465,10 @@ function getCalendarDateDiff(leftDate, rightDate, unitsList) {
 
 function renderCalculatorMessage(container, message) {
   clearFlipClock(container);
+  calcResultStatus.textContent = message;
   const element = document.createElement('div');
   element.className = 'calc-message';
+  element.setAttribute('aria-hidden', 'true');
   element.textContent = message;
   container.appendChild(element);
 }
@@ -2336,16 +2339,18 @@ function ensureFlipClockState(container, isWide) {
   let state = flipClockStates.get(container);
   if (!state || state.isWide !== isWide) {
     clearFlipClock(container);
-    const summary = document.createElement('span');
-    summary.className = 'visually-hidden';
-    summary.id = `flip-summary-${++flipSummarySequence}`;
-    summary.dataset.flipSummary = '';
     const isCalculatorOutput = container.id === 'calc-flip-clock';
-    summary.setAttribute('role', isCalculatorOutput ? 'status' : 'timer');
-    summary.setAttribute('aria-live', isCalculatorOutput ? 'polite' : 'off');
-    summary.setAttribute('aria-atomic', 'true');
-    container.appendChild(summary);
-    state = { isWide, summary, columns: new Map() };
+    const summary = isCalculatorOutput ? calcResultStatus : document.createElement('span');
+    if (!isCalculatorOutput) {
+      summary.className = 'visually-hidden';
+      summary.id = `flip-summary-${++flipSummarySequence}`;
+      summary.dataset.flipSummary = '';
+      summary.setAttribute('role', 'timer');
+      summary.setAttribute('aria-live', 'off');
+      summary.setAttribute('aria-atomic', 'true');
+      container.appendChild(summary);
+    }
+    state = { isWide, summary, isCalculatorOutput, columns: new Map() };
     flipClockStates.set(container, state);
   }
   return state;
@@ -2370,7 +2375,7 @@ function renderFlipClock(container, diffObj, isWide, summaryPrefix = 'Zeitspanne
     }
   });
 
-  let cursor = state.summary.nextElementSibling;
+  let cursor = state.isCalculatorOutput ? container.firstElementChild : state.summary.nextElementSibling;
   diffObj.forEach(item => {
     let column = state.columns.get(item.unit);
     if (!column) {
@@ -2430,7 +2435,7 @@ function renderFlipClock(container, diffObj, isWide, summaryPrefix = 'Zeitspanne
           digit.botFront.textContent = newVal;
           digit.wrap.classList.remove('flipping');
           digit.animationTimer = null;
-        }, 340);
+        }, getFlipAnimationDuration());
       } else {
         digit.topFront.textContent = newVal;
         digit.botFront.textContent = newVal;
@@ -2440,6 +2445,13 @@ function renderFlipClock(container, diffObj, isWide, summaryPrefix = 'Zeitspanne
     }
   });
   return state.summary;
+}
+
+function getFlipAnimationDuration() {
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--flip-animation-duration').trim();
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount) || amount < 0) return 340;
+  return value.endsWith('s') && !value.endsWith('ms') ? amount * 1000 : amount;
 }
 
 /* ── MODALS & FORMS ── */

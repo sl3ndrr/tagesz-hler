@@ -7,7 +7,7 @@
   --hue-sat: 38%;
 
   /* Color roles — light */
-  --md-sys-color-primary: hsl(var(--hue-primary), var(--hue-sat), 40%);
+  --md-sys-color-primary: hsl(var(--hue-primary), var(--hue-sat), 32%);
   --md-sys-color-on-primary: #ffffff;
   --md-sys-color-primary-container: hsl(var(--hue-primary), 70%, 91%);
   --md-sys-color-on-primary-container: hsl(var(--hue-primary), 72%, 16%);
@@ -127,6 +127,7 @@
   --flip-bg: #211f26;
   --flip-text: hsl(var(--hue-primary), 76%, 90%);
   --flip-split: var(--md-sys-color-primary);
+  --flip-animation-duration: 340ms;
   --ts: var(--md-duration-medium-2) var(--md-transition-emphasized);
   --te: var(--md-duration-medium-4) var(--md-transition-emphasized-decelerate);
 }
@@ -299,12 +300,6 @@ body {
   outline: 3px solid color-mix(in srgb, var(--md-sys-color-primary) 65%, white);
   outline-offset: 2px;
 }
-.event-card.no-image .card-bg {
-  background: linear-gradient(145deg,
-    hsl(var(--hue-primary), 48%, 30%) 0%,
-    hsl(var(--hue-primary), 38%, 17%) 100%) !important;
-}
-.event-card.no-image .card-scrim { background: linear-gradient(to top, rgba(0,0,0,.35), rgba(0,0,0,.05)); }
 html[data-view="compact"] .event-list { grid-template-columns: 1fr; max-width: 820px; margin-inline: auto; }
 html[data-view="compact"] .event-card { min-height: 126px; border-radius: var(--md-shape-medium); }
 html[data-view="compact"] .card-name { margin-bottom: 8px; }
@@ -348,8 +343,8 @@ html[data-view="compact"] .card-name { margin-bottom: 8px; }
 .flip-face-front  { z-index: 2; }
 .flip-face-back   { z-index: 1; transform: rotateX(180deg); }
 
-.flip-digit-wrap.flipping .face-top-front { animation: flip-top 340ms ease-in forwards; }
-.flip-digit-wrap.flipping .face-bot-back  { animation: flip-bot 340ms ease-out forwards; }
+:is(.flip-digit-wrap, .detail-flip-digit-wrap).flipping .face-top-front { animation: flip-top var(--flip-animation-duration) ease-in forwards; }
+:is(.flip-digit-wrap, .detail-flip-digit-wrap).flipping .face-bot-back  { animation: flip-bot var(--flip-animation-duration) ease-out forwards; }
 @keyframes flip-top { 0%{transform:rotateX(0deg)} 100%{transform:rotateX(-90deg)} }
 @keyframes flip-bot { 0%{transform:rotateX(180deg)} 100%{transform:rotateX(0deg)} }
 
@@ -1007,6 +1002,7 @@ button[hidden], [hidden] { display: none !important; }
   letter-spacing: -.035em;
   line-height: 1.08;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 .card-progress-wrap { height: 5px; margin: 0; border-radius: 99px; background: rgb(255 255 255 / .2); }
 .card-progress-bar { border-radius: 99px; background: var(--md-sys-color-inverse-primary); }
@@ -1347,7 +1343,17 @@ select.m3-input + .m3-field-label {
   padding: 30px 18px;
   border-radius: 18px;
   background: var(--md-sys-color-surface-container-low);
+  overflow-wrap: anywhere;
 }
+
+.detail-hero-title,
+.detail-row-value,
+.detail-row-body,
+.empty-body {
+  overflow-wrap: anywhere;
+}
+
+#detail-desc { white-space: pre-wrap; }
 
 .snackbar {
   bottom: calc(104px + env(safe-area-inset-bottom));
@@ -1508,6 +1514,7 @@ select.m3-input + .m3-field-label {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root { --flip-animation-duration: 0ms; }
   #detail-sheet .detail-hero-bg,
   #detail-sheet .detail-hero-text,
   #detail-sheet .detail-progress-wrap,
