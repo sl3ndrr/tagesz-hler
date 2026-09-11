@@ -2546,7 +2546,7 @@ function closeEditSheet() {
   currentEditId = null;
   currentEditBaseEvent = null;
   currentEditTimeZone = null;
-  if (editId) {
+  if (editId && eventStore.getEvent(editId)) {
     hideSheets(false, false);
     openDetailSheet(editId);
   } else {
