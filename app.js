@@ -30,6 +30,7 @@ let eventController = null;
 let eventRenderer = null;
 let liveScheduler = null;
 let midnightScheduler = null;
+let temporalContextTracker = null;
 let activeTab = 0;
 let currentDetailId = null;
 let detailNextUpdateAt = 0;
@@ -143,7 +144,8 @@ function init() {
   initSheetGestures(editSheet);
   if (document.readyState === 'complete') registerServiceWorker();
   else window.addEventListener('load', registerServiceWorker, { once: true });
-  liveScheduler = new SelfCorrectingScheduler(tick, 1000);
+  temporalContextTracker = new TemporalContextTracker();
+  liveScheduler = new SelfCorrectingScheduler(tick, TEMPORAL_CHECK_INTERVAL_MS);
   midnightScheduler = new MidnightRefreshScheduler(handleMidnightRefresh);
   liveScheduler.start();
   midnightScheduler.start();
@@ -350,12 +352,12 @@ function updateThemeColor() {
   });
 }
 
-function updateTodayLabel() {
+function updateTodayLabel(date = new Date()) {
   const label = document.getElementById('app-bar-date');
   if (!label) return;
   label.textContent = new Intl.DateTimeFormat('de-DE', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-  }).format(new Date());
+  }).format(date);
 }
 
 /* ── DATA MODEL ── */
@@ -1099,6 +1101,9 @@ const MS_PER_SECOND = 1000;
 const MS_PER_MINUTE = 60 * MS_PER_SECOND;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
+const ACTIVE_UPDATE_INTERVAL_MS = MS_PER_SECOND;
+const TEMPORAL_CHECK_INTERVAL_MS = 30 * MS_PER_SECOND;
+const CLOCK_JUMP_TOLERANCE_MS = 5 * MS_PER_SECOND;
 const zonedFormatterCache = new Map();
 const timeZoneValidityCache = new Map();
 const zonedResolutionCache = new Map();
@@ -1644,6 +1649,7 @@ class EventListRenderer {
       view.isVisible = entry.isIntersecting;
       if (view.isVisible) this.updateLiveView(view, now, true, viewerToday);
     });
+    updateLiveSchedulerCadence();
   }
 
   render(events, nowTime = Date.now()) {
@@ -1873,10 +1879,17 @@ class EventListRenderer {
       if (view.isVisible) this.updateLiveView(view, nowTime, force, viewerToday);
     });
   }
+
+  needsSecondUpdates() {
+    return [...this.views.values()].some(view => view.isVisible && view.event?.kind === 'timed' && (
+      view.event.units.includes('seconds') || view.event.refDate !== ''
+    ));
+  }
 }
 
-function renderEvents() {
-  eventRenderer?.render(eventStore.getEvents(), Date.now());
+function renderEvents(nowTime = Date.now()) {
+  eventRenderer?.render(eventStore.getEvents(), nowTime);
+  updateLiveSchedulerCadence();
 }
 
 function updateDetailLive(nowTime, force = false) {
@@ -1922,12 +1935,68 @@ function updateDetailLive(nowTime, force = false) {
   detailNextUpdateAt = Math.min(detailNextClockUpdateAt, detailNextProgressUpdateAt);
 }
 
+function getMonotonicTime() {
+  return typeof globalThis.performance?.now === 'function' ? globalThis.performance.now() : Date.now();
+}
+
+function getTemporalMarker(nowTime = Date.now()) {
+  const timeZone = getSystemTimeZone();
+  return `${timeZone}|${formatInstantDateKey(nowTime, timeZone)}`;
+}
+
+class TemporalContextTracker {
+  constructor(nowTime = Date.now(), monotonicTime = getMonotonicTime()) {
+    this.reset(nowTime, monotonicTime);
+  }
+
+  reset(nowTime = Date.now(), monotonicTime = getMonotonicTime()) {
+    this.wallTime = nowTime;
+    this.monotonicTime = monotonicTime;
+    this.marker = getTemporalMarker(nowTime);
+  }
+
+  observe(nowTime = Date.now(), monotonicTime = getMonotonicTime()) {
+    const marker = getTemporalMarker(nowTime);
+    const wallElapsed = nowTime - this.wallTime;
+    const monotonicElapsed = monotonicTime - this.monotonicTime;
+    const clockJumped = Math.abs(wallElapsed - monotonicElapsed) > CLOCK_JUMP_TOLERANCE_MS;
+    const markerChanged = marker !== this.marker;
+    const previousMarker = this.marker;
+    this.wallTime = nowTime;
+    this.monotonicTime = monotonicTime;
+    this.marker = marker;
+    return { changed: clockJumped || markerChanged, clockJumped, markerChanged, previousMarker, marker };
+  }
+}
+
+function detailNeedsSecondUpdates() {
+  if (!currentDetailId || !detailSheet.classList.contains('open')) return false;
+  const event = eventStore.getEvent(currentDetailId);
+  return Boolean(event?.kind === 'timed' && (event.units.includes('seconds') || event.refDate !== ''));
+}
+
+function getLiveUpdateIntervalMs() {
+  return eventRenderer?.needsSecondUpdates() || detailNeedsSecondUpdates()
+    ? ACTIVE_UPDATE_INTERVAL_MS
+    : TEMPORAL_CHECK_INTERVAL_MS;
+}
+
+function updateLiveSchedulerCadence() {
+  liveScheduler?.setIntervalMs(getLiveUpdateIntervalMs());
+}
+
 function tick(force = false) {
   if (document.hidden && !force) return;
   const now = Date.now();
+  const temporalChange = temporalContextTracker?.observe(now);
+  if (temporalChange?.changed) {
+    handleTemporalContextRefresh(now);
+    return;
+  }
   if (eventRenderer?.hasTimedBoundaryCrossed(now)) eventRenderer.render(eventStore.getEvents(), now);
   eventRenderer?.updateLive(now, force);
   updateDetailLive(now, force);
+  updateLiveSchedulerCadence();
 }
 
 class SelfCorrectingScheduler {
@@ -1959,6 +2028,12 @@ class SelfCorrectingScheduler {
       this.callback(true);
       this.scheduleNext();
     }
+  }
+
+  setIntervalMs(intervalMs) {
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0 || intervalMs === this.intervalMs) return;
+    this.intervalMs = intervalMs;
+    if (this.running && !document.hidden && this.timer != null) this.scheduleNext();
   }
 
   scheduleNext() {
@@ -2000,21 +2075,22 @@ class MidnightRefreshScheduler {
     this.handleVisibility = () => {
       this.clearTimer();
       if (!document.hidden && this.running) {
-        this.refreshIfNeeded();
-        this.scheduleNext();
+        const now = Date.now();
+        this.refreshIfNeeded(false, now);
+        this.scheduleNext(now);
       }
     };
     this.handleTimeout = () => {
       this.timer = null;
       if (!this.running || document.hidden) return;
-      this.refreshIfNeeded(true);
-      this.scheduleNext();
+      const now = Date.now();
+      this.refreshIfNeeded(true, now);
+      this.scheduleNext(now);
     };
   }
 
   getMarker(nowTime = Date.now()) {
-    const timeZone = getSystemTimeZone();
-    return `${timeZone}|${formatInstantDateKey(nowTime, timeZone)}`;
+    return getTemporalMarker(nowTime);
   }
 
   start() {
@@ -2025,18 +2101,22 @@ class MidnightRefreshScheduler {
     if (!document.hidden) this.scheduleNext();
   }
 
-  refreshIfNeeded(force = false) {
-    const nextMarker = this.getMarker();
+  refreshIfNeeded(force = false, nowTime = Date.now()) {
+    const nextMarker = this.getMarker(nowTime);
     if (!force && nextMarker === this.marker) return;
     this.marker = nextMarker;
-    this.callback();
+    this.callback(nowTime);
   }
 
-  scheduleNext() {
+  scheduleNext(nowTime = Date.now()) {
     this.clearTimer();
-    const now = Date.now();
-    const boundary = nextLocalDayBoundary(now);
-    this.timer = setTimeout(this.handleTimeout, Math.max(100, boundary - now + 75));
+    const boundary = nextLocalDayBoundary(nowTime);
+    this.timer = setTimeout(this.handleTimeout, Math.max(100, boundary - nowTime + 75));
+  }
+
+  rebase(nowTime = Date.now()) {
+    this.marker = this.getMarker(nowTime);
+    if (this.running && !document.hidden) this.scheduleNext(nowTime);
   }
 
   clearTimer() {
@@ -2051,10 +2131,25 @@ class MidnightRefreshScheduler {
   }
 }
 
-function handleMidnightRefresh() {
-  updateTodayLabel();
-  renderEvents();
-  tick(true);
+function refreshTemporalViews(nowTime) {
+  updateTodayLabel(new Date(nowTime));
+  detailNextUpdateAt = 0;
+  detailNextClockUpdateAt = 0;
+  detailNextProgressUpdateAt = 0;
+  renderEvents(nowTime);
+  updateDetailLive(nowTime, true);
+  updateLiveSchedulerCadence();
+}
+
+function handleTemporalContextRefresh(nowTime = Date.now()) {
+  temporalContextTracker?.reset(nowTime);
+  midnightScheduler?.rebase(nowTime);
+  refreshTemporalViews(nowTime);
+}
+
+function handleMidnightRefresh(nowTime = Date.now()) {
+  temporalContextTracker?.reset(nowTime);
+  refreshTemporalViews(nowTime);
 }
 
 /* ── DST-SAFE CALENDAR DIFFERENCE ── */
@@ -2098,6 +2193,7 @@ function resolveCompatibleZonedComponents(components, timeZone) {
 }
 
 function addZonedCalendarUnit(instant, amount, unit, timeZone) {
+  if (amount === 0) return instant;
   const parts = getZonedParts(instant, timeZone);
   const milliseconds = ((instant % MS_PER_SECOND) + MS_PER_SECOND) % MS_PER_SECOND;
   const sourceDate = datePartsToKey(parts);
