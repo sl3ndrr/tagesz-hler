@@ -111,6 +111,8 @@ Falls Pages für das Repository noch nicht aktiviert ist:
 
 Ereignisse und Einstellungen verbleiben im jeweiligen Browserprofil. Das Projekt besitzt kein Backend und überträgt keine Ereignisdaten. Netzwerkzugriffe entstehen für Google Fonts sowie für externe Bild-URLs, die Nutzer selbst hinterlegen.
 
+Import, lokaler Ereignisbestand und formatierter JSON-Export teilen ein Limit von 8 MiB UTF-8-Daten. Dadurch bleibt jeder regulär speicherbare Bestand auch wieder exportier- und importierbar; nichtlateinische Zeichen und Emoji werden nach ihrer tatsächlichen Bytegröße bewertet.
+
 ## Migration
 
 Die Herkunft, Dateizuordnung, CSP-Anpassung und Prüfschritte sind in [docs/MIGRATION.md](docs/MIGRATION.md) dokumentiert.
