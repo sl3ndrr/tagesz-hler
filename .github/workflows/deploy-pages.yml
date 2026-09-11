@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -17,7 +20,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check:
+    name: Prüfe statische PWA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Prüfe PWA-Eingaben
+        env:
+          PWA_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/check-static-pwa.mjs
+
+      - name: Führe Prüfregressionen aus
+        run: node --test tests/check-static-pwa.test.mjs
+
   deploy:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

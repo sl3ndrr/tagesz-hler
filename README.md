@@ -31,6 +31,8 @@ Eine weitere fachliche Modularisierung wäre eine funktionale Refaktorierung und
 ```text
 .
 ├── .github/workflows/deploy-pages.yml
+├── scripts/check-static-pwa.mjs
+├── tests/check-static-pwa.test.mjs
 ├── docs/MIGRATION.md
 ├── icons/
 ├── index.html
@@ -68,6 +70,14 @@ Bei Änderungen keine Inline-Skripte oder Inline-Stylesheet-Blöcke hinzufügen.
 ## GitHub Pages
 
 Jeder Push auf `main` startet `.github/workflows/deploy-pages.yml`. Der Workflow paketiert nur die statischen Laufzeitdateien; ein Build findet nicht statt.
+
+Vor dem Deployment und bei Pull Requests nach `main` läuft `node scripts/check-static-pwa.mjs`. Die Prüfung verwendet ausschließlich Node-Bordmittel und prüft JavaScript-Syntax, Manifest, lokale Referenzen, CSP-Grundregeln und den Versionswechsel des Service-Worker-Caches. Für Änderungen an einer gecachten App-Shell-Datei muss im selben Vergleich `sw.js` mit erhöhter `CACHE_VERSION` vorliegen. Ohne verfügbaren Vergleichsstand (etwa im Initiallauf) läuft die Grundprüfung weiter und meldet den übersprungenen Versionsvergleich.
+
+Die synthetischen Regressionen lassen sich ohne Installation ausführen:
+
+```bash
+node --test tests/check-static-pwa.test.mjs
+```
 
 Falls Pages für das Repository noch nicht aktiviert ist:
 

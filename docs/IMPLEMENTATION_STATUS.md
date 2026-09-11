@@ -18,7 +18,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 | # | Paket | Befunde | Status | Voraussetzungen | PR / Merge-Commit |
 |---|---|---|---|---|---|
-| P01 | Test- und CI-Grundlage | B1 | Geplant | keine | — |
+| P01 | Test- und CI-Grundlage | B1 | In Arbeit | keine | PR folgt |
 | P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Geplant | P01 | — |
 | P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | Geplant | P01 | — |
 | P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | Geplant | P01 | — |
@@ -41,10 +41,10 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P01 – Test- und CI-Grundlage
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** PR folgt
+- **Abschlussbericht:** Der Arbeitsbranch enthält eine Node-Bordmittel-Prüfung für Syntax, Manifest, lokale Referenzen, CSP-Grundregeln und Cache-Versionen sowie einen vorgeschalteten Actions-Prüfjob. Der endgültige Bericht steht in der PR-Beschreibung.
+- **Übergabe an Folgepakete:** Jede Änderung an einer Datei der `APP_SHELL` in `sw.js` benötigt im selben Paket eine Änderung von `sw.js` mit erhöhter `CACHE_VERSION`. Der Vergleich nutzt bei Pull Requests den Base-SHA und bei Pushes den vorherigen SHA; Initialläufe prüfen die Basisregeln, überspringen aber den Versionsvergleich.
 
 ### P02 – Sichere Schreibvorgänge und Konfliktbehandlung
 
