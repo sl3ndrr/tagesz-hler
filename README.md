@@ -79,6 +79,20 @@ Die synthetischen Regressionen lassen sich ohne Installation ausführen:
 node --test tests/*.test.mjs
 ```
 
+## Kalenderrechnung und Uhränderungen
+
+Kalenderanteile werden in der gespeicherten Ereigniszeitzone berechnet. Eine
+Nulladdition bewahrt den exakten Zeitpunkt auch in einer doppelt vorkommenden
+DST-Stunde; Kalenderadditionen in eine Lücke werden weiterhin kompatibel auf
+die nächste existierende lokale Uhrzeit verschoben.
+
+Während die App sichtbar ist, prüft ein leichter 30-Sekunden-Takt auf
+Mitternacht, Änderungen der Systemzeitzone und relevante Sprünge der
+Systemuhr. Betroffene Tagesklassifikationen und Aktualisierungsfristen werden
+dann neu aufgebaut. Der Sekundentakt läuft nur, wenn eine sichtbare zeitgenaue
+Karte oder Detailansicht Sekunden beziehungsweise einen laufenden Fortschritt
+anzeigt.
+
 ## Schreibsicherheit und mehrere Tabs
 
 Alle Änderungen am Ereignisbestand laufen über denselben exklusiven Web Lock. Innerhalb der Sperre wird der aktuelle `localStorage`-Stand erneut gelesen, der fachliche Konflikt geprüft und erst danach geschrieben. Neue Ereignisse und Änderungen an unterschiedlichen Ereignissen werden dadurch auf dem frischen Gesamtbestand zusammengeführt. Bei Änderungen desselben Ereignisses, Bearbeiten gegen Löschen sowie einem Import oder „Alle löschen“ gegen eine parallele Änderung wird der Vorgang abgebrochen; ein geöffneter Bearbeitungsentwurf bleibt erhalten.
