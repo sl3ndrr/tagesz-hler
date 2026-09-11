@@ -23,7 +23,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel` |
 | P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | In Arbeit | P01 | [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen` |
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | In Arbeit | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Branch `p05-zugaengliche-konsistente-darstellung`; Merge-Commit wird nach dem Merge ergänzt |
-| P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Geplant | P01 | — |
+| P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | In Arbeit | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6), Branch `p06-einheitliche-daten-formularvalidierung`; Merge-Commit wird nach dem Merge ergänzt |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Geplant | P02, P06 | — |
 | P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | Geplant | P06 | — |
 | P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Geplant | P02, P04, P07 | — |
@@ -78,10 +78,10 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P06 – Einheitliche Daten- und Formularvalidierung
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6), Branch `p06-einheitliche-daten-formularvalidierung`; Merge-Commit wird nach dem Merge ergänzt.
+- **Abschlussbericht:** Normalisierung akzeptiert IDs nur als String oder endliche Legacy-Zahl und weist falsche vorhandene Typen von `time`/`refDate` kontrolliert über den Quarantänepfad ab. `validity.badInput` verhindert, dass unvollständige native Datum-/Zeiteingaben als leer gespeichert werden. Speichern, Laden, Import und formatierter Export teilen ein UTF-8-Limit von 8 MiB; direkte DST-Listener entfallen zugunsten des Formularpfads. `CACHE_VERSION` ist `v7`.
+- **Übergabe an Folgepakete:** P07/P08/P15 können die strikte Ereignisnormalisierung und das gemeinsame UTF-8-Limit voraussetzen. Altformate mit Array-Wurzel, fehlenden/`null` optionalen Zeit-/Referenzwerten und numerischen Legacy-IDs bleiben lesbar. Der reale CI-Lauf sowie Browserprüfungen für native `badInput`-Fälle stehen noch aus.
 
 ### P07 – Datenrettung und verständliche Speicherzustände
 
