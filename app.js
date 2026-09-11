@@ -11,8 +11,8 @@ const STORAGE_KEYS = Object.freeze({
 });
 const DATA_LIMITS = Object.freeze({
   maxEvents: 1000,
-  maxImportBytes: 8 * 1024 * 1024,
-  maxStoredJsonChars: 8 * 1024 * 1024,
+  // Alle Datenwege verwenden die UTF-8-Größe des formatierten Exportformats.
+  maxEventDataBytes: 8 * 1024 * 1024,
   maxNameChars: 200,
   maxDescriptionChars: 4000,
   maxIdChars: 128,
@@ -229,9 +229,6 @@ function init() {
     });
   });
 
-  eventDateInput.addEventListener('input', updateDateTimeDisambiguation);
-  eventTimeInput.addEventListener('input', updateDateTimeDisambiguation);
-  dstChoiceInput.addEventListener('change', updateDateTimeDisambiguation);
   imageFileBtn.addEventListener('click', () => imageFileInput.click());
   imageFileInput.addEventListener('change', handleImageUpload);
   imageUrlInput.addEventListener('input', handleImageUrlInput);
@@ -398,6 +395,31 @@ function ensureUniqueEventIds(list) {
   });
 }
 
+function utf8ByteLength(value) {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+function serializeEventCollection(events, formatted = false) {
+  return JSON.stringify(events, null, formatted ? 2 : undefined);
+}
+
+function hasOptionalString(raw, key) {
+  return Object.prototype.hasOwnProperty.call(raw, key) && raw[key] != null;
+}
+
+function readOptionalString(raw, key) {
+  if (!hasOptionalString(raw, key)) return '';
+  return typeof raw[key] === 'string' ? raw[key] : null;
+}
+
+function normalizeEventId(raw, { regenerateId = false } = {}) {
+  const hasId = hasOptionalString(raw, 'id');
+  if (hasId && typeof raw.id !== 'string' && !(typeof raw.id === 'number' && Number.isFinite(raw.id))) return null;
+  const rawId = hasId ? String(raw.id) : '';
+  if (regenerateId || !rawId || rawId.length > DATA_LIMITS.maxIdChars) return createEventId();
+  return rawId;
+}
+
 function normalizeEvent(raw, index = 0, { regenerateId = false } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   if (typeof raw.name !== 'string' || raw.name.length > DATA_LIMITS.maxNameChars) return null;
@@ -407,18 +429,17 @@ function normalizeEvent(raw, index = 0, { regenerateId = false } = {}) {
 
   const name = raw.name.trim();
   const date = typeof raw.date === 'string' ? raw.date : '';
-  const time = typeof raw.time === 'string' ? raw.time : '';
-  const refDate = typeof raw.refDate === 'string' ? raw.refDate : '';
+  const time = readOptionalString(raw, 'time');
+  const refDate = readOptionalString(raw, 'refDate');
   const desc = typeof raw.desc === 'string' ? raw.desc.trim() : '';
-  const rawId = raw.id == null ? '' : String(raw.id);
-  const id = regenerateId || !rawId || rawId.length > DATA_LIMITS.maxIdChars ? createEventId() : rawId;
+  const id = normalizeEventId(raw, { regenerateId });
   const units = ALLOWED_UNITS.filter(unit => raw.units.includes(unit));
   const img = normalizeImageSource(raw.img);
   const inferredKind = time === '' ? 'all-day' : 'timed';
   const kind = raw.kind == null ? inferredKind : raw.kind;
   const hasRefDate = refDate !== '';
 
-  if (!name || !isValidDateInput(date) || !isValidTimeInput(time) || (hasRefDate && !isValidDateInput(refDate)) || units.length === 0) return null;
+  if (time == null || refDate == null || id == null || !name || !isValidDateInput(date) || !isValidTimeInput(time) || (hasRefDate && !isValidDateInput(refDate)) || units.length === 0) return null;
   if (!['all-day', 'timed'].includes(kind) || kind !== inferredKind) return null;
   if (raw.img && !img) return null;
 
@@ -452,7 +473,12 @@ function normalizeEventCollection(rawEvents, { regenerateIds = false } = {}) {
   let totalImageChars = 0;
 
   rawEvents.forEach((raw, index) => {
-    const event = normalizeEvent(raw, index, { regenerateId: regenerateIds });
+    let event = null;
+    try {
+      event = normalizeEvent(raw, index, { regenerateId: regenerateIds });
+    } catch (_) {
+      event = null;
+    }
     if (!event) {
       invalidCount++;
       return;
@@ -465,9 +491,20 @@ function normalizeEventCollection(rawEvents, { regenerateIds = false } = {}) {
     return { ok: false, code: 'images-too-large', events: [], invalidCount };
   }
 
+  const events = ensureUniqueEventIds(normalized);
+  let formattedExport;
+  try {
+    formattedExport = serializeEventCollection(events, true);
+  } catch (_) {
+    return { ok: false, code: 'serialization', events: [], invalidCount };
+  }
+  if (utf8ByteLength(formattedExport) > DATA_LIMITS.maxEventDataBytes) {
+    return { ok: false, code: 'data-too-large', events: [], invalidCount };
+  }
+
   return {
     ok: true,
-    events: ensureUniqueEventIds(normalized),
+    events,
     invalidCount,
     totalImageChars
   };
@@ -518,7 +555,7 @@ class EventRepository {
 
   parseStoredRaw(raw, { quarantineOnError = true } = {}) {
     const rawRevision = `raw:${hashString(raw)}`;
-    if (raw.length > DATA_LIMITS.maxStoredJsonChars) {
+    if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) {
       return this.failureResult(raw, new Error('Gespeicherter Datensatz überschreitet das Größenlimit.'), 'size-check', { quarantineOnError, revision: rawRevision });
     }
 
@@ -548,7 +585,12 @@ class EventRepository {
       return this.failureResult(raw, new Error('Unbekanntes oder nicht unterstütztes Datenschema.'), 'schema-migration', { quarantineOnError, revision: rawRevision });
     }
 
-    const collection = normalizeEventCollection(payload);
+    let collection;
+    try {
+      collection = normalizeEventCollection(payload);
+    } catch (error) {
+      return this.failureResult(raw, error, 'schema-validation', { quarantineOnError, revision });
+    }
     if (!collection.ok) {
       return this.failureResult(raw, new Error(`Datensatzvalidierung fehlgeschlagen: ${collection.code}`), 'schema-validation', { quarantineOnError, revision });
     }
@@ -721,11 +763,13 @@ class EventRepository {
     let serialized;
     try {
       // Das kanonische Array-Format bleibt für noch offene Tabs älterer App-Versionen lesbar.
-      serialized = JSON.stringify(collection.events);
+      serialized = serializeEventCollection(collection.events);
     } catch (error) {
       return { ok: false, code: 'serialization', error };
     }
-    if (serialized.length > DATA_LIMITS.maxStoredJsonChars) return { ok: false, code: 'too-large' };
+    if (utf8ByteLength(serializeEventCollection(collection.events, true)) > DATA_LIMITS.maxEventDataBytes) {
+      return { ok: false, code: 'too-large' };
+    }
 
     const snapshot = {
       schemaVersion: DATA_SCHEMA_VERSION,
@@ -2669,6 +2713,12 @@ function updateDateTimeDisambiguation() {
   eventTimeInput.setCustomValidity('');
   timeZoneHint.classList.remove('error');
 
+  if (eventDateInput.validity.badInput || eventTimeInput.validity.badInput) {
+    dstChoiceField.hidden = true;
+    timeZoneHint.textContent = 'Bitte Datum und Uhrzeit vollständig eingeben.';
+    return { ok: false, status: 'invalid' };
+  }
+
   if (time === '') {
     dstChoiceField.hidden = true;
     timeZoneHint.textContent = 'Ohne Uhrzeit wird das Ereignis als reiner Kalendertag behandelt.';
@@ -2752,13 +2802,15 @@ function validateEditorForm({ focusFirst = true } = {}) {
   }
 
   const validDate = isValidDateInput(date);
-  if (!date) invalidate(eventDateInput, 'Bitte ein Datum auswählen.');
+  if (eventDateInput.validity.badInput) invalidate(eventDateInput, 'Bitte ein vollständiges, gültiges Datum eingeben.');
+  else if (!date) invalidate(eventDateInput, 'Bitte ein Datum auswählen.');
   else if (!validDate) invalidate(eventDateInput, 'Bitte ein gültiges Datum auswählen.');
 
   if (desc.length > DATA_LIMITS.maxDescriptionChars || eventDescriptionInput.validity.tooLong) {
     invalidate(eventDescriptionInput, `Die Beschreibung darf höchstens ${DATA_LIMITS.maxDescriptionChars} Zeichen enthalten.`);
   }
 
+  const hasInvalidTimeInput = eventTimeInput.validity.badInput;
   const kind = time === '' ? 'all-day' : 'timed';
   const timeZone = kind === 'timed' && isValidTimeZone(currentEditTimeZone)
     ? currentEditTimeZone
@@ -2768,15 +2820,19 @@ function validateEditorForm({ focusFirst = true } = {}) {
   const disambiguation = kind === 'timed' ? dstChoiceInput.value : '';
   const target = updateDateTimeDisambiguation();
 
-  if (time && !isValidTimeInput(time)) {
+  if (hasInvalidTimeInput) {
+    invalidate(eventTimeInput, 'Bitte eine vollständige, gültige Uhrzeit eingeben.');
+  } else if (time && !isValidTimeInput(time)) {
     invalidate(eventTimeInput, 'Bitte eine gültige Uhrzeit eingeben.');
   } else if (time && target.status === 'nonexistent') {
     invalidate(eventTimeInput, 'Diese Uhrzeit existiert wegen der Zeitumstellung nicht.');
   }
 
+  const hasInvalidRefDateInput = eventRefDateInput.validity.badInput;
   const hasRefDate = refDate !== '';
   const validRefDate = !hasRefDate || isValidDateInput(refDate);
-  if (!validRefDate) invalidate(eventRefDateInput, 'Bitte ein gültiges Referenzdatum auswählen.');
+  if (hasInvalidRefDateInput) invalidate(eventRefDateInput, 'Bitte ein vollständiges, gültiges Referenzdatum eingeben.');
+  else if (!validRefDate) invalidate(eventRefDateInput, 'Bitte ein gültiges Referenzdatum auswählen.');
 
   if (validDate && validRefDate && hasRefDate) {
     if (kind === 'all-day' && compareDateKeys(refDate, date) >= 0) {
@@ -3202,7 +3258,12 @@ function clearImage() {
 /* ── IMPORT / EXPORT ── */
 function exportData() {
   const events = eventStore.getEvents();
-  const data = JSON.stringify(events, null, 2);
+  const data = serializeEventCollection(events, true);
+  if (utf8ByteLength(data) > DATA_LIMITS.maxEventDataBytes) {
+    setMenuOpen(false);
+    showSnackbar('Export fehlgeschlagen: Der Datenbestand überschreitet das zulässige Größenlimit.');
+    return;
+  }
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -3220,16 +3281,16 @@ function importData(event) {
   const input = event.target;
   const file = input.files[0];
   if (!file) return;
-  if (file.size > DATA_LIMITS.maxImportBytes) {
+  if (file.size > DATA_LIMITS.maxEventDataBytes) {
     input.value = '';
     setMenuOpen(false);
-    return showSnackbar(`Import fehlgeschlagen: Datei darf maximal ${Math.floor(DATA_LIMITS.maxImportBytes / 1024 / 1024)} MB groß sein.`);
+    return showSnackbar(`Import fehlgeschlagen: Datei darf maximal ${Math.floor(DATA_LIMITS.maxEventDataBytes / 1024 / 1024)} MB groß sein.`);
   }
   const reader = new FileReader();
   reader.onload = async readEvent => {
     try {
       const raw = String(readEvent.target.result || '');
-      if (raw.length > DATA_LIMITS.maxStoredJsonChars) throw new Error('Die Datei überschreitet das zulässige Datenlimit.');
+      if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Die Datei überschreitet das zulässige Datenlimit.');
       const data = JSON.parse(raw);
       if (!Array.isArray(data)) throw new Error('Die Datei enthält kein Ereignis-Array.');
       const collection = normalizeEventCollection(data, { regenerateIds: true });

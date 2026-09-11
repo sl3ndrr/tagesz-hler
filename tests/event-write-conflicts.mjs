@@ -94,6 +94,7 @@ function createArchitecture(storage, lockManager = new QueuedLockManager()) {
     window: { localStorage: storage, navigator: lockManager ? { locks: lockManager } : {} },
     STORAGE_KEYS: { events: 'events', quarantine: 'quarantine', quarantineMeta: 'quarantine-meta' },
     DATA_LIMITS: {
+      maxEventDataBytes: 1024 * 1024,
       maxStoredJsonChars: 1024 * 1024,
       maxQuarantineRawChars: 1024 * 1024,
       maxQuarantineEntries: 5
@@ -106,6 +107,9 @@ function createArchitecture(storage, lockManager = new QueuedLockManager()) {
     normalizeEventCollection: events => Array.isArray(events)
       ? { ok: true, events: events.map(event => ({ ...event })), invalidCount: 0 }
       : { ok: false, events: [], invalidCount: 0 },
+    serializeEventCollection: (events, formatted = false) => JSON.stringify(events, null, formatted ? 2 : undefined),
+    TextEncoder,
+    utf8ByteLength: value => new TextEncoder().encode(value).byteLength,
     freezeEvents: events => Object.freeze(events.map(event => Object.freeze({ ...event }))),
     eventsEqual: (left, right) => left === right || Boolean(left && right && JSON.stringify(left) === JSON.stringify(right))
   });
