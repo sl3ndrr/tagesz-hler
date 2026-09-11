@@ -4,6 +4,8 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:f
 import { resolve } from 'node:path';
 import test from 'node:test';
 
+import './event-write-conflicts.mjs';
+
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');
 

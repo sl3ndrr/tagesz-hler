@@ -2,6 +2,8 @@
 const ALLOWED_UNITS = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
 const DEFAULT_UNITS = ['years', 'months', 'weeks', 'days', 'seconds'];
 const DATA_SCHEMA_VERSION = 2;
+const EVENT_WRITE_LOCK_NAME = 'tageszaehler-events-v2-write';
+const WRITE_PROTOCOL_VERSION = 2;
 const STORAGE_KEYS = Object.freeze({
   events: 'events',
   quarantine: 'tageszaehler:events:quarantine:v1',
@@ -34,12 +36,13 @@ let detailNextUpdateAt = 0;
 let detailNextClockUpdateAt = 0;
 let detailNextProgressUpdateAt = 0;
 let currentEditId = null;
-let currentEditBaseRevision = null;
+let currentEditBaseEvent = null;
 let currentEditTimeZone = null;
 let imgData = null;
 let imageCompressionController = null;
 let imageCompressionToken = 0;
 let imageProcessing = false;
+let eventSavePending = false;
 let imagePreviewToken = 0;
 let deferredInstallPrompt = null;
 let modalHistoryActive = false;
@@ -180,7 +183,7 @@ function init() {
   document.getElementById('edit-top-close-btn').addEventListener('click', closeEditSheet);
   editForm.addEventListener('submit', event => {
     event.preventDefault();
-    saveEvent();
+    void saveEvent();
   });
   editForm.addEventListener('input', handleEditorInput);
   editForm.addEventListener('change', handleEditorInput);
@@ -198,7 +201,7 @@ function init() {
     if (modalHistoryActive) {
       modalHistoryActive = false;
       currentEditId = null;
-      currentEditBaseRevision = null;
+      currentEditBaseEvent = null;
       currentEditTimeZone = null;
       abortImageProcessing();
       hideSheets(true);
@@ -231,7 +234,7 @@ function init() {
   imageUrlInput.addEventListener('input', handleImageUrlInput);
   document.getElementById('img-clear-btn').addEventListener('click', clearImage);
 
-  document.getElementById('clear-btn').addEventListener('click', () => eventController.clearAll());
+  document.getElementById('clear-btn').addEventListener('click', () => { void eventController.clearAll(); });
   document.getElementById('export-btn').addEventListener('click', exportData);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
@@ -471,6 +474,12 @@ function freezeEvents(list) {
   return Object.freeze(list.map(event => Object.freeze({ ...event, units: Object.freeze([...event.units]) })));
 }
 
+function eventsEqual(left, right) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 /* ── STORAGE REPOSITORY ── */
 class EventRepository {
   constructor() {
@@ -656,7 +665,34 @@ class EventRepository {
     }
   }
 
-  save(events, expectedRevision, sourceId) {
+  async save(mutate, sourceId) {
+    const lockManager = window.navigator?.locks;
+    if (!lockManager || typeof lockManager.request !== 'function') {
+      return { ok: false, code: 'lock-unavailable' };
+    }
+
+    try {
+      return await lockManager.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+        const latest = this.loadCurrent({ quarantineOnError: true });
+        if (!latest.ok || latest.writeProtected) {
+          return { ok: false, code: 'write-protected', latest };
+        }
+
+        let mutation;
+        try {
+          mutation = mutate([...latest.events], latest);
+        } catch (error) {
+          return { ok: false, code: 'mutation-failed', error, latest };
+        }
+        if (!mutation?.ok) return { ...mutation, ok: false, latest };
+        return this.persist(mutation.events, latest.revision, sourceId);
+      });
+    } catch (error) {
+      return { ok: false, code: 'lock-failed', error };
+    }
+  }
+
+  persist(events, expectedRevision, sourceId) {
     let storage;
     let currentRaw;
     try {
@@ -671,7 +707,7 @@ class EventRepository {
       const latest = currentRaw == null
         ? this.loadCurrent({ quarantineOnError: false })
         : this.parseStoredRaw(currentRaw, { quarantineOnError: true });
-      return { ok: false, code: 'conflict', latest };
+      return { ok: false, code: 'write-raced', latest };
     }
 
     const collection = normalizeEventCollection(events);
@@ -698,6 +734,13 @@ class EventRepository {
 
     try {
       storage.setItem(this.key, serialized);
+      const persistedRaw = storage.getItem(this.key);
+      if (persistedRaw !== serialized) {
+        const latest = persistedRaw == null
+          ? this.loadCurrent({ quarantineOnError: false })
+          : this.parseStoredRaw(persistedRaw, { quarantineOnError: true });
+        return { ok: false, code: 'write-raced', latest };
+      }
       return { ok: true, ...snapshot, events: collection.events, writeProtected: false };
     } catch (error) {
       return { ok: false, code: isQuotaExceededError(error) ? 'quota' : 'storage-unavailable', error };
@@ -720,6 +763,7 @@ class EventStore {
     this.repository = repository;
     this.sourceId = createEventId();
     this.listeners = new Set();
+    this.legacyPeerDetected = false;
     this.state = {
       events: freezeEvents(initialSnapshot.events || []),
       revision: initialSnapshot.revision ?? null,
@@ -755,34 +799,54 @@ class EventStore {
     });
   }
 
-  upsert(event, { requireExisting = false, baseRevision = null } = {}) {
-    if (requireExisting && baseRevision !== this.state.revision) return { ok: false, code: 'stale-edit' };
-    const index = this.state.events.findIndex(item => item.id === event.id);
-    if (requireExisting && index < 0) return { ok: false, code: 'not-found' };
-    const next = [...this.state.events];
-    if (index >= 0) next[index] = event;
-    else next.push(event);
-    return this.commit(next, index >= 0 ? 'update' : 'create');
+  upsert(event, { requireExisting = false, baseEvent = null } = {}) {
+    return this.commit(requireExisting ? 'update' : 'create', currentEvents => {
+      const index = currentEvents.findIndex(item => item.id === event.id);
+      if (requireExisting) {
+        if (index < 0) return { ok: false, code: 'edit-deleted' };
+        if (!eventsEqual(currentEvents[index], baseEvent)) return { ok: false, code: 'edit-conflict' };
+      } else if (index >= 0) {
+        return { ok: false, code: 'create-conflict' };
+      }
+
+      const next = [...currentEvents];
+      if (index >= 0) next[index] = event;
+      else next.push(event);
+      return { ok: true, events: next };
+    });
   }
 
-  remove(id) {
-    if (!this.state.events.some(event => event.id === id)) return { ok: false, code: 'not-found' };
-    return this.commit(this.state.events.filter(event => event.id !== id), 'delete');
+  remove(id, baseEvent) {
+    return this.commit('delete', currentEvents => {
+      const current = currentEvents.find(event => event.id === id);
+      if (!current) return { ok: false, code: 'not-found' };
+      if (!eventsEqual(current, baseEvent)) return { ok: false, code: 'delete-conflict' };
+      return { ok: true, events: currentEvents.filter(event => event.id !== id) };
+    });
   }
 
   clear() {
-    return this.commit([], 'clear');
+    const baseRevision = this.state.revision;
+    return this.commit('clear', (currentEvents, latest) => {
+      if (latest.revision !== baseRevision) return { ok: false, code: 'collection-conflict' };
+      return { ok: true, events: [] };
+    });
   }
 
   replaceAll(events) {
-    return this.commit(events, 'import');
+    const baseRevision = this.state.revision;
+    return this.commit('import', (currentEvents, latest) => {
+      if (latest.revision !== baseRevision) return { ok: false, code: 'collection-conflict' };
+      return { ok: true, events };
+    });
   }
 
-  commit(nextEvents, action) {
+  async commit(action, mutate) {
     if (this.state.writeProtected) return { ok: false, code: 'write-protected' };
-    const result = this.repository.save(nextEvents, this.state.revision, this.sourceId);
+    if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    const result = await this.repository.save(mutate, this.sourceId);
     if (!result.ok) {
-      if (result.code === 'conflict' && result.latest?.ok) this.applyExternal(result.latest, 'conflict');
+      if (result.latest?.ok) this.applyExternal(result.latest, 'conflict');
       return result;
     }
 
@@ -794,6 +858,12 @@ class EventStore {
     };
     this.emit({ origin: 'local', action, revision: result.revision });
     return { ok: true, action, revision: result.revision };
+  }
+
+  blockWritesForLegacyPeer() {
+    if (this.legacyPeerDetected) return false;
+    this.legacyPeerDetected = true;
+    return true;
   }
 
   applyExternal(snapshot, origin = 'external') {
@@ -830,14 +900,16 @@ class EventSync {
     };
   }
 
-  start(onSnapshot) {
+  start(onSnapshot, onLegacyPeer) {
     this.onSnapshot = onSnapshot;
     window.addEventListener('storage', this.onStorage);
     if ('BroadcastChannel' in window) {
       try {
         this.channel = new window.BroadcastChannel('tageszaehler-events-v2');
         this.channel.addEventListener('message', event => {
-          if (event.data?.type === 'events-updated' && event.data.sourceId !== this.sourceId) this.reload('broadcast');
+          if (event.data?.type !== 'events-updated' || event.data.sourceId === this.sourceId) return;
+          if (event.data.writeProtocolVersion !== WRITE_PROTOCOL_VERSION) onLegacyPeer?.();
+          this.reload('broadcast');
         });
       } catch (error) {
         console.warn('BroadcastChannel ist nicht verfügbar; Synchronisation nutzt das storage-Event.', error);
@@ -852,7 +924,12 @@ class EventSync {
 
   publish(revision) {
     try {
-      this.channel?.postMessage({ type: 'events-updated', sourceId: this.sourceId, revision });
+      this.channel?.postMessage({
+        type: 'events-updated',
+        sourceId: this.sourceId,
+        revision,
+        writeProtocolVersion: WRITE_PROTOCOL_VERSION
+      });
     } catch (error) {
       console.warn('BroadcastChannel-Nachricht fehlgeschlagen; das storage-Event bleibt als Fallback aktiv.', error);
     }
@@ -882,17 +959,29 @@ class EventUIController {
         return;
       }
       this.store.applyExternal(snapshot, origin);
+    }, () => {
+      if (!this.store.blockWritesForLegacyPeer()) return;
+      showSnackbar('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
     });
   }
 
   handleStoreChange(change) {
     const detailEvent = currentDetailId ? this.store.getEvent(currentDetailId) : null;
-    if (currentDetailId && !detailEvent && (detailSheet.classList.contains('open') || editSheet.classList.contains('open'))) {
+    if (currentDetailId && !detailEvent && detailSheet.classList.contains('open')) {
       currentEditId = null;
-      currentEditBaseRevision = null;
+      currentEditBaseEvent = null;
       closeSheets();
     } else if (detailEvent && detailSheet.classList.contains('open')) {
       populateDetailSheet(detailEvent);
+    }
+
+    if (currentEditId && editSheet.classList.contains('open') && change.origin !== 'local') {
+      const currentEvent = this.store.getEvent(currentEditId);
+      if (!currentEvent) {
+        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.';
+      } else if (!eventsEqual(currentEvent, currentEditBaseEvent)) {
+        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt bis zur Konfliktentscheidung geöffnet.';
+      }
     }
 
     renderEvents();
@@ -900,38 +989,39 @@ class EventUIController {
     if (change.origin === 'storage' || change.origin === 'broadcast') showSnackbar('Daten aus einem anderen Tab wurden übernommen.');
   }
 
-  upsert(event, wasEdit) {
-    const result = this.store.upsert(event, {
+  async upsert(event, wasEdit) {
+    const result = await this.store.upsert(event, {
       requireExisting: wasEdit,
-      baseRevision: wasEdit ? currentEditBaseRevision : null
+      baseEvent: wasEdit ? currentEditBaseEvent : null
     });
     if (!result.ok) return this.handleFailure(result);
     currentEditId = null;
-    currentEditBaseRevision = null;
+    currentEditBaseEvent = null;
     closeSheets();
     showSnackbar(wasEdit ? 'Geändert.' : 'Erstellt.');
     return true;
   }
 
-  deleteById(id) {
-    const result = this.store.remove(id);
+  async deleteById(id) {
+    const baseEvent = this.store.getEvent(id);
+    const result = await this.store.remove(id, baseEvent);
     if (!result.ok) return this.handleFailure(result);
     showSnackbar('Gelöscht.');
     return true;
   }
 
-  clearAll() {
+  async clearAll() {
     if (!this.store.getEvents().length) return showSnackbar('Es sind keine Ereignisse vorhanden.');
     if (!confirm('Wirklich alle Ereignisse löschen?')) return false;
-    const result = this.store.clear();
+    const result = await this.store.clear();
     if (!result.ok) return this.handleFailure(result);
     setMenuOpen(false);
     showSnackbar('Alle Ereignisse gelöscht.');
     return true;
   }
 
-  importEvents(importedEvents) {
-    const result = this.store.replaceAll(importedEvents);
+  async importEvents(importedEvents) {
+    const result = await this.store.replaceAll(importedEvents);
     if (!result.ok) return this.handleFailure(result);
     showSnackbar(`${importedEvents.length} Ereignis${importedEvents.length === 1 ? '' : 'se'} importiert.`);
     return true;
@@ -940,17 +1030,27 @@ class EventUIController {
   handleFailure(result) {
     const messages = {
       'write-protected': 'Änderung blockiert: Der fehlerhafte Originalbestand konnte nicht vollständig quarantänisiert werden.',
-      conflict: 'Daten wurden in einem anderen Tab geändert. Ansicht aktualisiert – bitte den Dialog neu öffnen.',
-      'stale-edit': 'Dieses Ereignis wurde während der Bearbeitung in einem anderen Tab geändert. Bitte neu öffnen.',
+      'edit-conflict': 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt geöffnet.',
+      'edit-deleted': 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.',
+      'delete-conflict': 'Das Ereignis wurde in einem anderen Tab geändert. Löschen wurde abgebrochen.',
+      'collection-conflict': 'Der Datenbestand wurde in einem anderen Tab geändert. Der Vorgang wurde abgebrochen.',
+      'create-conflict': 'Die Ereignis-ID ist bereits vorhanden. Das neue Ereignis wurde nicht gespeichert.',
       'not-found': 'Ereignis wurde nicht gefunden.',
       quota: 'Speicher voll – Änderung wurde nicht übernommen. Nutze kleinere Bilder oder Bild-URLs.',
       'too-large': 'Der Datensatz ist für den lokalen Speicher zu groß.',
       validation: 'Datenvalidierung fehlgeschlagen; Änderung wurde nicht gespeichert.',
       serialization: 'Daten konnten nicht serialisiert werden.',
-      'storage-unavailable': 'Lokaler Speicher ist momentan nicht verfügbar.'
+      'storage-unavailable': 'Lokaler Speicher ist momentan nicht verfügbar.',
+      'lock-unavailable': 'Sicheres Speichern wird von diesem Browser nicht unterstützt. Die Änderung wurde nicht gespeichert.',
+      'lock-failed': 'Die Schreibsperre konnte nicht verwendet werden. Die Änderung wurde nicht gespeichert.',
+      'write-raced': 'Ein nicht kooperierender Tab hat gleichzeitig geschrieben. Die Änderung wurde nicht als gespeichert bestätigt.',
+      'mutation-failed': 'Die Änderung konnte nicht sicher vorbereitet werden.',
+      'legacy-peer': 'Ein älterer Tab ist noch geöffnet. Bitte alle Tabs aktualisieren; die Änderung wurde nicht gespeichert.'
     };
     console.warn('Store-Änderung fehlgeschlagen:', result);
-    showSnackbar(messages[result.code] || 'Änderung konnte nicht sicher gespeichert werden.');
+    const message = messages[result.code] || 'Änderung konnte nicht sicher gespeichert werden.';
+    if (editSheet.classList.contains('open')) editFormStatus.textContent = message;
+    showSnackbar(message);
     return false;
   }
 }
@@ -2303,10 +2403,10 @@ function openEditSheet(id = null) {
   const ev = id ? eventStore.getEvent(id) : null;
   if (id && !ev) {
     currentEditId = null;
-    currentEditBaseRevision = null;
+    currentEditBaseEvent = null;
     return showSnackbar('Ereignis wurde nicht gefunden.');
   }
-  currentEditBaseRevision = id ? eventStore.getRevision() : null;
+  currentEditBaseEvent = ev;
   currentEditTimeZone = ev?.timeZone || getSystemTimeZone();
   eventNameInput.value = ev?.name || '';
   eventDateInput.value = ev?.date || '';
@@ -2432,7 +2532,7 @@ function closeSheets() {
   abortImageProcessing();
   hideSheets(true, true);
   currentEditId = null;
-  currentEditBaseRevision = null;
+  currentEditBaseEvent = null;
   currentEditTimeZone = null;
   if (modalHistoryActive) {
     modalHistoryActive = false;
@@ -2444,9 +2544,9 @@ function closeEditSheet() {
   const editId = currentEditId;
   abortImageProcessing();
   currentEditId = null;
-  currentEditBaseRevision = null;
+  currentEditBaseEvent = null;
   currentEditTimeZone = null;
-  if (editId) {
+  if (editId && eventStore.getEvent(editId)) {
     hideSheets(false, false);
     openDetailSheet(editId);
   } else {
@@ -2613,7 +2713,8 @@ function validateEditorForm({ focusFirst = true } = {}) {
   };
 }
 
-function saveEvent() {
+async function saveEvent() {
+  if (eventSavePending) return false;
   if (imageProcessing) {
     showSnackbar('Bitte warten, bis das Bild verarbeitet wurde.');
     return false;
@@ -2634,12 +2735,17 @@ function saveEvent() {
     return false;
   }
   const wasEdit = Boolean(currentEditId);
-  return eventController.upsert(event, wasEdit);
+  setEventSavePending(true);
+  try {
+    return await eventController.upsert(event, wasEdit);
+  } finally {
+    setEventSavePending(false);
+  }
 }
 
-function deleteCurrentEvent() {
+async function deleteCurrentEvent() {
   if (!currentDetailId || !confirm('Dieses Ereignis löschen?')) return;
-  eventController.deleteById(currentDetailId);
+  await eventController.deleteById(currentDetailId);
 }
 
 /* ── SHEET GESTURES / ACCESSIBILITY ── */
@@ -2750,10 +2856,16 @@ function throwIfAborted(signal) {
 
 function setImageProcessingState(processing) {
   imageProcessing = processing;
-  editSaveBtn.disabled = processing;
-  editSaveBtn.setAttribute('aria-busy', String(processing));
-  editSaveBtn.textContent = processing ? 'Bild wird verarbeitet…' : 'Speichern';
+  const busy = imageProcessing || eventSavePending;
+  editSaveBtn.disabled = busy;
+  editSaveBtn.setAttribute('aria-busy', String(busy));
+  editSaveBtn.textContent = imageProcessing ? 'Bild wird verarbeitet…' : eventSavePending ? 'Speichert…' : 'Speichern';
   imageFileBtn.setAttribute('aria-busy', String(processing));
+}
+
+function setEventSavePending(pending) {
+  eventSavePending = pending;
+  setImageProcessingState(imageProcessing);
 }
 
 function abortImageProcessing() {
@@ -3006,7 +3118,7 @@ function importData(event) {
     return showSnackbar(`Import fehlgeschlagen: Datei darf maximal ${Math.floor(DATA_LIMITS.maxImportBytes / 1024 / 1024)} MB groß sein.`);
   }
   const reader = new FileReader();
-  reader.onload = readEvent => {
+  reader.onload = async readEvent => {
     try {
       const raw = String(readEvent.target.result || '');
       if (raw.length > DATA_LIMITS.maxStoredJsonChars) throw new Error('Die Datei überschreitet das zulässige Datenlimit.');
@@ -3017,7 +3129,7 @@ function importData(event) {
       if (collection.invalidCount) throw new Error(`${collection.invalidCount} ungültige Ereignisse gefunden.`);
       const normalized = collection.events;
       if (!confirm(`${normalized.length} Ereignis${normalized.length === 1 ? '' : 'se'} importieren und aktuelle Daten ersetzen?`)) return;
-      eventController.importEvents(normalized);
+      await eventController.importEvents(normalized);
     } catch (error) {
       console.error('Import fehlgeschlagen:', error);
       showSnackbar(`Import fehlgeschlagen: ${error.message || 'ungültige Datei'}`);

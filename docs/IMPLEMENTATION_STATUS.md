@@ -18,8 +18,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 | # | Paket | Befunde | Status | Voraussetzungen | PR / Merge-Commit |
 |---|---|---|---|---|---|
-| P01 | Test- und CI-Grundlage | B1 | In Arbeit | keine | Branch `p01-test-und-ci-grundlage`; PR-Erstellung durch GitHub-Integration blockiert |
-| P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Geplant | P01 | — |
+| P01 | Test- und CI-Grundlage | B1 | Gemergt | keine | [PR #1](https://github.com/sl3ndrr/tagesz-hler/pull/1) / `da260f23d12130272a457ebba41043def39c39cf` |
+| P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | In Arbeit | P01 | [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2), Branch `p02-sichere-schreibvorgaenge` |
 | P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | Geplant | P01 | — |
 | P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | Geplant | P01 | — |
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Geplant | P01 | — |
@@ -41,17 +41,17 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P01 – Test- und CI-Grundlage
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** Branch `p01-test-und-ci-grundlage`, Implementierungscommit `36dcc079f620fee7ca96028ef427a63f6caf12ed`; PR-Erstellung durch die verbundene GitHub-Integration derzeit mit `403 Resource not accessible by integration` blockiert.
-- **Abschlussbericht:** Der Arbeitsbranch enthält eine Node-Bordmittel-Prüfung für Syntax, Manifest, lokale Referenzen, CSP-Grundregeln und Cache-Versionen sowie einen vorgeschalteten Actions-Prüfjob. Der vollständige Abschlussbericht kann erst nach Freischaltung der PR-Erstellung in die PR-Beschreibung übernommen werden.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #1](https://github.com/sl3ndrr/tagesz-hler/pull/1), Merge-Commit `da260f23d12130272a457ebba41043def39c39cf`, getesteter Implementierungscommit `f9c3c3c2de07c48595354b1e0913b6fdafccf81f`.
+- **Abschlussbericht:** Node-Bordmittel-Prüfung für Syntax, Manifest, lokale Referenzen, CSP-Grundregeln und Cache-Versionen sowie vier synthetische Regressionstests und ein vorgeschalteter Actions-Prüfjob sind auf `main` vorhanden.
 - **Übergabe an Folgepakete:** Jede Änderung an einer Datei der `APP_SHELL` in `sw.js` benötigt im selben Paket eine Änderung von `sw.js` mit erhöhter `CACHE_VERSION`. Der Vergleich nutzt bei Pull Requests den Base-SHA und bei Pushes den vorherigen SHA; Initialläufe prüfen die Basisregeln, überspringen aber den Versionsvergleich.
 
 ### P02 – Sichere Schreibvorgänge und Konfliktbehandlung
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2), Branch `p02-sichere-schreibvorgaenge`; Merge-Commit wird nach dem Merge ergänzt.
+- **Abschlussbericht:** Alle Ereignis-Mutationen verwenden eine asynchrone Web-Lock-Transaktion mit erneutem Lesen, Konfliktprüfung, Schreiben und Read-back-Bestätigung. Bearbeitungen vergleichen den konkreten Ausgangsdatensatz; unabhängige Änderungen werden zusammengeführt, echte Konflikte erhalten den Editorentwurf. Deterministische Node-Regressionen decken konkurrierendes Anlegen, Bearbeitungen, Löschen, Import, Quota-Fehler, fehlende Locks und nicht kooperierende Schreiber ab.
+- **Übergabe an Folgepakete:** Store- und Controller-Mutationen sind asynchron und müssen vor Erfolgsmeldungen abgewartet werden. Ohne Web Locks sind Ereignis-Schreibvorgänge absichtlich gesperrt. Das bestehende Array-Speicherformat und der Broadcast-Channel bleiben unverändert; Nachrichten tragen zusätzlich `writeProtocolVersion: 2`. Erkannte alte Broadcast-Clients sperren weitere Schreibvorgänge, nicht sendende oder Broadcast-lose alte Tabs sind technisch nicht zuverlässig erkennbar und bleiben ein dokumentiertes Restrisiko. `CACHE_VERSION` wurde wegen der Änderung an `app.js` auf `v3` erhöht.
 
 ### P03 – Kalenderrechnung und Aktualisierung bei Uhränderungen
 

@@ -76,8 +76,14 @@ Vor dem Deployment und bei Pull Requests nach `main` läuft `node scripts/check-
 Die synthetischen Regressionen lassen sich ohne Installation ausführen:
 
 ```bash
-node --test tests/check-static-pwa.test.mjs
+node --test tests/*.test.mjs
 ```
+
+## Schreibsicherheit und mehrere Tabs
+
+Alle Änderungen am Ereignisbestand laufen über denselben exklusiven Web Lock. Innerhalb der Sperre wird der aktuelle `localStorage`-Stand erneut gelesen, der fachliche Konflikt geprüft und erst danach geschrieben. Neue Ereignisse und Änderungen an unterschiedlichen Ereignissen werden dadurch auf dem frischen Gesamtbestand zusammengeführt. Bei Änderungen desselben Ereignisses, Bearbeiten gegen Löschen sowie einem Import oder „Alle löschen“ gegen eine parallele Änderung wird der Vorgang abgebrochen; ein geöffneter Bearbeitungsentwurf bleibt erhalten.
+
+Fehlt die Web-Locks-Unterstützung, blockiert die App Schreibvorgänge, statt einen unkoordinierten Erfolg zu melden. Tabs mit einer älteren App-Version beachten die Sperre nicht und können daher nicht vollständig geschützt werden. Meldet sich ein solcher Tab über den bestehenden Broadcast-Kanal, sperrt die aktuelle Sitzung weitere Schreibvorgänge bis zum Neuladen. Alte Tabs ohne Broadcast-Unterstützung lassen sich nicht zuverlässig erkennen; vor Änderungen sollten deshalb alle bereits geöffneten Tabs aktualisiert oder geschlossen werden.
 
 Falls Pages für das Repository noch nicht aktiviert ist:
 
