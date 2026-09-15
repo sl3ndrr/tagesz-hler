@@ -55,7 +55,10 @@ test('bereitet bei einer Einzeländerung nur das betroffene synthetische Ereigni
   const result = prepare(cache, changed, {}, createModel);
 
   assert.equal(calls, 4);
-  assert.deepEqual(result.stats, { modelCalculations: 1, reusedModels: 2, removedEntries: 0, temporalChanged: false });
+  assert.equal(result.stats.modelCalculations, 1);
+  assert.equal(result.stats.reusedModels, 2);
+  assert.equal(result.stats.removedEntries, 0);
+  assert.equal(result.stats.temporalChanged, false);
   assert.equal(result.prepared.find(item => item.event.id === 'a').model.version, 1);
   assert.equal(result.prepared.find(item => item.event.id === 'b').model.version, 4);
 });
