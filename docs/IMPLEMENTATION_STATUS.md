@@ -27,7 +27,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Gemergt | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7) / `3e8019ed5fe58285333c265f6c0f5b9b8452e923` |
 | P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`; Merge-Commit nach Merge |
 | P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | In Arbeit | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9); Merge-Commit nach Merge |
-| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Geplant | P02, P07 | — |
+| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | In Arbeit | P02, P07 | [PR #11](https://github.com/sl3ndrr/tagesz-hler/pull/11); Merge-Commit nach Merge |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Geplant | P03, P05, P10 | — |
 | P12 | Schriftarten lokal bereitstellen | B5 | Geplant | P04 | — |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Geplant | P01–P12 | — |
@@ -110,10 +110,12 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P10 – Controller entkoppeln und überflüssigen Zustand entfernen
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #11](https://github.com/sl3ndrr/tagesz-hler/pull/11), Branch `p10-controller-entkoppeln-zustand-codex`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Abschlussbericht:** Detail- und Editorzustand liegen im expliziten `sheetState`; `EventUIController` nutzt die begrenzte UI-Schnittstelle aus `createEventControllerUi()` statt verdeckter DOM-/Globalzugriffe. Der ungenutzte `normalizeEvent`-Index sowie ungenutzte `migrated`-/`updatedAt`-Metadaten sind entfernt, alte lesbare Objektformate bleiben unterstützt. `CACHE_VERSION` ist `v11`; die vollständige PR-Prüfung steht noch aus.
+- **Übergabe an Folgepakete:** P11 kann die Controller-UI-Effekte über `createEventControllerUi()` und den Sheet-Zustand über `sheetState` anbinden; asynchrone Store-Mutationen, P02-Konflikterhalt und P07-Rettungspfade bleiben unverändert. Reale Browser-, Mehrtab- und Offlineprüfung stehen vor dem Merge noch aus.
+- **Paketfremder offener Statuspunkt:** P08 steht weiterhin auf `In Arbeit`, obwohl sein Merge-Commit laut P09-Protokoll in `main` bestätigt ist. Der P08-Nachtrag bleibt außerhalb von P10 und sollte gesondert auf den tatsächlichen Merge-Stand gebracht werden.
+- **Vorformulierter Nachtrag erst nach dem tatsächlichen Merge:** Überblick: `| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #11](https://github.com/sl3ndrr/tagesz-hler/pull/11) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #11, tatsächlicher Merge-Commit, letzter getesteter Branch-Commit und beobachteter CI-Lauf samt Ergebnis ergänzen. Die Controller-UI-Grenze, `sheetState` sowie die asynchronen Store- und Konfliktverträge bleiben erhalten.
 
 ### P11 – Ereignislisten gezielt aktualisieren
 
