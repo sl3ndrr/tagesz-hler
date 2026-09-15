@@ -43,13 +43,16 @@ let liveScheduler = null;
 let midnightScheduler = null;
 let temporalContextTracker = null;
 let activeTab = 0;
-let currentDetailId = null;
+// Auswahl und Editor-Ausgangsstand gehören zur Sheet-UI, nicht zum Store/Controller.
+const sheetState = {
+  detailId: null,
+  editId: null,
+  editBaseEvent: null,
+  editTimeZone: null
+};
 let detailNextUpdateAt = 0;
 let detailNextClockUpdateAt = 0;
 let detailNextProgressUpdateAt = 0;
-let currentEditId = null;
-let currentEditBaseEvent = null;
-let currentEditTimeZone = null;
 let imgData = null;
 let imageCompressionController = null;
 let imageCompressionToken = 0;
@@ -201,7 +204,7 @@ function init() {
     setMenuOpen(!menuPopup.classList.contains('open'));
   });
   document.getElementById('detail-close-btn').addEventListener('click', closeSheets);
-  document.getElementById('detail-edit-btn').addEventListener('click', () => openEditSheet(currentDetailId));
+  document.getElementById('detail-edit-btn').addEventListener('click', () => openEditSheet(sheetState.detailId));
   document.getElementById('detail-delete-btn').addEventListener('click', deleteCurrentEvent);
   document.getElementById('edit-cancel-btn').addEventListener('click', closeEditSheet);
   document.getElementById('edit-top-close-btn').addEventListener('click', closeEditSheet);
@@ -224,9 +227,9 @@ function init() {
   window.addEventListener('popstate', () => {
     if (modalHistoryActive) {
       modalHistoryActive = false;
-      currentEditId = null;
-      currentEditBaseEvent = null;
-      currentEditTimeZone = null;
+      sheetState.editId = null;
+      sheetState.editBaseEvent = null;
+      sheetState.editTimeZone = null;
       abortImageProcessing();
       hideSheets(true);
     }
@@ -478,7 +481,7 @@ function normalizeEventId(raw, { regenerateId = false } = {}) {
   return rawId;
 }
 
-function normalizeEvent(raw, index = 0, { regenerateId = false } = {}) {
+function normalizeEvent(raw, { regenerateId = false } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   if (typeof raw.name !== 'string' || raw.name.length > DATA_LIMITS.maxNameChars) return null;
   if (raw.desc != null && (typeof raw.desc !== 'string' || raw.desc.length > DATA_LIMITS.maxDescriptionChars)) return null;
@@ -530,10 +533,10 @@ function normalizeEventCollection(rawEvents, { regenerateIds = false } = {}) {
   let invalidCount = 0;
   let totalImageChars = 0;
 
-  rawEvents.forEach((raw, index) => {
+  rawEvents.forEach(raw => {
     let event = null;
     try {
-      event = normalizeEvent(raw, index, { regenerateId: regenerateIds });
+      event = normalizeEvent(raw, { regenerateId: regenerateIds });
     } catch (_) {
       event = null;
     }
@@ -601,11 +604,9 @@ class EventRepository {
         ok: true,
         events: [],
         revision: null,
-        updatedAt: 0,
         sourceId: null,
         warning: null,
-        writeProtected: false,
-        migrated: false
+        writeProtected: false
       };
     }
     return this.parseStoredRaw(raw, { quarantineOnError });
@@ -626,9 +627,7 @@ class EventRepository {
 
     let payload;
     let revision;
-    let updatedAt = 0;
     let sourceId = null;
-    let migrated = false;
 
     if (Array.isArray(parsed)) {
       payload = parsed;
@@ -636,9 +635,7 @@ class EventRepository {
     } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.schemaVersion === DATA_SCHEMA_VERSION && Array.isArray(parsed.events)) {
       payload = parsed.events;
       revision = typeof parsed.revision === 'string' && parsed.revision ? parsed.revision : rawRevision;
-      updatedAt = Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0;
       sourceId = typeof parsed.sourceId === 'string' ? parsed.sourceId : null;
-      migrated = true;
     } else {
       return this.failureResult(raw, new Error('Unbekanntes oder nicht unterstütztes Datenschema.'), 'schema-migration', { quarantineOnError, revision: rawRevision });
     }
@@ -661,9 +658,7 @@ class EventRepository {
         ok: true,
         events: collection.events,
         revision,
-        updatedAt,
         sourceId,
-        migrated,
         invalidCount: collection.invalidCount,
         warning: quarantine.hasRawCopy
           ? `${collection.invalidCount} ungültige Ereignisse wurden nur zur Ansicht ausgelassen. Der aktive Rohbestand und eine Rettungskopie bleiben erhalten; Änderungen erfordern eine bewusste Wiederherstellung.`
@@ -676,9 +671,7 @@ class EventRepository {
       ok: true,
       events: collection.events,
       revision,
-      updatedAt,
       sourceId,
-      migrated,
       warning: null,
       writeProtected: false
     };
@@ -694,9 +687,7 @@ class EventRepository {
       ok: false,
       events: [],
       revision: revision ?? (raw == null ? null : `raw:${hashString(raw)}`),
-      updatedAt: 0,
       sourceId: null,
-      migrated: false,
       warning: quarantine.hasRawCopy
         ? 'Gespeicherte Daten konnten nicht geladen werden. Der aktive Rohbestand blieb erhalten; eine Rettungskopie wurde gesichert. Änderungen sind gesperrt.'
         : 'Gespeicherte Daten konnten nicht geladen werden. Wenn der aktive Rohbestand lesbar ist, blieb er unverändert; Änderungen sind gesperrt.',
@@ -1004,7 +995,6 @@ class EventRepository {
     const snapshot = {
       schemaVersion: DATA_SCHEMA_VERSION,
       revision: `data:${hashString(serialized)}`,
-      updatedAt: Date.now(),
       sourceId,
       events: collection.events
     };
@@ -1044,7 +1034,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(initialSnapshot.events || []),
       revision: initialSnapshot.revision ?? null,
-      updatedAt: initialSnapshot.updatedAt || 0,
       writeProtected: Boolean(initialSnapshot.writeProtected),
       loadState: !initialSnapshot.ok ? 'read-error' : initialSnapshot.writeProtected ? 'partial' : 'ok'
     };
@@ -1129,7 +1118,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1150,7 +1138,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1170,7 +1157,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1194,7 +1180,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(snapshot.events || []),
       revision: snapshot.revision ?? null,
-      updatedAt: snapshot.updatedAt || 0,
       writeProtected: Boolean(snapshot.writeProtected),
       loadState: nextLoadState
     };
@@ -1283,9 +1268,10 @@ class EventSync {
 
 /* ── UI CONTROLLER ── */
 class EventUIController {
-  constructor(store, sync) {
+  constructor(store, sync, ui) {
     this.store = store;
     this.sync = sync;
+    this.ui = ui;
     this.unsubscribe = null;
   }
 
@@ -1294,55 +1280,34 @@ class EventUIController {
     this.sync.start((snapshot, origin) => {
       if (!snapshot.ok) {
         this.store.protectAfterExternalLoadFailure(snapshot, `${origin}-error`);
-        showSnackbar('Externe Datenänderung konnte nicht sicher geladen werden; lokaler Stand bleibt erhalten und Schreibzugriffe sind gesperrt.');
+        this.ui.notify('Externe Datenänderung konnte nicht sicher geladen werden; lokaler Stand bleibt erhalten und Schreibzugriffe sind gesperrt.');
         return;
       }
       const before = this.store.state.loadState;
       const applied = this.store.applyExternal(snapshot, origin);
       if (applied.ok && before === 'read-error' && !snapshot.writeProtected) {
-        showSnackbar('Aktive Daten sind wieder lesbar; der vorübergehende Schreibschutz ist aufgehoben.');
+        this.ui.notify('Aktive Daten sind wieder lesbar; der vorübergehende Schreibschutz ist aufgehoben.');
       }
     }, () => {
       if (!this.store.blockWritesForLegacyPeer()) return;
-      showSnackbar('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
+      this.ui.notify('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
     });
   }
 
   handleStoreChange(change) {
-    const detailEvent = currentDetailId ? this.store.getEvent(currentDetailId) : null;
-    if (currentDetailId && !detailEvent && detailSheet.classList.contains('open')) {
-      currentEditId = null;
-      currentEditBaseEvent = null;
-      closeSheets();
-    } else if (detailEvent && detailSheet.classList.contains('open')) {
-      populateDetailSheet(detailEvent);
-    }
-
-    if (currentEditId && editSheet.classList.contains('open') && change.origin !== 'local') {
-      const currentEvent = this.store.getEvent(currentEditId);
-      if (!currentEvent) {
-        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.';
-      } else if (!eventsEqual(currentEvent, currentEditBaseEvent)) {
-        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt bis zur Konfliktentscheidung geöffnet.';
-      }
-    }
-
-    renderEvents();
-    updateRecoveryStatus();
+    this.ui.refresh(change, this.store);
     if (change.origin === 'local') this.sync.publish(change.revision);
-    if ((change.origin === 'storage' || change.origin === 'broadcast') && change.action === 'replace' && change.state.loadState === 'ok') showSnackbar('Daten aus einem anderen Tab wurden übernommen.');
+    if ((change.origin === 'storage' || change.origin === 'broadcast') && change.action === 'replace' && change.state.loadState === 'ok') this.ui.notify('Daten aus einem anderen Tab wurden übernommen.');
   }
 
   async upsert(event, wasEdit) {
     const result = await this.store.upsert(event, {
       requireExisting: wasEdit,
-      baseEvent: wasEdit ? currentEditBaseEvent : null
+      baseEvent: wasEdit ? this.ui.getEditBaseEvent() : null
     });
     if (!result.ok) return this.handleFailure(result);
-    currentEditId = null;
-    currentEditBaseEvent = null;
-    closeSheets();
-    showSnackbar(wasEdit ? 'Geändert.' : 'Erstellt.');
+    this.ui.closeAfterSave();
+    this.ui.notify(wasEdit ? 'Geändert.' : 'Erstellt.');
     return true;
   }
 
@@ -1350,19 +1315,19 @@ class EventUIController {
     const baseEvent = this.store.getEvent(id);
     const result = await this.store.remove(id, baseEvent);
     if (!result.ok) return this.handleFailure(result);
-    showSnackbar('Gelöscht.');
+    this.ui.notify('Gelöscht.');
     return true;
   }
 
   async clearAll() {
-    openRecoveryDialog();
+    this.ui.openRecovery();
     return true;
   }
 
   async importEvents(importedEvents) {
     const result = await this.store.replaceAll(importedEvents);
     if (!result.ok) return this.handleFailure(result);
-    showSnackbar(`${importedEvents.length} Ereignis${importedEvents.length === 1 ? '' : 'se'} importiert.`);
+    this.ui.notify(`${importedEvents.length} Ereignis${importedEvents.length === 1 ? '' : 'se'} importiert.`);
     return true;
   }
 
@@ -1388,10 +1353,43 @@ class EventUIController {
     };
     console.warn('Store-Änderung fehlgeschlagen:', result);
     const message = messages[result.code] || 'Änderung konnte nicht sicher gespeichert werden.';
-    if (editSheet.classList.contains('open')) editFormStatus.textContent = message;
-    showSnackbar(message);
+    this.ui.reportFailure(message);
     return false;
   }
+}
+
+// Die UI besitzt Sheet-Zustand und Darstellung; der Controller erhält nur diese Schnittstelle.
+function createEventControllerUI() {
+  return {
+    notify: showSnackbar,
+    getEditBaseEvent: () => sheetState.editBaseEvent,
+    closeAfterSave: closeSheets,
+    openRecovery: openRecoveryDialog,
+    reportFailure(message) {
+      if (editSheet.classList.contains('open')) editFormStatus.textContent = message;
+      showSnackbar(message);
+    },
+    refresh(change, store) {
+      const detailEvent = sheetState.detailId ? store.getEvent(sheetState.detailId) : null;
+      if (sheetState.detailId && !detailEvent && detailSheet.classList.contains('open')) {
+        closeSheets();
+      } else if (detailEvent && detailSheet.classList.contains('open')) {
+        populateDetailSheet(detailEvent);
+      }
+
+      if (sheetState.editId && editSheet.classList.contains('open') && change.origin !== 'local') {
+        const currentEvent = store.getEvent(sheetState.editId);
+        if (!currentEvent) {
+          editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.';
+        } else if (!eventsEqual(currentEvent, sheetState.editBaseEvent)) {
+          editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt bis zur Konfliktentscheidung geöffnet.';
+        }
+      }
+
+      renderEvents();
+      updateRecoveryStatus();
+    }
+  };
 }
 
 function initializeDataArchitecture() {
@@ -1399,7 +1397,7 @@ function initializeDataArchitecture() {
   const initialSnapshot = loadEvents();
   eventStore = new EventStore(eventRepository, initialSnapshot);
   eventSync = new EventSync(eventRepository, eventStore.sourceId);
-  eventController = new EventUIController(eventStore, eventSync);
+  eventController = new EventUIController(eventStore, eventSync, createEventControllerUI());
   eventController.connect();
   dataLoadWarning = initialSnapshot.warning;
 }
@@ -2329,9 +2327,9 @@ function renderEvents(nowTime = Date.now()) {
 }
 
 function updateDetailLive(nowTime, force = false) {
-  if (!currentDetailId || !detailSheet.classList.contains('open')) return;
+  if (!sheetState.detailId || !detailSheet.classList.contains('open')) return;
   if (!force && nowTime < detailNextUpdateAt) return;
-  const event = eventStore.getEvent(currentDetailId);
+  const event = eventStore.getEvent(sheetState.detailId);
   if (!event) return;
   const model = createEventTimeModel(event, nowTime);
   if (!model) return;
@@ -2406,8 +2404,8 @@ class TemporalContextTracker {
 }
 
 function detailNeedsSecondUpdates() {
-  if (!currentDetailId || !detailSheet.classList.contains('open')) return false;
-  const event = eventStore.getEvent(currentDetailId);
+  if (!sheetState.detailId || !detailSheet.classList.contains('open')) return false;
+  const event = eventStore.getEvent(sheetState.detailId);
   return Boolean(event?.kind === 'timed' && (event.units.includes('seconds') || event.refDate !== ''));
 }
 
@@ -2892,7 +2890,7 @@ function openDetailSheet(id) {
   const ev = eventStore.getEvent(id);
   if (!ev) return;
   if (!modalHistoryActive) lastFocusedElement = document.activeElement;
-  currentDetailId = id;
+  sheetState.detailId = id;
   populateDetailSheet(ev);
   clearFlipClock(detailFlipClock);
   showSheet(detailSheet);
@@ -2936,19 +2934,19 @@ function openEditSheet(id = null) {
   const previousFocus = document.activeElement;
   if (!modalHistoryActive) lastFocusedElement = previousFocus;
   hideSheets(false, false);
-  currentEditId = id;
+  sheetState.editId = id;
   imgData = null;
   clearImage();
   document.getElementById('edit-headline').textContent = id ? 'Ereignis bearbeiten' : 'Neues Ereignis';
 
   const ev = id ? eventStore.getEvent(id) : null;
   if (id && !ev) {
-    currentEditId = null;
-    currentEditBaseEvent = null;
+    sheetState.editId = null;
+    sheetState.editBaseEvent = null;
     return showSnackbar('Ereignis wurde nicht gefunden.');
   }
-  currentEditBaseEvent = ev;
-  currentEditTimeZone = ev?.timeZone || getSystemTimeZone();
+  sheetState.editBaseEvent = ev;
+  sheetState.editTimeZone = ev?.timeZone || getSystemTimeZone();
   eventNameInput.value = ev?.name || '';
   eventDateInput.value = ev?.date || '';
   eventTimeInput.value = ev?.time || '';
@@ -3065,7 +3063,7 @@ function hideSheets(restoreFocus = true, resetIds = true) {
     sheet.setAttribute('inert', '');
   });
   setModalBackgroundInert(false);
-  if (resetIds) currentDetailId = null;
+  if (resetIds) sheetState.detailId = null;
   if (restoreFocus) restoreModalFocus(focusTarget);
 }
 
@@ -3073,9 +3071,9 @@ function closeSheets() {
   abortImageProcessing();
   cancelImagePreview();
   hideSheets(true, true);
-  currentEditId = null;
-  currentEditBaseEvent = null;
-  currentEditTimeZone = null;
+  sheetState.editId = null;
+  sheetState.editBaseEvent = null;
+  sheetState.editTimeZone = null;
   if (modalHistoryActive) {
     modalHistoryActive = false;
     history.back();
@@ -3083,12 +3081,12 @@ function closeSheets() {
 }
 
 function closeEditSheet() {
-  const editId = currentEditId;
+  const editId = sheetState.editId;
   abortImageProcessing();
   cancelImagePreview();
-  currentEditId = null;
-  currentEditBaseEvent = null;
-  currentEditTimeZone = null;
+  sheetState.editId = null;
+  sheetState.editBaseEvent = null;
+  sheetState.editTimeZone = null;
   if (editId && eventStore.getEvent(editId)) {
     hideSheets(false, false);
     openDetailSheet(editId);
@@ -3100,7 +3098,7 @@ function closeEditSheet() {
 function updateDateTimeDisambiguation() {
   const date = eventDateInput.value;
   const time = eventTimeInput.value;
-  const timeZone = isValidTimeZone(currentEditTimeZone) ? currentEditTimeZone : getSystemTimeZone();
+  const timeZone = isValidTimeZone(sheetState.editTimeZone) ? sheetState.editTimeZone : getSystemTimeZone();
   eventTimeInput.setCustomValidity('');
   timeZoneHint.classList.remove('error');
 
@@ -3203,8 +3201,8 @@ function validateEditorForm({ focusFirst = true } = {}) {
 
   const hasInvalidTimeInput = eventTimeInput.validity.badInput;
   const kind = time === '' ? 'all-day' : 'timed';
-  const timeZone = kind === 'timed' && isValidTimeZone(currentEditTimeZone)
-    ? currentEditTimeZone
+  const timeZone = kind === 'timed' && isValidTimeZone(sheetState.editTimeZone)
+    ? sheetState.editTimeZone
     : kind === 'timed'
       ? getSystemTimeZone()
       : '';
@@ -3282,14 +3280,14 @@ async function saveEvent() {
   if (normalizedImageUrl) image = normalizedImageUrl;
 
   const event = normalizeEvent({
-    id: currentEditId || createEventId(),
+    id: sheetState.editId || createEventId(),
     name, kind, date, time, timeZone, disambiguation, refDate, desc, units, img: image
   });
   if (!event) {
     showSnackbar('Ereignis konnte nicht gespeichert werden. Eingaben prüfen.');
     return false;
   }
-  const wasEdit = Boolean(currentEditId);
+  const wasEdit = Boolean(sheetState.editId);
   setEventSavePending(true);
   try {
     return await eventController.upsert(event, wasEdit);
@@ -3299,8 +3297,8 @@ async function saveEvent() {
 }
 
 async function deleteCurrentEvent() {
-  if (!currentDetailId || !confirm('Dieses Ereignis löschen?')) return;
-  await eventController.deleteById(currentDetailId);
+  if (!sheetState.detailId || !confirm('Dieses Ereignis löschen?')) return;
+  await eventController.deleteById(sheetState.detailId);
 }
 
 /* ── SHEET GESTURES / ACCESSIBILITY ── */

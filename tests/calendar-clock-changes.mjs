@@ -166,7 +166,7 @@ function createCadenceContext() {
   const context = vm.createContext({
     ACTIVE_UPDATE_INTERVAL_MS: 1000,
     TEMPORAL_CHECK_INTERVAL_MS: 30_000,
-    currentDetailId: null,
+    sheetState: { detailId: null },
     detailSheet: { classList: { contains: () => state.detailOpen } },
     eventStore: { getEvent: () => state.detailEvent },
     eventRenderer: { needsSecondUpdates: () => state.listNeedsSeconds },
@@ -180,7 +180,7 @@ test('verwendet für leere und reine Ganztagslisten keinen Sekundentakt', () => 
   const { context, state } = createCadenceContext();
   assert.equal(context.getLiveUpdateIntervalMs(), 30_000);
   state.detailOpen = true;
-  context.currentDetailId = 'all-day';
+  context.sheetState.detailId = 'all-day';
   state.detailEvent = { kind: 'all-day', units: ['days'], refDate: '' };
   assert.equal(context.getLiveUpdateIntervalMs(), 30_000);
 });
@@ -192,7 +192,7 @@ test('aktiviert den Sekundentakt nur für sichtbaren Sekunden- oder Fortschritts
 
   state.listNeedsSeconds = false;
   state.detailOpen = true;
-  context.currentDetailId = 'timed';
+  context.sheetState.detailId = 'timed';
   state.detailEvent = { kind: 'timed', units: ['minutes'], refDate: '' };
   assert.equal(context.getLiveUpdateIntervalMs(), 30_000);
 
