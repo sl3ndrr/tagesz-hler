@@ -401,6 +401,7 @@ function setView(view, persist = true) {
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
+  if (eventRenderer && eventStore) renderEvents();
   return persist ? persistPreference('view', view) : { ok: true };
 }
 
@@ -2053,11 +2054,85 @@ function eventDifference(event, model, nowTime) {
     : getDiff(model.targetTime, nowTime, event.units, event.timeZone);
 }
 
+function getEventRenderKey(event) {
+  return [
+    event.name, event.kind, event.date, event.time, event.timeZone,
+    event.disambiguation, event.refDate, event.desc, event.img, event.units.join('|')
+  ].join('\u001f');
+}
+
+class EventListModelCache {
+  constructor() {
+    this.entries = new Map();
+    this.temporalKey = '';
+    this.lastStats = { modelCalculations: 0, reusedModels: 0, removedEntries: 0, temporalChanged: false };
+  }
+
+  prepare(events, { nowTime, viewerTimeZone, viewerToday, forceTemporal = false }, createModel) {
+    const temporalKey = `${viewerTimeZone}|${viewerToday}`;
+    const temporalChanged = forceTemporal || temporalKey !== this.temporalKey;
+    const activeIds = new Set();
+    const prepared = [];
+    let modelCalculations = 0;
+    let reusedModels = 0;
+    let removedEntries = 0;
+
+    this.temporalKey = temporalKey;
+    events.forEach(event => {
+      const eventKey = getEventRenderKey(event);
+      const previous = this.entries.get(event.id);
+      const eventChanged = !previous || previous.eventKey !== eventKey;
+      const modelChanged = eventChanged || temporalChanged;
+      let model = previous?.model;
+
+      activeIds.add(event.id);
+      if (modelChanged) {
+        modelCalculations++;
+        model = createModel(event, nowTime, viewerTimeZone, viewerToday);
+      } else {
+        reusedModels++;
+      }
+      if (!model) {
+        if (this.entries.delete(event.id)) removedEntries++;
+        return;
+      }
+
+      this.entries.set(event.id, { eventKey, model });
+      prepared.push({ event, eventKey, model, eventChanged, modelChanged });
+    });
+
+    this.entries.forEach((_entry, id) => {
+      if (activeIds.has(id)) return;
+      this.entries.delete(id);
+      removedEntries++;
+    });
+
+    this.lastStats = { modelCalculations, reusedModels, removedEntries, temporalChanged };
+    return { prepared, stats: this.lastStats };
+  }
+
+  remove(id) {
+    return this.entries.delete(id);
+  }
+}
+
+function getCachedViewDifference(view, nowTime) {
+  const differenceKey = `${nowTime}|${view.model?.viewerToday || ''}`;
+  if (view.differenceKey !== differenceKey) {
+    view.difference = eventDifference(view.event, view.model, nowTime);
+    view.differenceKey = differenceKey;
+    view.differenceCalculations++;
+  }
+  return view.difference;
+}
+
 class EventListRenderer {
   constructor(futureContainer, pastContainer) {
     this.futureContainer = futureContainer;
     this.pastContainer = pastContainer;
     this.views = new Map();
+    this.modelCache = new EventListModelCache();
+    this.lastRenderStats = { modelCalculations: 0, reusedModels: 0, removedEntries: 0, updatedViews: 0, temporalChanged: false };
     this.emptyFuture = null;
     this.emptyPast = null;
     this.nextTimedBoundaryAt = Infinity;
@@ -2086,19 +2161,27 @@ class EventListRenderer {
     updateLiveSchedulerCadence();
   }
 
-  render(events, nowTime = Date.now()) {
+  render(events, nowTime = Date.now(), { forceTemporal = false } = {}) {
     const viewerTimeZone = getSystemTimeZone();
     const viewerToday = formatInstantDateKey(nowTime, viewerTimeZone);
-    const prepared = events
-      .map(event => ({ event, model: createEventTimeModel(event, nowTime, viewerTimeZone, viewerToday) }))
-      .filter(item => item.model);
+    const viewMode = document.documentElement.dataset.view || 'cards';
+    const cacheResult = this.modelCache.prepare(events, {
+      nowTime, viewerTimeZone, viewerToday, forceTemporal
+    }, createEventTimeModel);
+    const prepared = cacheResult.prepared;
     const activeIds = new Set(prepared.map(item => item.event.id));
+    let updatedViews = 0;
 
     this.views.forEach((view, id) => {
       if (activeIds.has(id)) return;
       this.observer?.unobserve(view.element);
       clearFlipClock(view.clock);
       view.element.remove();
+      view.event = null;
+      view.model = null;
+      view.difference = null;
+      view.differenceKey = '';
+      this.modelCache.remove(id);
       this.views.delete(id);
     });
 
@@ -2110,13 +2193,21 @@ class EventListRenderer {
         view = this.createView(item.event.id);
         this.views.set(item.event.id, view);
       }
-      this.updateView(view, item.event, item.model, nowTime);
+      const viewModeChanged = view.viewModeKey !== viewMode;
+      if (item.eventChanged || item.modelChanged || viewModeChanged) {
+        this.updateView(view, item.event, item.eventKey, item.model, nowTime, viewMode);
+        updatedViews++;
+      } else {
+        // Store-Snapshots können neue Objektidentitäten haben; der modellrelevante Schlüssel blieb gleich.
+        view.event = item.event;
+      }
       (item.model.isPast ? past : future).push({ ...item, view });
     });
 
     this.nextTimedBoundaryAt = future.reduce((next, item) =>
       item.model.kind === 'timed' ? Math.min(next, item.model.targetTime) : next, Infinity);
     this.lastTickTime = nowTime;
+    this.lastRenderStats = { ...cacheResult.stats, updatedViews };
 
     future.sort(comparePreparedEvents);
     past.sort((left, right) => comparePreparedEvents(right, left));
@@ -2163,7 +2254,8 @@ class EventListRenderer {
     const view = {
       id, element, background, content, badge, name, clock,
       progressWrap: null, progressBar: null,
-      event: null, model: null, imageSource: null, unitsKey: '',
+      event: null, model: null, imageSource: null, unitsKey: '', viewModeKey: '',
+      difference: null, differenceKey: '', differenceCalculations: 0,
       staggerIndex: null, isVisible: !this.observer,
       nextUpdateAt: 0, nextClockUpdateAt: 0, nextProgressUpdateAt: 0, lastProgressWidth: null
     };
@@ -2171,9 +2263,13 @@ class EventListRenderer {
     return view;
   }
 
-  updateView(view, event, model, nowTime) {
+  updateView(view, event, eventKey, model, nowTime, viewMode) {
     view.event = event;
     view.model = model;
+    view.eventKey = eventKey;
+    view.viewModeKey = viewMode;
+    view.difference = null;
+    view.differenceKey = '';
     setTextIfChanged(view.name, event.name);
     setTextIfChanged(view.badge, formatEventBadgeDate(model.targetLocalDate, model.viewerToday));
     view.element.classList.toggle('no-image', !event.img);
@@ -2191,7 +2287,7 @@ class EventListRenderer {
 
     const clockSummary = updateFlipClockSummary(
       view.clock,
-      eventDifference(event, model, nowTime),
+      getCachedViewDifference(view, nowTime),
       false,
       model.isPast ? 'Seit dem Ereignis vergangen' : 'Noch bis zum Ereignis'
     );
@@ -2228,14 +2324,19 @@ class EventListRenderer {
 
   updateLiveView(view, nowTime, force = false, viewerToday = null) {
     if (!view.event || !view.model || (!force && nowTime < view.nextUpdateAt)) return;
-    view.model.viewerToday = viewerToday || formatInstantDateKey(nowTime, getSystemTimeZone());
+    const nextViewerToday = viewerToday || formatInstantDateKey(nowTime, getSystemTimeZone());
+    if (view.model.viewerToday !== nextViewerToday) {
+      view.model.viewerToday = nextViewerToday;
+      view.difference = null;
+      view.differenceKey = '';
+    }
     const clockDue = force || nowTime >= view.nextClockUpdateAt;
     const progressDue = Boolean(view.progressBar) && (force || nowTime >= view.nextProgressUpdateAt);
 
     if (clockDue) {
       const summary = renderFlipClock(
         view.clock,
-        eventDifference(view.event, view.model, nowTime),
+        getCachedViewDifference(view, nowTime),
         false,
         view.model.isPast ? 'Seit dem Ereignis vergangen' : 'Noch bis zum Ereignis'
       );
@@ -2314,6 +2415,10 @@ class EventListRenderer {
     });
   }
 
+  getRenderStats() {
+    return { ...this.lastRenderStats };
+  }
+
   needsSecondUpdates() {
     return [...this.views.values()].some(view => view.isVisible && view.event?.kind === 'timed' && (
       view.event.units.includes('seconds') || view.event.refDate !== ''
@@ -2321,8 +2426,8 @@ class EventListRenderer {
   }
 }
 
-function renderEvents(nowTime = Date.now()) {
-  eventRenderer?.render(eventStore.getEvents(), nowTime);
+function renderEvents(nowTime = Date.now(), { temporal = false } = {}) {
+  eventRenderer?.render(eventStore.getEvents(), nowTime, { forceTemporal: temporal });
   updateLiveSchedulerCadence();
 }
 
@@ -2427,7 +2532,7 @@ function tick(force = false) {
     handleTemporalContextRefresh(now);
     return;
   }
-  if (eventRenderer?.hasTimedBoundaryCrossed(now)) eventRenderer.render(eventStore.getEvents(), now);
+  if (eventRenderer?.hasTimedBoundaryCrossed(now)) eventRenderer.render(eventStore.getEvents(), now, { forceTemporal: true });
   eventRenderer?.updateLive(now, force);
   updateDetailLive(now, force);
   updateLiveSchedulerCadence();
@@ -2570,7 +2675,7 @@ function refreshTemporalViews(nowTime) {
   detailNextUpdateAt = 0;
   detailNextClockUpdateAt = 0;
   detailNextProgressUpdateAt = 0;
-  renderEvents(nowTime);
+  renderEvents(nowTime, { temporal: true });
   updateDetailLive(nowTime, true);
   updateLiveSchedulerCadence();
 }
