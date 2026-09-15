@@ -20,12 +20,12 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 |---|---|---|---|---|---|
 | P01 | Test- und CI-Grundlage | B1 | Gemergt | keine | [PR #1](https://github.com/sl3ndrr/tagesz-hler/pull/1) / `da260f23d12130272a457ebba41043def39c39cf` |
 | P02 | Sichere Schreibvorgänge und Konfliktbehandlung | A1, B8 | Gemergt | P01 | [PR #2](https://github.com/sl3ndrr/tagesz-hler/pull/2) / `b5847d222e5a5f80ec94a726d4db27cca9c48a7c` |
-| P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | In Arbeit | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel` |
-| P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | In Arbeit | P01 | [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen` |
-| P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | In Arbeit | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Branch `p05-zugaengliche-konsistente-darstellung`; Merge-Commit wird nach dem Merge ergänzt |
-| P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | In Arbeit | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6), Branch `p06-einheitliche-daten-formularvalidierung`; Merge-Commit wird nach dem Merge ergänzt |
-| P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | In Arbeit | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7), Branch `p07-datenrettung-speicherzustaende`; Merge-Commit erst nach Merge |
-| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | Geplant | P06 | — |
+| P03 | Kalenderrechnung und Aktualisierung bei Uhränderungen | A2, A7, B10 | Gemergt | P01 | [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3) / `af1998b62e7c7e8d4aba4634da1b771708829e6b` |
+| P04 | Konsistente Offline-Versionen und begrenztes Caching | A3, B3, B4 | Gemergt | P01 | [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4) / `e8a20f10e6fa4391e34de25d31dc02e79607aaf8` |
+| P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Gemergt | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5) / `c697b2da28ec1c549f129f81cd76fbd6c3853627` |
+| P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Gemergt | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) / `c07cb664a102dc7b1f97afa762113729087f1d9e` |
+| P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Gemergt | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7) / `3e8019ed5fe58285333c265f6c0f5b9b8452e923` |
+| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`; Merge-Commit nach Merge |
 | P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Geplant | P02, P04, P07 | — |
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Geplant | P02, P07 | — |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Geplant | P03, P05, P10 | — |
@@ -55,48 +55,49 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P03 – Kalenderrechnung und Aktualisierung bei Uhränderungen
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Branch `p03-kalender-uhrwechsel`; Merge-Commit wird nach dem Merge ergänzt.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #3](https://github.com/sl3ndrr/tagesz-hler/pull/3), Merge-Commit `af1998b62e7c7e8d4aba4634da1b771708829e6b`, getesteter Branch-Commit `fd3ec317474cb14000d802fe208412726ed8f035`; [CI-Lauf #14](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34623547573) laut PR-Abschlussbericht erfolgreich. Reale Browser-/Uhrprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Nulladditionen erhalten den exakten Instant auch in DST-Folds. Ein leichter sichtbarer Prüftakt erkennt Tages-, Systemzeitzonen- und relevante Uhränderungen, invalidiert zeitabhängige Anzeigen und plant Mitternacht sowie Detailfristen neu. Sekündliche Updates laufen nur bei sichtbarem Sekunden- oder Fortschrittsbedarf. Synthetische Regressionen decken beide Fold-Instanzen, Lücken, Einheitenkombinationen, Monatsenden, Schaltjahre, Uhrsprünge, Zeitzonenwechsel, Mitternacht, Sichtbarkeitswechsel und den reduzierten Leerlauftakt ab.
 - **Übergabe an Folgepakete:** Die leichte Erkennung verwendet höchstens einen 30-Sekunden-Takt; entsprechend können Uhr- oder Zeitzonenänderungen im sichtbaren Leerlauf bis zu 30 Sekunden später erscheinen. Gespeicherte Ereigniszeitzonen bleiben unverändert. P11 kann auf `EventListRenderer.needsSecondUpdates()` und den zentralen Neuaufbau in `refreshTemporalViews()` aufsetzen, ohne die Kalendersemantik neu zu definieren.
 
 ### P04 – Konsistente Offline-Versionen und begrenztes Caching
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Branch `p04-konsistente-offline-versionen`, getesteter Implementierungscommit `d9f46b60f2ea6a699b85ce0e96cc1430b9a3cae7`; Merge-Commit wird nach dem Merge ergänzt.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #4](https://github.com/sl3ndrr/tagesz-hler/pull/4), Merge-Commit `e8a20f10e6fa4391e34de25d31dc02e79607aaf8`, getesteter Branch-Commit `fad5cb6c96d74979ceb1bf03666ea1bae07b5107`; [CI-Lauf #17](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34625692467) laut PR-Abschlussbericht erfolgreich. Reale Offline-/Mehrtab-Browserprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Die App-Shell wird vollständig in `tageszaehler-v5` installiert und ausschließlich aus dem Cache der aktiven Worker-Version gelesen. Fehlende Assets oder Schreibfehler verwerfen die Installation. Kontrollierte Navigationen verwenden die aktive Shell sofort; nur bei einem verlorenen aktiven Cache wird das Netz zeitlich begrenzt versucht. Allgemeines Runtime-Caching entfällt. Wartende Updates werden nicht erzwungen und in der bestehenden zugänglichen Statusmeldung angekündigt. Synthetische Regressionen decken Versionswechsel mit mehreren Clients, Precache- und Schreibfehler, HTTP 503, Netzabbruch, langsames Netz, Offline-Neustart und Pages-Unterpfade ab.
 - **Übergabe an Folgepakete:** App-Shell-Dateien bleiben durch `APP_SHELL` und `CACHE_VERSION` gekoppelt; Folgeänderungen daran müssen die Version weiterhin erhöhen. Der aktive Worker liefert keine Shell-Ressource aus fremden Versionscaches und cached sonstige Laufzeitanfragen nicht. Updates aktivieren regulär erst nach dem Schließen aller App-Tabs; bei einer extern erzwungenen Aktivierung erfolgt aus Rücksicht auf offene Eingaben kein automatisches Neuladen. Die Trusted-Types-Policy bleibt ausschließlich `tageszaehler-sw` für `./sw.js`.
-- **Offener Punkt außerhalb P04:** PR #3 ist nachweislich als Merge-Commit `af1998b62e7c7e8d4aba4634da1b771708829e6b` in `main` enthalten, seine P03-Zeile und sein Paketprotokoll stehen dort jedoch noch auf `In Arbeit`. Der P03-Nachtrag auf `Gemergt` ist außerhalb dieses Pakets weiterhin erforderlich.
+- **Historischer Statuspunkt (mit P08 erledigt):** PR #3 war bereits als Merge-Commit `af1998b62e7c7e8d4aba4634da1b771708829e6b` in `main`, während die P03-Übergabe noch `In Arbeit` zeigte. Überblick und P03-Protokoll wurden auf `Gemergt` berichtigt.
 
 ### P05 – Zugängliche und konsistente Darstellung
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Branch `p05-zugaengliche-konsistente-darstellung`, getesteter Implementierungscommit `7ab5d4e92a83029ae9bdf7fe778fb1c88f99ff51`; Merge-Commit wird nach dem Merge ergänzt.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5), Merge-Commit `c697b2da28ec1c549f129f81cd76fbd6c3853627`; [CI-Lauf #20](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34639271789) laut PR-Abschlussbericht erfolgreich. Reale Browser-/Screenreader-/Zoomprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Die Primärfarbe erreicht mit allen vier Akzenten auf den verwendeten hellen und dunklen Flächen mindestens 4,5:1. Der Rechner verwendet eine dauerhafte Statusregion außerhalb der rein visuellen Flip-Ziffern; Fehler und Ergebnisse werden dort angekündigt. Detailbeschreibungen erhalten Zeilenumbrüche, lange Inhalte brechen um, beide Flip-Varianten animieren und reduzierte Bewegung wartet nicht. Wegen App-Shell-Änderungen ist `CACHE_VERSION` nun `v6`.
 - **Übergabe an Folgepakete:** `#calc-result-status` muss als stabile Rechner-Live-Region erhalten bleiben; `#calc-flip-clock` enthält nur visuelle Ziffern. Änderungen an App-Shell-Dateien bleiben an eine Erhöhung von `CACHE_VERSION` gekoppelt. Reale Browser-, Zoom-, Screenreader- und Bewegungspräferenzprüfungen stehen noch aus.
-- **Offener Punkt außerhalb P05:** P03 und P04 sind laut ihren Merge-Commits in `main`, stehen in Überblick und Paketprotokoll weiterhin auf `In Arbeit`; die Statusnachträge sind außerhalb dieses Pakets zu erledigen.
+- **Historischer Statuspunkt (mit P08 erledigt):** P03 und P04 waren bereits gemergt, aber ihre Übergabe noch auf `In Arbeit`. Beide Statusnachträge wurden in Überblick und Paketprotokoll berichtigt.
 
 ### P06 – Einheitliche Daten- und Formularvalidierung
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6), Branch `p06-einheitliche-daten-formularvalidierung`; Merge-Commit wird nach dem Merge ergänzt.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6), Merge-Commit `c07cb664a102dc7b1f97afa762113729087f1d9e`, getesteter Branch-Commit `d9fee2650311dff60654c10a2c21096dfb6952a5`; [CI-Lauf #23](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34640864525) laut PR-Abschlussbericht erfolgreich.
 - **Abschlussbericht:** Normalisierung akzeptiert IDs nur als String oder endliche Legacy-Zahl und weist falsche vorhandene Typen von `time`/`refDate` kontrolliert über den Quarantänepfad ab. `validity.badInput` verhindert, dass unvollständige native Datum-/Zeiteingaben als leer gespeichert werden. Speichern, Laden, Import und formatierter Export teilen ein UTF-8-Limit von 8 MiB; direkte DST-Listener entfallen zugunsten des Formularpfads. `CACHE_VERSION` ist `v7`.
-- **Übergabe an Folgepakete:** P07/P08/P15 können die strikte Ereignisnormalisierung und das gemeinsame UTF-8-Limit voraussetzen. Altformate mit Array-Wurzel, fehlenden/`null` optionalen Zeit-/Referenzwerten und numerischen Legacy-IDs bleiben lesbar. Der reale CI-Lauf sowie Browserprüfungen für native `badInput`-Fälle stehen noch aus.
+- **Übergabe an Folgepakete:** P07/P08/P15 können die strikte Ereignisnormalisierung und das gemeinsame UTF-8-Limit voraussetzen. Altformate mit Array-Wurzel, fehlenden/`null` optionalen Zeit-/Referenzwerten und numerischen Legacy-IDs bleiben lesbar. Browserprüfungen für native `badInput`-Fälle stehen noch aus.
 
 ### P07 – Datenrettung und verständliche Speicherzustände
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7), Branch `p07-datenrettung-speicherzustaende`. Merge-Commit und Status `Gemergt` werden ausschließlich nach tatsächlichem Merge ergänzt.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7), Merge-Commit `3e8019ed5fe58285333c265f6c0f5b9b8452e923`, getesteter Branch-Commit `de141777d1ea479414055a0dc275600b9d984f00`; [CI-Lauf #26](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34965238822) laut PR-Abschlussbericht erfolgreich. Reale Browser-/Fokusprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Der vollständige Bericht steht in der PR-Beschreibung. Aktiver Rohbestand und gesicherte Rettungskopien sind getrennt exportierbar; eine validierte, ausdrücklich bestätigte Wiederherstellung oder Ersetzung läuft unter dem P02-Web-Lock mit Bestandsvergleich und Read-back. Teilvalidierung lässt die Rohkopie bestehen und sperrt stille Änderungen. Drei bestätigte Löschvarianten betreffen nur aktive Ereignisse und/oder die beiden zugehörigen Rettungsschlüssel. Ein erfolgreiches erneutes Lesen hebt vorübergehenden Schreibschutz auch bei gleicher Revision auf. App-Shell-Version `v8`.
 - **Übergabe an Folgepakete:** Rettungskopien werden nach Wiederherstellung nicht automatisch entfernt; der unveränderte Rohdatenexport ist kein vollständiges Backup mit Einstellungen (P15). Alle aktiven Ersetzungen und Löschungen benötigen Web Locks; alte, nicht kooperierende Tabs bleiben das dokumentierte P02-Restrisiko. Der Rettungsdialog verwendet ein natives modales `dialog`, fokussiert explizit und stellt den Ausgangsfokus beim Schließen wieder her. Reale Browser-/Tastatur-/Fokusprüfung steht aus.
-- **Offener Punkt außerhalb P07:** P06 ist laut [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) tatsächlich als Merge-Commit `c07cb664a102dc7b1f97afa762113729087f1d9e` auf `main`, steht aber hier in Überblick und Paketprotokoll weiter auf `In Arbeit`. P07 wurde trotz dieser veralteten Übergabezeile vom Nutzer ausdrücklich freigegeben; der P06-Statusnachtrag bleibt außerhalb P07 offen. Auch P03–P05 sind laut ihren gemergten PRs noch als `In Arbeit` geführt.
+- **Historischer Statuspunkt (mit P08 erledigt):** P06 war laut [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) als `c07cb664a102dc7b1f97afa762113729087f1d9e` gemergt, aber die Übergabe veraltet. P07 wurde damals vom Nutzer ausdrücklich trotz dieser Diskrepanz freigegeben. P03–P06 sind nun in Überblick und Paketprotokoll berichtigt.
 
 ### P08 – Belastbare Bildverarbeitung und URL-Vorschau
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Upload und JSON-Bildimport prüfen Base64, Bildsignaturen, MIME und Headerdimensionen vor dem Dekodieren; eingebettete Importbilder werden zusätzlich tatsächlich dekodiert. URL-Vorschauen warten 400 ms auf vollständige absolute URLs und verwerfen überholte Ergebnisse. Die Darstellung verwendet `no-referrer`; App-Shell-Version `v9`.
+- **Übergabe an Folgepakete:** Uploadlimit 20 MiB, maximal 24 Mio. Bildpixel und 10.000 Pixel je Achse; eingebettete Bilder bleiben zusätzlich durch P06-Quellen-/Bestandslimits begrenzt. Headerprüfung verhindert den großen Dekodierschritt für erkannte Ausreißer, kann jedoch nicht die Browserinternen Ressourcen der anschließenden Dekodierung oder jedes beschädigte Kompressionsdetail vorab beweisen. CSS-Hintergrundbilder übernehmen den dokumentweiten `no-referrer`-Wert; externe Bilder werden nicht offline gespeichert. Reale Browserprüfung bleibt vor Merge offen.
+- **Statuskorrektur außerhalb P08:** P03–P07 sind nach GitHub-PRs und Vorfahrvergleich auf `main` gemergt; ihre veralteten Zeilen und Protokolle wurden auf den tatsächlichen Merge-Stand gebracht. Historische offene Statushinweise in den alten Paketprotokollen sind damit erledigt; andere fachliche Restrisiken bleiben bestehen.
 
 ### P09 – Installationsbezogene Speicherung und Präferenzen
 
