@@ -121,6 +121,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 - **PR / Merge-Commit:** [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13), Branch `p11-ereignislisten-gezielt-aktualisieren`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
 - **Abschlussbericht:** Unveränderte Ereignisse verwenden ihr Zeitmodell und ihren DOM-Knoten weiter. Ereignisänderung, Zeitablauf an einer Zeitgrenze, Tages-/Zeitzonenwechsel, Einheiten-/Ansichtswechsel und Sichtbarkeitswechsel invalidieren gezielt. Differenzen werden je Ansichtsobjekt innerhalb desselben Schritts geteilt; gelöschte Ereignisse entfernen Modellcache und Ansicht.
 - **Übergabe an Folgepakete:** `EventListModelCache` hält höchstens aktive Ereignis-Modelle. `getRenderStats()` liefert die letzte Renderzählung für synthetische Regressionen. `refreshTemporalViews()` ruft den Renderer mit temporaler Invalidierung auf; eine Änderung an `app.js` erhöhte die Shell-Version auf `v12`. Reale Browser-/Scroll-/Mitternachts-/Uhrsprungprüfungen stehen vor Merge aus.
+- **Vorformulierter Nachtrag erst nach tatsächlichem Merge:** Überblick: `| P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #13, tatsächlichen Merge-Commit, letzten getesteten Branch-Commit und den beobachteten CI-Lauf ergänzen. Der Modellcache bleibt auf aktive Ereignisse begrenzt.
 
 ### P12 – Schriftarten lokal bereitstellen
 
