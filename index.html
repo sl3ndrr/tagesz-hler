@@ -198,7 +198,7 @@
 <dialog class="recovery-dialog" id="recovery-dialog" aria-labelledby="recovery-heading" aria-describedby="recovery-intro">
   <div class="recovery-dialog-inner">
     <h2 id="recovery-heading">Datenrettung und Speicherzustand</h2>
-    <p id="recovery-intro">Aktive Ereignisse und Rettungskopien sind getrennt. Rohdaten bleiben bei teilweiser Validierung erhalten; Wiederherstellung und Löschung brauchen deine ausdrückliche Bestätigung.</p>
+    <p id="recovery-intro">Aktive Ereignisse und Rettungskopien sind getrennt. Alte gemeinsame Rohdaten und Einstellungen können aus einem anderen Projekt derselben Origin stammen. Übernimm sie nur nach Prüfung ihrer Herkunft und ausdrücklicher Bestätigung; alte Quellen bleiben erhalten.</p>
     <p class="recovery-message" id="recovery-message" role="status" aria-live="polite" aria-atomic="true"></p>
     <label for="recovery-source">Rohdatenquelle</label>
     <select id="recovery-source" class="m3-input"></select>
@@ -207,6 +207,7 @@
       <button type="button" class="m3-btn ripple-host" id="recovery-restore-btn">Gültige Ereignisse aus Quelle übernehmen</button>
       <button type="button" class="m3-btn ripple-host" id="recovery-file-btn">Aktive Daten mit Importdatei ersetzen</button>
       <input type="file" id="recovery-file-input" accept=".json,application/json" hidden>
+      <button type="button" class="m3-btn ripple-host" id="legacy-preferences-btn">Alte gemeinsame Einstellungen prüfen</button>
     </div>
     <h3>Löschung gezielt wählen</h3>
     <div class="recovery-actions">

@@ -1,9 +1,11 @@
 /* FOUC-Bootstrap: Präferenzen anwenden, bevor CSS und App-Shell gezeichnet werden. */
 (() => {
   const root = document.documentElement;
+  // Die Skript-URL bezeichnet auch beim Start über ./ oder ./index.html denselben Pfad.
+  const namespace = `tageszaehler:${encodeURIComponent(new URL('./', document.currentScript.src).pathname)}:`;
   const readPreference = (key, allowed, fallback) => {
     try {
-      const value = localStorage.getItem(key);
+      const value = localStorage.getItem(`${namespace}${key}`);
       return allowed.includes(value) ? value : fallback;
     } catch (_) {
       return fallback;

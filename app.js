@@ -2,13 +2,24 @@
 const ALLOWED_UNITS = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
 const DEFAULT_UNITS = ['years', 'months', 'weeks', 'days', 'seconds'];
 const DATA_SCHEMA_VERSION = 2;
-const EVENT_WRITE_LOCK_NAME = 'tageszaehler-events-v2-write';
+// Dieselbe Pfadableitung verwendet der frühe Theme-Bootstrap und der Service Worker.
+const INSTALLATION_NAMESPACE = `tageszaehler:${encodeURIComponent(new URL('./', document.currentScript.src).pathname)}:`;
+const EVENT_WRITE_LOCK_NAME = `${INSTALLATION_NAMESPACE}events-v2-write`;
+const LEGACY_EVENT_WRITE_LOCK_NAME = 'tageszaehler-events-v2-write';
+const EVENT_CHANNEL_NAME = `${INSTALLATION_NAMESPACE}events-v2`;
+const LEGACY_EVENT_CHANNEL_NAME = 'tageszaehler-events-v2';
 const WRITE_PROTOCOL_VERSION = 2;
 const STORAGE_KEYS = Object.freeze({
+  events: `${INSTALLATION_NAMESPACE}events`,
+  quarantine: `${INSTALLATION_NAMESPACE}events:quarantine:v1`,
+  quarantineMeta: `${INSTALLATION_NAMESPACE}events:quarantine-meta:v1`
+});
+const LEGACY_STORAGE_KEYS = Object.freeze({
   events: 'events',
   quarantine: 'tageszaehler:events:quarantine:v1',
   quarantineMeta: 'tageszaehler:events:quarantine-meta:v1'
 });
+const preferenceKey = name => `${INSTALLATION_NAMESPACE}${name}`;
 const DATA_LIMITS = Object.freeze({
   maxEvents: 1000,
   // Alle Datenwege verwenden die UTF-8-Größe des formatierten Exportformats.
@@ -252,6 +263,7 @@ function init() {
   document.getElementById('recovery-confirm-btn').addEventListener('click', () => { void confirmRecoveryAction(); });
   document.getElementById('recovery-export-btn').addEventListener('click', exportSelectedRecoveryRaw);
   document.getElementById('recovery-restore-btn').addEventListener('click', prepareSelectedRecovery);
+  document.getElementById('legacy-preferences-btn').addEventListener('click', prepareLegacyPreferences);
   document.getElementById('recovery-file-btn').addEventListener('click', () => document.getElementById('recovery-file-input').click());
   document.getElementById('recovery-file-input').addEventListener('change', importRecoveryFile);
   document.getElementById('recovery-clear-active-btn').addEventListener('click', () => prepareRecoveryDeletion('active'));
@@ -328,13 +340,28 @@ function safeStorageGet(key, fallback = null) {
 }
 
 function safeStorageSet(key, value) {
-  try { localStorage.setItem(key, value); } catch (_) {}
+  try {
+    localStorage.setItem(key, value);
+    return localStorage.getItem(key) === value
+      ? { ok: true }
+      : { ok: false, code: 'read-back' };
+  } catch (error) {
+    return { ok: false, code: isQuotaExceededError(error) ? 'quota' : 'storage-unavailable', error };
+  }
+}
+
+function persistPreference(name, value) {
+  const status = safeStorageSet(preferenceKey(name), value);
+  if (!status.ok) {
+    showSnackbar('Auswahl gilt vorerst nur in diesem Tab: Einstellung konnte nicht dauerhaft gespeichert werden.');
+  }
+  return status;
 }
 
 function applyPreferences() {
-  setTheme(safeStorageGet('theme', 'system'), false);
-  setColor(safeStorageGet('color', 'purple'), false);
-  setView(safeStorageGet('view', 'cards'), false);
+  setTheme(safeStorageGet(preferenceKey('theme'), 'system'), false);
+  setColor(safeStorageGet(preferenceKey('color'), 'purple'), false);
+  setView(safeStorageGet(preferenceKey('view'), 'cards'), false);
 }
 
 function setTheme(theme, persist = true) {
@@ -345,8 +372,9 @@ function setTheme(theme, persist = true) {
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
-  if (persist) safeStorageSet('theme', theme);
+  const status = persist ? persistPreference('theme', theme) : { ok: true };
   updateThemeColor();
+  return status;
 }
 
 function setColor(color, persist = true) {
@@ -357,8 +385,9 @@ function setColor(color, persist = true) {
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
-  if (persist) safeStorageSet('color', color);
+  const status = persist ? persistPreference('color', color) : { ok: true };
   updateThemeColor();
+  return status;
 }
 
 function setView(view, persist = true) {
@@ -369,7 +398,7 @@ function setView(view, persist = true) {
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', String(active));
   });
-  if (persist) safeStorageSet('view', view);
+  return persist ? persistPreference('view', view) : { ok: true };
 }
 
 function updateThemeColor() {
@@ -746,6 +775,9 @@ class EventRepository {
     let activeReadError = false;
     let copiesReadError = false;
     let metadataCount = 0;
+    let legacyReadError = false;
+    let legacyCopiesReadError = false;
+    let legacyMetadataCount = 0;
     try {
       activeRaw = this.getStorage().getItem(this.key);
       if (activeRaw !== null) {
@@ -780,7 +812,41 @@ class EventRepository {
         if (document?.schemaVersion === 1 && Array.isArray(document.entries)) metadataCount = document.entries.length;
       }
     } catch (_) {}
-    return { sources, activeRaw, activeReadError, copiesReadError, metadataCount };
+    // Alte originweite Bestände sind nicht einer Installation zuordenbar.
+    // Sie werden nur als auswählbare Rohquelle angeboten und niemals automatisch verschoben.
+    try {
+      const raw = this.getStorage().getItem(LEGACY_STORAGE_KEYS.events);
+      if (raw !== null) sources.push({ id: 'legacy-active', label: 'Alter gemeinsamer Rohbestand (Zuordnung ungeklärt)', raw });
+    } catch (error) {
+      legacyReadError = true;
+      console.warn('Alter Rohbestand kann nicht gelesen werden.', error);
+    }
+    try {
+      const raw = this.getStorage().getItem(LEGACY_STORAGE_KEYS.quarantine);
+      if (raw) {
+        const document = JSON.parse(raw);
+        if (document?.schemaVersion !== 1 || !Array.isArray(document.entries)) throw new Error('Alte Rettungskopien sind nicht lesbar.');
+        document.entries.forEach((entry, index) => {
+          if (typeof entry?.raw !== 'string' || entry.sourceKey !== LEGACY_STORAGE_KEYS.events || hashString(entry.raw) !== entry.checksum) return;
+          sources.push({
+            id: `legacy-copy:${index}:${entry.checksum}`,
+            label: `Alte gemeinsame Rettungskopie ${index + 1} (Zuordnung ungeklärt)`,
+            raw: entry.raw
+          });
+        });
+      }
+    } catch (error) {
+      legacyCopiesReadError = true;
+      console.warn('Alte Rettungskopien können nicht gelesen werden.', error);
+    }
+    try {
+      const raw = this.getStorage().getItem(LEGACY_STORAGE_KEYS.quarantineMeta);
+      if (raw) {
+        const document = JSON.parse(raw);
+        if (document?.schemaVersion === 1 && Array.isArray(document.entries)) legacyMetadataCount = document.entries.length;
+      }
+    } catch (_) {}
+    return { sources, activeRaw, activeReadError, copiesReadError, metadataCount, legacyReadError, legacyCopiesReadError, legacyMetadataCount };
   }
 
   async recover(expectedRaw, events, sourceId) {
@@ -799,6 +865,35 @@ class EventRepository {
         }
         return this.persist(events, currentRaw == null ? null : this.extractRevision(currentRaw), sourceId);
       });
+    } catch (error) {
+      return { ok: false, code: 'lock-failed', error };
+    }
+  }
+
+  async migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, writerId) {
+    const locks = window.navigator?.locks;
+    if (!locks || typeof locks.request !== 'function') return { ok: false, code: 'lock-unavailable' };
+    if (expectedTargetRaw !== null) return { ok: false, code: 'target-not-empty' };
+    try {
+      return await locks.request(LEGACY_EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () =>
+        locks.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+          const inventory = this.readRecoverySources();
+          const source = inventory.sources.find(item => item.id === sourceId);
+          if (!source || source.raw !== expectedSourceRaw) return { ok: false, code: 'legacy-source-changed' };
+          let currentTarget;
+          try {
+            currentTarget = this.getStorage().getItem(this.key);
+          } catch (error) {
+            return { ok: false, code: 'storage-unavailable', error };
+          }
+          if (currentTarget !== expectedTargetRaw) return { ok: false, code: 'collection-conflict' };
+          const result = this.persist(events, null, writerId);
+          if (!result.ok) return result;
+          const after = this.readRecoverySources().sources.find(item => item.id === sourceId);
+          if (!after || after.raw !== expectedSourceRaw) return { ok: false, code: 'legacy-source-raced-after-write', persisted: true };
+          return result;
+        })
+      );
     } catch (error) {
       return { ok: false, code: 'lock-failed', error };
     }
@@ -1042,6 +1137,25 @@ class EventStore {
     return { ok: true, action: 'recovery', revision: result.revision };
   }
 
+  async migrateLegacy(sourceId, expectedSourceRaw, events) {
+    if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    const expectedTargetRaw = this.repository.readRecoverySources().activeRaw;
+    const result = await this.repository.migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, this.sourceId);
+    if (!result.ok) {
+      if (result.persisted) this.applyExternal(this.repository.loadCurrent(), 'migration-race');
+      return result;
+    }
+    this.state = {
+      events: freezeEvents(result.events),
+      revision: result.revision,
+      updatedAt: result.updatedAt,
+      writeProtected: false,
+      loadState: 'ok'
+    };
+    this.emit({ origin: 'local', action: 'migration', revision: result.revision });
+    return { ok: true, action: 'migration', revision: result.revision };
+  }
+
   async commit(action, mutate) {
     if (this.state.writeProtected) return { ok: false, code: 'write-protected' };
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
@@ -1104,18 +1218,21 @@ class EventSync {
     this.repository = repository;
     this.sourceId = sourceId;
     this.channel = null;
+    this.legacyChannel = null;
     this.onSnapshot = null;
     this.onStorage = event => {
       if (event.key === this.repository.key || event.key === null) this.reload('storage');
+      if (event.key === LEGACY_STORAGE_KEYS.events) this.onLegacyPeer?.();
     };
   }
 
   start(onSnapshot, onLegacyPeer) {
     this.onSnapshot = onSnapshot;
+    this.onLegacyPeer = onLegacyPeer;
     window.addEventListener('storage', this.onStorage);
     if ('BroadcastChannel' in window) {
       try {
-        this.channel = new window.BroadcastChannel('tageszaehler-events-v2');
+        this.channel = new window.BroadcastChannel(EVENT_CHANNEL_NAME);
         this.channel.addEventListener('message', event => {
           if (event.data?.type !== 'events-updated' || event.data.sourceId === this.sourceId) return;
           if (event.data.writeProtocolVersion !== WRITE_PROTOCOL_VERSION) onLegacyPeer?.();
@@ -1123,6 +1240,14 @@ class EventSync {
         });
       } catch (error) {
         console.warn('BroadcastChannel ist nicht verfügbar; Synchronisation nutzt das storage-Event.', error);
+      }
+      try {
+        this.legacyChannel = new window.BroadcastChannel(LEGACY_EVENT_CHANNEL_NAME);
+        this.legacyChannel.addEventListener('message', event => {
+          if (event.data?.type === 'events-updated') onLegacyPeer?.();
+        });
+      } catch (error) {
+        console.warn('Alter Kommunikationskanal konnte nicht beobachtet werden.', error);
       }
     }
   }
@@ -1148,7 +1273,9 @@ class EventSync {
   stop() {
     window.removeEventListener('storage', this.onStorage);
     this.channel?.close();
+    this.legacyChannel?.close();
     this.channel = null;
+    this.legacyChannel = null;
   }
 }
 
@@ -3631,12 +3758,15 @@ function openRecoveryDialog() {
   recoveryExpectedRaw = inventory.activeRaw;
   refreshRecoverySources(inventory);
   const copies = recoverySources.filter(source => source.id.startsWith('copy:')).length;
+  const legacy = recoverySources.filter(source => source.id.startsWith('legacy-')).length;
   const notes = [
     inventory.activeReadError ? 'Aktive Rohdaten sind derzeit nicht lesbar; Wiederherstellung und Löschung aktiver Daten sind gesperrt.' :
       inventory.activeRaw == null ? 'Kein aktiver Rohbestand vorhanden.' : 'Aktiver Rohbestand kann separat als unverändertes JSON exportiert werden.',
-    `${copies} lesbare Rettungskopie${copies === 1 ? '' : 'n'} vorhanden; ${inventory.metadataCount} Metadaten-Eintrag${inventory.metadataCount === 1 ? '' : 'e'} ohne Rohkopie.`
+    `${copies} lesbare Rettungskopie${copies === 1 ? '' : 'n'} vorhanden; ${inventory.metadataCount} Metadaten-Eintrag${inventory.metadataCount === 1 ? '' : 'e'} ohne Rohkopie.`,
+    `${legacy} alte gemeinsame Rohquelle${legacy === 1 ? '' : 'n'}; ${inventory.legacyMetadataCount} alte Metadaten-Einträge. Herkunft vor Übernahme prüfen; keine automatische Migration.`
   ];
   if (inventory.copiesReadError) notes.push('Gespeicherte Rettungskopien sind derzeit nicht lesbar; sie wurden nicht verändert.');
+  if (inventory.legacyReadError || inventory.legacyCopiesReadError) notes.push('Alte Rohquellen sind teilweise nicht lesbar; sie wurden nicht verändert.');
   setRecoveryMessage(notes.join(' '));
   recoveryDialog.showModal();
   document.getElementById('recovery-close-btn').focus();
@@ -3683,7 +3813,7 @@ function exportSelectedRecoveryRaw() {
   const selected = selectedRecoveryRaw();
   if (!selected) return;
   try {
-    downloadRecoveryRaw(selected.raw, selected.id === 'active' ? 'aktiv' : 'rettungskopie');
+    downloadRecoveryRaw(selected.raw, selected.id === 'active' ? 'aktiv' : selected.id.startsWith('legacy-') ? 'alt-gemeinsam' : 'rettungskopie');
     setRecoveryMessage('Unveränderte Rohdaten exportiert. Aktive Daten und Rettungskopien bleiben gespeichert.');
   } catch (error) {
     console.warn('Rettungsexport fehlgeschlagen:', error);
@@ -3700,13 +3830,66 @@ function prepareSelectedRecovery() {
     return;
   }
   const dropped = parsed.invalidCount || 0;
+  const legacy = selected.id.startsWith('legacy-');
   requestRecoveryConfirmation(
-    `${parsed.events.length} gültige Ereignis${parsed.events.length === 1 ? '' : 'se'} aus „${selected.label}“ in den aktiven Bestand übernehmen? ${dropped} ungültige Ereignis${dropped === 1 ? '' : 'se'} werden nicht übernommen. Die gewählte Rohkopie bleibt erhalten; exportiere sie vor einer Löschung. Eine Änderung des aktiven Bestands bricht den Vorgang ab.`,
+    `${parsed.events.length} gültige Ereignis${parsed.events.length === 1 ? '' : 'se'} aus „${selected.label}“ in den aktiven Bestand übernehmen? ${dropped} ungültige Ereignis${dropped === 1 ? '' : 'se'} werden nicht übernommen. ${legacy ? 'Die alte gemeinsame Quelle kann zu einer anderen Installation gehören. Der neue Bestand muss noch unbeschrieben sein; alte Quellen werden nicht gelöscht.' : 'Die gewählte Rohkopie bleibt erhalten; exportiere sie vor einer Löschung.'} Eine Änderung der Quellen oder des aktiven Bestands bricht den Vorgang ab.`,
     async () => {
       if (!selectedRecoveryRaw() || recoverySources.find(source => source.id === selected.id)?.raw !== selected.raw) return { ok: false, message: 'Rohdatenquelle wurde geändert; nichts ersetzt.' };
-      const result = await eventStore.recoverReplaceAll(parsed.events, recoveryExpectedRaw);
-      if (!result.ok) return { ok: false, message: `Wiederherstellung nicht bestätigt: ${result.code}. Aktive Daten und Rettungskopien wurden nicht gezielt gelöscht.` };
+      const result = legacy
+        ? await eventStore.migrateLegacy(selected.id, selected.raw, parsed.events)
+        : await eventStore.recoverReplaceAll(parsed.events, recoveryExpectedRaw);
+      if (!result.ok) return { ok: false, message: `Übernahme nicht bestätigt: ${result.code}. ${result.persisted ? 'Ein neuer aktiver Bestand wurde geschrieben, aber die alte Quelle änderte sich danach; beide Rohbestände prüfen und nichts erneut übernehmen.' : 'Aktive Daten und alte Rohquellen wurden nicht gezielt gelöscht.'}` };
       return { ok: true, message: `${parsed.events.length} gültige Ereignisse sicher übernommen. Frühere Rettungskopien bleiben erhalten; der bisherige aktive Rohbestand wurde nur nach Bestätigung ersetzt.` };
+    }
+  );
+}
+
+const LEGACY_PREFERENCE_VALUES = Object.freeze({
+  theme: ['system', 'light', 'dark'],
+  color: ['purple', 'blue', 'green', 'orange'],
+  view: ['cards', 'compact']
+});
+
+function readLegacyPreferences() {
+  const values = {};
+  try {
+    for (const [name, allowed] of Object.entries(LEGACY_PREFERENCE_VALUES)) {
+      const value = localStorage.getItem(name);
+      if (allowed.includes(value)) values[name] = value;
+    }
+    return { ok: true, values };
+  } catch (error) {
+    return { ok: false, values, error };
+  }
+}
+
+function prepareLegacyPreferences() {
+  const snapshot = readLegacyPreferences();
+  if (!snapshot.ok) return setRecoveryMessage('Alte Einstellungen sind nicht lesbar; keine Übernahme.');
+  const names = Object.keys(snapshot.values);
+  if (!names.length) return setRecoveryMessage('Keine gültigen alten Einstellungen gefunden; nichts zu übernehmen.');
+  requestRecoveryConfirmation(
+    `Alte gemeinsame Einstellungen (${names.join(', ')}) für diese Installation übernehmen? Ihre Herkunft ist nicht erkennbar. Vorhandene Einstellungen dieser Installation und alle alten Schlüssel bleiben unverändert.`,
+    async () => {
+      const fresh = readLegacyPreferences();
+      if (!fresh.ok || JSON.stringify(fresh.values) !== JSON.stringify(snapshot.values)) return { ok: false, message: 'Alte Einstellungen haben sich geändert; nichts übernommen.' };
+      const saved = [];
+      const skipped = [];
+      const failed = [];
+      for (const name of names) {
+        let existing;
+        try { existing = localStorage.getItem(preferenceKey(name)); }
+        catch (_) { failed.push(name); continue; }
+        if (existing !== null) { skipped.push(name); continue; }
+        const status = safeStorageSet(preferenceKey(name), snapshot.values[name]);
+        if (status.ok) saved.push(name);
+        else failed.push(name);
+      }
+      applyPreferences();
+      return {
+        ok: failed.length === 0,
+        message: `Alte Einstellungen: ${saved.length} bestätigt, ${skipped.length} vorhandene übersprungen, ${failed.length} nicht dauerhaft gespeichert. Alte Schlüssel bleiben erhalten.`
+      };
     }
   );
 }
