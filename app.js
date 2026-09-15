@@ -110,6 +110,15 @@ const timeZoneHint = document.getElementById('f-time-zone-hint');
 const calcDirection = document.getElementById('calc-direction');
 const calcResultStatus = document.getElementById('calc-result-status');
 const offlineStatus = document.getElementById('offline-status');
+const recoveryStatus = document.getElementById('recovery-status');
+const recoveryDialog = document.getElementById('recovery-dialog');
+const recoverySource = document.getElementById('recovery-source');
+const recoveryMessage = document.getElementById('recovery-message');
+const recoveryConfirmation = document.getElementById('recovery-confirmation');
+let recoverySources = [];
+let recoveryExpectedRaw = null;
+let recoveryPendingAction = null;
+let recoveryReturnFocus = null;
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 const desktopNavigationQuery = window.matchMedia('(min-width: 900px)');
@@ -235,6 +244,24 @@ function init() {
   document.getElementById('img-clear-btn').addEventListener('click', clearImage);
 
   document.getElementById('clear-btn').addEventListener('click', () => { void eventController.clearAll(); });
+  document.getElementById('recovery-btn').addEventListener('click', openRecoveryDialog);
+  document.getElementById('recovery-status-btn').addEventListener('click', openRecoveryDialog);
+  document.getElementById('recovery-close-btn').addEventListener('click', () => recoveryDialog.close());
+  document.getElementById('recovery-cancel-btn').addEventListener('click', cancelRecoveryConfirmation);
+  document.getElementById('recovery-confirm-btn').addEventListener('click', () => { void confirmRecoveryAction(); });
+  document.getElementById('recovery-export-btn').addEventListener('click', exportSelectedRecoveryRaw);
+  document.getElementById('recovery-restore-btn').addEventListener('click', prepareSelectedRecovery);
+  document.getElementById('recovery-file-btn').addEventListener('click', () => document.getElementById('recovery-file-input').click());
+  document.getElementById('recovery-file-input').addEventListener('change', importRecoveryFile);
+  document.getElementById('recovery-clear-active-btn').addEventListener('click', () => prepareRecoveryDeletion('active'));
+  document.getElementById('recovery-clear-copies-btn').addEventListener('click', () => prepareRecoveryDeletion('copies'));
+  document.getElementById('recovery-clear-both-btn').addEventListener('click', () => prepareRecoveryDeletion('both'));
+  recoveryDialog.addEventListener('close', () => {
+    cancelRecoveryConfirmation();
+    document.getElementById('recovery-file-input').value = '';
+    restoreModalFocus(recoveryReturnFocus);
+    recoveryReturnFocus = null;
+  });
   document.getElementById('export-btn').addEventListener('click', exportData);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
@@ -256,6 +283,7 @@ function init() {
   });
 
   if (dataLoadWarning) showSnackbar(dataLoadWarning);
+  updateRecoveryStatus();
 }
 
 function setActiveTab(index) {
@@ -606,10 +634,11 @@ class EventRepository {
         updatedAt,
         sourceId,
         migrated,
+        invalidCount: collection.invalidCount,
         warning: quarantine.hasRawCopy
-          ? `${collection.invalidCount} ungültige Ereignisse wurden ausgelassen; der Originalbestand liegt in Quarantäne.`
+          ? `${collection.invalidCount} ungültige Ereignisse wurden nur zur Ansicht ausgelassen. Der aktive Rohbestand und eine Rettungskopie bleiben erhalten; Änderungen erfordern eine bewusste Wiederherstellung.`
           : `${collection.invalidCount} ungültige Ereignisse wurden ausgelassen. Der Originalbestand blieb unverändert; Änderungen sind vorsorglich gesperrt.`,
-        writeProtected: !quarantine.hasRawCopy
+        writeProtected: true
       };
     }
 
@@ -630,7 +659,7 @@ class EventRepository {
     const quarantine = raw != null && quarantineOnError
       ? this.quarantine(raw, error, stage)
       : { stored: false, hasRawCopy: false };
-    const protectedState = writeProtected ?? !quarantine.hasRawCopy;
+    const protectedState = writeProtected ?? true;
     return {
       ok: false,
       events: [],
@@ -639,8 +668,8 @@ class EventRepository {
       sourceId: null,
       migrated: false,
       warning: quarantine.hasRawCopy
-        ? 'Gespeicherte Daten konnten nicht geladen werden. Das unveränderte Original wurde in Quarantäne gesichert.'
-        : 'Gespeicherte Daten konnten nicht geladen werden. Das Original blieb unverändert; Änderungen sind vorsorglich gesperrt.',
+        ? 'Gespeicherte Daten konnten nicht geladen werden. Der aktive Rohbestand blieb erhalten; eine Rettungskopie wurde gesichert. Änderungen sind gesperrt.'
+        : 'Gespeicherte Daten konnten nicht geladen werden. Wenn der aktive Rohbestand lesbar ist, blieb er unverändert; Änderungen sind gesperrt.',
       writeProtected: protectedState,
       errorCode: stage
     };
@@ -707,6 +736,111 @@ class EventRepository {
     } catch (error) {
       console.warn('Quarantäne-Metadaten konnten nicht gespeichert werden.', error);
       return false;
+    }
+  }
+
+  readRecoverySources() {
+    const sources = [];
+    let activeRaw = null;
+    let activeReadError = false;
+    let copiesReadError = false;
+    let metadataCount = 0;
+    try {
+      activeRaw = this.getStorage().getItem(this.key);
+      if (activeRaw !== null) {
+        sources.push({ id: 'active', label: 'Aktiver Rohbestand (unverändert)', raw: activeRaw });
+      }
+    } catch (error) {
+      activeReadError = true;
+      console.warn('Aktiver Rohbestand kann nicht gelesen werden.', error);
+    }
+    try {
+      const copiesRaw = this.getStorage().getItem(STORAGE_KEYS.quarantine);
+      if (copiesRaw) {
+        const document = JSON.parse(copiesRaw);
+        if (!document || document.schemaVersion !== 1 || !Array.isArray(document.entries)) throw new Error('Rettungskopien sind nicht lesbar.');
+        document.entries.forEach((entry, index) => {
+          if (typeof entry?.raw !== 'string' || entry.sourceKey !== this.key || hashString(entry.raw) !== entry.checksum) return;
+          sources.push({
+            id: `copy:${index}:${entry.checksum}`,
+            label: `Rettungskopie ${index + 1} vom ${entry.quarantinedAt || 'unbekannten Zeitpunkt'}`,
+            raw: entry.raw
+          });
+        });
+      }
+    } catch (error) {
+      copiesReadError = true;
+      console.warn('Rettungskopien können nicht gelesen werden.', error);
+    }
+    try {
+      const metadataRaw = this.getStorage().getItem(STORAGE_KEYS.quarantineMeta);
+      if (metadataRaw) {
+        const document = JSON.parse(metadataRaw);
+        if (document?.schemaVersion === 1 && Array.isArray(document.entries)) metadataCount = document.entries.length;
+      }
+    } catch (_) {}
+    return { sources, activeRaw, activeReadError, copiesReadError, metadataCount };
+  }
+
+  async recover(expectedRaw, events, sourceId) {
+    const lockManager = window.navigator?.locks;
+    if (!lockManager || typeof lockManager.request !== 'function') return { ok: false, code: 'lock-unavailable' };
+    try {
+      return await lockManager.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+        let currentRaw;
+        try {
+          currentRaw = this.getStorage().getItem(this.key);
+        } catch (error) {
+          return { ok: false, code: 'storage-unavailable', error };
+        }
+        if (currentRaw !== expectedRaw) {
+          return { ok: false, code: 'collection-conflict', latest: this.loadCurrent({ quarantineOnError: true }) };
+        }
+        return this.persist(events, currentRaw == null ? null : this.extractRevision(currentRaw), sourceId);
+      });
+    } catch (error) {
+      return { ok: false, code: 'lock-failed', error };
+    }
+  }
+
+  async deleteRecoveryCopies(expectedCopiesRaw, expectedMetadataRaw) {
+    const lockManager = window.navigator?.locks;
+    if (!lockManager || typeof lockManager.request !== 'function') return { ok: false, code: 'lock-unavailable' };
+    try {
+      return await lockManager.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+        const removed = [];
+        const failed = [];
+        const targets = [
+          [STORAGE_KEYS.quarantine, expectedCopiesRaw],
+          [STORAGE_KEYS.quarantineMeta, expectedMetadataRaw]
+        ];
+        for (const [key, expected] of targets) {
+          try {
+            const storage = this.getStorage();
+            if (storage.getItem(key) !== expected) {
+              failed.push('Rettungskopien wurden zwischenzeitlich geändert.');
+              break;
+            }
+            if (expected != null) {
+              storage.removeItem(key);
+              if (storage.getItem(key) !== null) throw new Error('Löschung nicht bestätigt.');
+              removed.push(key);
+            }
+          } catch (error) {
+            failed.push(`${key}: ${error.message || 'Speicherfehler'}`);
+          }
+        }
+        const remaining = targets.map(([key]) => {
+          try {
+            return { key, present: this.getStorage().getItem(key) !== null };
+          } catch (_) {
+            return { key, present: null };
+          }
+        });
+        return { ok: failed.length === 0, removed, failed, remaining };
+      });
+    } catch (error) {
+      return { ok: false, code: 'lock-failed', removed: [], failed: [String(error)] };
     }
   }
 
@@ -815,7 +949,8 @@ class EventStore {
       events: freezeEvents(initialSnapshot.events || []),
       revision: initialSnapshot.revision ?? null,
       updatedAt: initialSnapshot.updatedAt || 0,
-      writeProtected: Boolean(initialSnapshot.writeProtected)
+      writeProtected: Boolean(initialSnapshot.writeProtected),
+      loadState: !initialSnapshot.ok ? 'read-error' : initialSnapshot.writeProtected ? 'partial' : 'ok'
     };
   }
 
@@ -888,6 +1023,24 @@ class EventStore {
     });
   }
 
+  async recoverReplaceAll(events, expectedRaw) {
+    if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    const result = await this.repository.recover(expectedRaw, events, this.sourceId);
+    if (!result.ok) {
+      if (result.latest?.ok) this.applyExternal(result.latest, 'conflict');
+      return result;
+    }
+    this.state = {
+      events: freezeEvents(result.events),
+      revision: result.revision,
+      updatedAt: result.updatedAt,
+      writeProtected: false,
+      loadState: 'ok'
+    };
+    this.emit({ origin: 'local', action: 'recovery', revision: result.revision });
+    return { ok: true, action: 'recovery', revision: result.revision };
+  }
+
   async commit(action, mutate) {
     if (this.state.writeProtected) return { ok: false, code: 'write-protected' };
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
@@ -901,7 +1054,8 @@ class EventStore {
       events: freezeEvents(result.events),
       revision: result.revision,
       updatedAt: result.updatedAt,
-      writeProtected: false
+      writeProtected: false,
+      loadState: 'ok'
     };
     this.emit({ origin: 'local', action, revision: result.revision });
     return { ok: true, action, revision: result.revision };
@@ -914,24 +1068,32 @@ class EventStore {
   }
 
   applyExternal(snapshot, origin = 'external') {
-    if (!snapshot?.ok || snapshot.revision === this.state.revision) return { ok: false, code: 'unchanged' };
+    if (!snapshot?.ok) return { ok: false, code: 'invalid' };
+    const nextLoadState = snapshot.writeProtected ? 'partial' : 'ok';
+    if (snapshot.revision === this.state.revision &&
+        Boolean(snapshot.writeProtected) === this.state.writeProtected &&
+        nextLoadState === this.state.loadState &&
+        eventsEqual(snapshot.events || [], this.state.events)) return { ok: false, code: 'unchanged' };
     this.state = {
       events: freezeEvents(snapshot.events || []),
       revision: snapshot.revision ?? null,
       updatedAt: snapshot.updatedAt || 0,
-      writeProtected: Boolean(snapshot.writeProtected)
+      writeProtected: Boolean(snapshot.writeProtected),
+      loadState: nextLoadState
     };
     this.emit({ origin, action: 'replace', revision: this.state.revision });
     return { ok: true };
   }
 
   protectAfterExternalLoadFailure(snapshot, origin = 'external-error') {
+    if (this.state.loadState === 'read-error' && this.state.writeProtected) return { ok: false, code: 'unchanged' };
     this.state = {
       ...this.state,
-      revision: snapshot?.revision ?? this.state.revision,
-      writeProtected: true
+      writeProtected: true,
+      loadState: 'read-error'
     };
     this.emit({ origin, action: 'write-protect', revision: this.state.revision });
+    return { ok: true };
   }
 }
 
@@ -1005,7 +1167,11 @@ class EventUIController {
         showSnackbar('Externe Datenänderung konnte nicht sicher geladen werden; lokaler Stand bleibt erhalten und Schreibzugriffe sind gesperrt.');
         return;
       }
-      this.store.applyExternal(snapshot, origin);
+      const before = this.store.state.loadState;
+      const applied = this.store.applyExternal(snapshot, origin);
+      if (applied.ok && before === 'read-error' && !snapshot.writeProtected) {
+        showSnackbar('Aktive Daten sind wieder lesbar; der vorübergehende Schreibschutz ist aufgehoben.');
+      }
     }, () => {
       if (!this.store.blockWritesForLegacyPeer()) return;
       showSnackbar('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
@@ -1032,8 +1198,9 @@ class EventUIController {
     }
 
     renderEvents();
+    updateRecoveryStatus();
     if (change.origin === 'local') this.sync.publish(change.revision);
-    if (change.origin === 'storage' || change.origin === 'broadcast') showSnackbar('Daten aus einem anderen Tab wurden übernommen.');
+    if ((change.origin === 'storage' || change.origin === 'broadcast') && change.action === 'replace' && change.state.loadState === 'ok') showSnackbar('Daten aus einem anderen Tab wurden übernommen.');
   }
 
   async upsert(event, wasEdit) {
@@ -1058,12 +1225,7 @@ class EventUIController {
   }
 
   async clearAll() {
-    if (!this.store.getEvents().length) return showSnackbar('Es sind keine Ereignisse vorhanden.');
-    if (!confirm('Wirklich alle Ereignisse löschen?')) return false;
-    const result = await this.store.clear();
-    if (!result.ok) return this.handleFailure(result);
-    setMenuOpen(false);
-    showSnackbar('Alle Ereignisse gelöscht.');
+    openRecoveryDialog();
     return true;
   }
 
@@ -1076,7 +1238,7 @@ class EventUIController {
 
   handleFailure(result) {
     const messages = {
-      'write-protected': 'Änderung blockiert: Der fehlerhafte Originalbestand konnte nicht vollständig quarantänisiert werden.',
+      'write-protected': 'Änderung blockiert: Aktive Daten sind beschädigt oder vorübergehend nicht lesbar. Öffne die Datenrettung; Rettungskopien werden nicht still gelöscht.',
       'edit-conflict': 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt geöffnet.',
       'edit-deleted': 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.',
       'delete-conflict': 'Das Ereignis wurde in einem anderen Tab geändert. Löschen wurde abgebrochen.',
@@ -2950,6 +3112,7 @@ function initSheetGestures(sheet) {
 }
 
 function handleGlobalKeydown(event) {
+  if (recoveryDialog.open) return;
   if (event.key === 'Escape') {
     if (menuPopup.classList.contains('open')) {
       setMenuOpen(false);
@@ -3253,6 +3416,239 @@ function clearImage() {
   preview.removeAttribute('src');
   document.getElementById('img-preview-wrap').style.display = 'none';
   document.getElementById('img-clear-btn').style.display = 'none';
+}
+
+/* ── DATENRETTUNG: ROHDATEN, ERSETZUNG UND GEZIELTE LÖSCHUNG ── */
+function updateRecoveryStatus() {
+  if (!eventStore || !eventRepository) return;
+  const state = eventStore.state;
+  recoveryStatus.hidden = state.loadState === 'ok';
+  const copy = document.getElementById('recovery-status-copy');
+  if (state.loadState === 'read-error') {
+    copy.textContent = 'Aktive Daten konnten zuletzt nicht sicher gelesen werden. Der angezeigte Stand kann veraltet sein; Änderungen sind gesperrt. Rohdaten und Rettungskopien getrennt prüfen.';
+  } else if (state.loadState === 'partial') {
+    copy.textContent = 'Nur gültige aktive Ereignisse werden angezeigt; der aktive Rohbestand und eventuelle Rettungskopien bleiben erhalten. Änderungen sind bis zur bewussten Wiederherstellung gesperrt.';
+  }
+}
+
+function setRecoveryMessage(message) {
+  recoveryMessage.textContent = message;
+}
+
+function refreshRecoverySources(inventory) {
+  recoverySources = inventory.sources;
+  recoverySource.replaceChildren();
+  recoverySources.forEach(source => {
+    const option = document.createElement('option');
+    option.value = source.id;
+    option.textContent = source.label;
+    recoverySource.appendChild(option);
+  });
+  recoverySource.disabled = recoverySources.length === 0;
+  document.getElementById('recovery-export-btn').disabled = recoverySources.length === 0;
+  document.getElementById('recovery-restore-btn').disabled = recoverySources.length === 0;
+}
+
+function openRecoveryDialog() {
+  if (recoveryDialog.open) return;
+  recoveryReturnFocus = menuPopup.contains(document.activeElement)
+    ? document.getElementById('menu-btn')
+    : document.activeElement;
+  setMenuOpen(false);
+  const inventory = eventRepository.readRecoverySources();
+  recoveryExpectedRaw = inventory.activeRaw;
+  refreshRecoverySources(inventory);
+  const copies = recoverySources.filter(source => source.id.startsWith('copy:')).length;
+  const notes = [
+    inventory.activeReadError ? 'Aktive Rohdaten sind derzeit nicht lesbar; Wiederherstellung und Löschung aktiver Daten sind gesperrt.' :
+      inventory.activeRaw == null ? 'Kein aktiver Rohbestand vorhanden.' : 'Aktiver Rohbestand kann separat als unverändertes JSON exportiert werden.',
+    `${copies} lesbare Rettungskopie${copies === 1 ? '' : 'n'} vorhanden; ${inventory.metadataCount} Metadaten-Eintrag${inventory.metadataCount === 1 ? '' : 'e'} ohne Rohkopie.`
+  ];
+  if (inventory.copiesReadError) notes.push('Gespeicherte Rettungskopien sind derzeit nicht lesbar; sie wurden nicht verändert.');
+  setRecoveryMessage(notes.join(' '));
+  recoveryDialog.showModal();
+  document.getElementById('recovery-close-btn').focus();
+}
+
+function cancelRecoveryConfirmation() {
+  recoveryPendingAction = null;
+  recoveryConfirmation.hidden = true;
+  document.getElementById('recovery-confirm-btn').disabled = false;
+}
+
+function requestRecoveryConfirmation(description, action) {
+  recoveryPendingAction = action;
+  document.getElementById('recovery-confirm-copy').textContent = description;
+  recoveryConfirmation.hidden = false;
+  document.getElementById('recovery-cancel-btn').focus();
+}
+
+function selectedRecoveryRaw() {
+  const selected = recoverySources.find(source => source.id === recoverySource.value);
+  if (!selected) return null;
+  const fresh = eventRepository.readRecoverySources();
+  const available = fresh.sources.find(source => source.id === selected.id && source.raw === selected.raw);
+  if (!available) {
+    setRecoveryMessage('Die gewählte Rohdatenquelle hat sich geändert oder kann nicht mehr gelesen werden. Dialog schließen und erneut öffnen.');
+    return null;
+  }
+  return selected;
+}
+
+function downloadRecoveryRaw(raw, label) {
+  const blob = new Blob([raw], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `tageszaehler_rohdaten_${label}_${localDateInput()}.json`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportSelectedRecoveryRaw() {
+  const selected = selectedRecoveryRaw();
+  if (!selected) return;
+  try {
+    downloadRecoveryRaw(selected.raw, selected.id === 'active' ? 'aktiv' : 'rettungskopie');
+    setRecoveryMessage('Unveränderte Rohdaten exportiert. Aktive Daten und Rettungskopien bleiben gespeichert.');
+  } catch (error) {
+    console.warn('Rettungsexport fehlgeschlagen:', error);
+    setRecoveryMessage('Rettungsexport fehlgeschlagen; alle gespeicherten Rohdaten bleiben unverändert.');
+  }
+}
+
+function prepareSelectedRecovery() {
+  const selected = selectedRecoveryRaw();
+  if (!selected) return;
+  const parsed = eventRepository.parseStoredRaw(selected.raw, { quarantineOnError: false });
+  if (!parsed.ok) {
+    setRecoveryMessage('Diese Quelle enthält kein lesbares Ereignisschema. Exportiere die Rohdaten und verwende für eine Ersetzung eine geprüfte Importdatei.');
+    return;
+  }
+  const dropped = parsed.invalidCount || 0;
+  requestRecoveryConfirmation(
+    `${parsed.events.length} gültige Ereignis${parsed.events.length === 1 ? '' : 'se'} aus „${selected.label}“ in den aktiven Bestand übernehmen? ${dropped} ungültige Ereignis${dropped === 1 ? '' : 'se'} werden nicht übernommen. Die gewählte Rohkopie bleibt erhalten; exportiere sie vor einer Löschung. Eine Änderung des aktiven Bestands bricht den Vorgang ab.`,
+    async () => {
+      if (!selectedRecoveryRaw() || recoverySources.find(source => source.id === selected.id)?.raw !== selected.raw) return { ok: false, message: 'Rohdatenquelle wurde geändert; nichts ersetzt.' };
+      const result = await eventStore.recoverReplaceAll(parsed.events, recoveryExpectedRaw);
+      if (!result.ok) return { ok: false, message: `Wiederherstellung nicht bestätigt: ${result.code}. Aktive Daten und Rettungskopien wurden nicht gezielt gelöscht.` };
+      return { ok: true, message: `${parsed.events.length} gültige Ereignisse sicher übernommen. Frühere Rettungskopien bleiben erhalten; der bisherige aktive Rohbestand wurde nur nach Bestätigung ersetzt.` };
+    }
+  );
+}
+
+function importRecoveryFile(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > DATA_LIMITS.maxEventDataBytes) {
+    setRecoveryMessage('Ersetzung abgebrochen: Importdatei überschreitet 8 MiB. Aktive Rohdaten und Rettungskopien bleiben erhalten.');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const raw = String(reader.result || '');
+      if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Datei überschreitet 8 MiB.');
+      const data = JSON.parse(raw);
+      const collection = normalizeEventCollection(data, { regenerateIds: true });
+      if (!collection.ok || collection.invalidCount) throw new Error('Datei enthält kein vollständig gültiges Ereignis-Array.');
+      requestRecoveryConfirmation(
+        `Beschädigte aktive Daten mit ${collection.events.length} gültigen Ereignissen aus der Datei ersetzen? Der aktive Rohbestand wird überschrieben; vorhandene Rettungskopien bleiben erhalten. Exportiere aktive Rohdaten vorher, falls sie noch benötigt werden.`,
+        async () => {
+          const result = await eventStore.recoverReplaceAll(collection.events, recoveryExpectedRaw);
+          if (!result.ok) return { ok: false, message: `Ersetzung nicht bestätigt: ${result.code}. Aktiver Rohbestand und Rettungskopien bleiben unverändert, soweit kein anderer Tab schrieb.` };
+          return { ok: true, message: `${collection.events.length} Ereignisse aus Datei sicher übernommen. Rettungskopien bleiben erhalten.` };
+        }
+      );
+    } catch (error) {
+      setRecoveryMessage(`Ersetzung abgebrochen: ${error.message || 'Datei nicht lesbar'}. Bestehende Daten bleiben erhalten.`);
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.onerror = () => {
+    setRecoveryMessage('Importdatei konnte nicht gelesen werden; bestehende Daten bleiben erhalten.');
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function prepareRecoveryDeletion(variant) {
+  let expectedCopiesRaw;
+  let expectedMetadataRaw;
+  try {
+    const storage = eventRepository.getStorage();
+    expectedCopiesRaw = storage.getItem(STORAGE_KEYS.quarantine);
+    expectedMetadataRaw = storage.getItem(STORAGE_KEYS.quarantineMeta);
+  } catch (_) {
+    setRecoveryMessage('Rettungsschlüssel sind nicht lesbar; Löschung ist gesperrt.');
+    return;
+  }
+  const inventory = eventRepository.readRecoverySources();
+  if ((variant === 'active' || variant === 'both') && inventory.activeReadError) {
+    setRecoveryMessage('Aktiver Speicher ist nicht lesbar; aktive Daten werden nicht gelöscht.');
+    return;
+  }
+  requestRecoveryConfirmation(
+    variant === 'active'
+      ? 'Nur aktive Ereignisse löschen? Ein beschädigter aktiver Rohbestand wird bewusst durch ein leeres Array ersetzt. Rettungskopien und deren Metadaten bleiben erhalten.'
+      : variant === 'copies'
+        ? 'Nur Rettungskopien und deren Metadaten gezielt löschen? Aktive Ereignisse bleiben erhalten. Exportiere benötigte Rohkopien zuerst.'
+        : 'Aktive Ereignisse und anschließend Rettungskopien sowie deren Metadaten löschen? Wenn einer der Schritte fehlschlägt, werden verbliebene Daten ausdrücklich gemeldet.',
+    async () => {
+      let activeCleared = false;
+      if (variant !== 'copies') {
+        const result = eventStore.state.writeProtected
+          ? await eventStore.recoverReplaceAll([], inventory.activeRaw)
+          : await eventStore.clear();
+        if (!result.ok) return { ok: false, message: `Aktive Daten nicht gelöscht (${result.code}); Rettungskopien bleiben erhalten.` };
+        activeCleared = true;
+      }
+      if (variant === 'active') {
+        return { ok: true, message: 'Aktive Ereignisse gelöscht. Rettungskopien und deren Metadaten bleiben erhalten.' };
+      }
+      const result = await eventRepository.deleteRecoveryCopies(expectedCopiesRaw, expectedMetadataRaw);
+      if (!result.ok) {
+        const remaining = result.remaining
+          ? result.remaining.map(item => `${item.key === STORAGE_KEYS.quarantine ? 'Rohkopien' : 'Metadaten'}: ${item.present === null ? 'nicht prüfbar' : item.present ? 'verblieben' : 'nicht mehr vorhanden'}`).join(', ')
+          : 'Rohkopien und Metadaten derzeit nicht sicher prüfbar';
+        return {
+          ok: false,
+          message: `${activeCleared ? 'Aktive Ereignisse gelöscht. ' : 'Aktive Ereignisse bleiben erhalten. '}Rettungsschlüssel nicht vollständig gelöscht (${result.failed?.join('; ') || result.code}). ${remaining}.`
+        };
+      }
+      return {
+        ok: true,
+        message: activeCleared
+          ? 'Aktive Ereignisse und zugehörige Rettungskopien samt Metadaten gezielt gelöscht.'
+          : 'Rettungskopien samt Metadaten gelöscht. Aktive Ereignisse bleiben erhalten.'
+      };
+    }
+  );
+}
+
+async function confirmRecoveryAction() {
+  if (!recoveryPendingAction) return;
+  const action = recoveryPendingAction;
+  const button = document.getElementById('recovery-confirm-btn');
+  button.disabled = true;
+  let result;
+  try {
+    result = await action();
+  } catch (error) {
+    console.warn('Datenrettung fehlgeschlagen:', error);
+    result = { ok: false, message: 'Speicherfehler: Vorgang nicht bestätigt. Prüfe aktiven Rohbestand und Rettungskopien einzeln.' };
+  }
+  cancelRecoveryConfirmation();
+  setRecoveryMessage(result.message);
+  refreshRecoverySources(eventRepository.readRecoverySources());
+  updateRecoveryStatus();
+  if (result.ok) showSnackbar(result.message);
+  document.getElementById('recovery-close-btn').focus();
 }
 
 /* ── IMPORT / EXPORT ── */
