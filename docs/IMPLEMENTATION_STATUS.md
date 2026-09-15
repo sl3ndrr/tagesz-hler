@@ -3,7 +3,7 @@
 Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzungsplans. Sie wird mit jeder Umsetzung im selben Pull Request aktualisiert. Folgepakete prüfen den aktuellen `main` und lesen zusätzlich die verlinkten Abschlussberichte der direkten Voraussetzungen.
 
 **Ausgangsstand:** `081d5abf3e04f85b4b00d9df3f8af1d2c64cd454`  
-**Stand:** 2026-09-11  
+**Stand:** 2026-09-15  
 **Statuswerte:** `Geplant` · `In Arbeit` · `Gemergt` · `Blockiert` · `Entfällt`
 
 ## Arbeitsregeln
@@ -25,9 +25,9 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Gemergt | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5) / `c697b2da28ec1c549f129f81cd76fbd6c3853627` |
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Gemergt | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) / `c07cb664a102dc7b1f97afa762113729087f1d9e` |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Gemergt | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7) / `3e8019ed5fe58285333c265f6c0f5b9b8452e923` |
-| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`; Merge-Commit nach Merge |
-| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | In Arbeit | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9); Merge-Commit nach Merge |
-| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | In Arbeit | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10), Branch `p10-controller-entkoppeln-zustand`; Merge-Commit nach Merge |
+| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | Gemergt | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8) / `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90` |
+| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Gemergt | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9) / `8bdd7f412ff7274dd99862a3ceab68cb51ac961e` |
+| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10) / `de72c0e361d4c895c05893c96a7f3c29d277498e` |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Geplant | P03, P05, P10 | — |
 | P12 | Schriftarten lokal bereitstellen | B5 | Geplant | P04 | — |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Geplant | P01–P12 | — |
@@ -93,29 +93,27 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P08 – Belastbare Bildverarbeitung und URL-Vorschau
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Merge-Commit `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90`, getesteter Branch-Commit `eb67b2848e05e9355e6e58d33dd87064ab9508a0`; [Actions #30](https://github.com/sl3ndrr/tagesz-hler/actions/runs/34968401340) erfolgreich. Reale Browser-/DevTools-/Offline- und Referrerprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Upload und JSON-Bildimport prüfen Base64, Bildsignaturen, MIME und Headerdimensionen vor dem Dekodieren; eingebettete Importbilder werden zusätzlich tatsächlich dekodiert. URL-Vorschauen warten 400 ms auf vollständige absolute URLs und verwerfen überholte Ergebnisse. Die Darstellung verwendet `no-referrer`; App-Shell-Version `v9`.
 - **Übergabe an Folgepakete:** Uploadlimit 20 MiB, maximal 24 Mio. Bildpixel und 10.000 Pixel je Achse; eingebettete Bilder bleiben zusätzlich durch P06-Quellen-/Bestandslimits begrenzt. Headerprüfung verhindert den großen Dekodierschritt für erkannte Ausreißer, kann jedoch nicht die Browserinternen Ressourcen der anschließenden Dekodierung oder jedes beschädigte Kompressionsdetail vorab beweisen. CSS-Hintergrundbilder übernehmen den dokumentweiten `no-referrer`-Wert; externe Bilder werden nicht offline gespeichert. Reale Browserprüfung bleibt vor Merge offen.
 - **Statuskorrektur außerhalb P08:** P03–P07 sind nach GitHub-PRs und Vorfahrvergleich auf `main` gemergt; ihre veralteten Zeilen und Protokolle wurden auf den tatsächlichen Merge-Stand gebracht. Historische offene Statushinweise in den alten Paketprotokollen sind damit erledigt; andere fachliche Restrisiken bleiben bestehen.
 
 ### P09 – Installationsbezogene Speicherung und Präferenzen
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9), Branch `p09-installationsbezogene-speicherung-praeferenzen`. Merge-Commit und `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9), Merge-Commit `8bdd7f412ff7274dd99862a3ceab68cb51ac961e`, getesteter Branch-Commit `11b2a03e0348d49deb7be6e1c3e559620acfa88d`; [Actions #34](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35007155693) erfolgreich. Reale Browser-/Offline-/Mehrtabprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Verzeichnispfad-basierte Installationsschlüssel, Channel-/Lock-Namen und Shell-Caches; früh gelesene Präferenzen; explizite Altquellenwahl und persistenzfehlerbezogener UI-Hinweis. Shell-Version `v10`.
 - **Übergabe an Folgepakete:** Alte originweite Ereignisse, Rettungskopien und Einstellungen werden nicht automatisch einer Installation zugeordnet oder gelöscht. Übernahme braucht explizite Bestätigung; Ereignisse nur in unbeschriebenen Zielbestand unter altem und neuem Web Lock mit Quellen-/Zielvergleich und Read-back. Alte sendende Tabs werden über den bisherigen Channel beziehungsweise den alten Storage-Schlüssel erkannt und sperren weitere Schreibvorgänge; stumme alte Tabs bleiben nicht zuverlässig erkennbar. Präferenzauswahl wirkt sofort, ein fehlgeschlagener dauerhafter Schreibzugriff wird gemeldet. Jede weitere App-Shell-Änderung benötigt eine neue Cache-Version.
-- **Paketfremder offener Statuspunkt:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8) ist laut GitHub als `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90` gemergt; P08 steht in Überblick und Protokoll noch auf `In Arbeit`. Der P08-Nachtrag mit tatsächlichem Merge-Commit und finalem Teststand muss gesondert erfolgen; die P09-Implementierung erweitert diesen Scope nicht.
-- **Vorformulierter Nachtrag erst nach dem tatsächlichen Merge:** Überblick: `| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Gemergt | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #9, tatsächlicher Merge-Commit, letzter getesteter Branch-Commit und beobachteter CI-Lauf samt Ergebnis ergänzen. Alte gemeinsame Schlüssel bleiben bis zu einer ausdrücklich bestätigten Auswahl unangetastet.
+- **Statusnachtrag:** GitHub bestätigt den Merge von PR #8 und PR #9. Überblick und Protokoll führen die tatsächlichen Merge-Commits und beobachteten CI-Läufe jetzt nach. Alte gemeinsame Schlüssel bleiben bis zu einer ausdrücklich bestätigten Auswahl unangetastet.
 
 ### P10 – Controller entkoppeln und überflüssigen Zustand entfernen
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10), Branch `p10-controller-entkoppeln-zustand`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10), Merge-Commit `de72c0e361d4c895c05893c96a7f3c29d277498e`, getesteter Branch-Commit `1674b8433a3432d94bf0798abf4616afb30f1415`; [Actions #37](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35008534192) erfolgreich. Reale Browser-/Zwei-Tab-/Fokus-/Offlineprüfungen nicht ausgeführt.
 - **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Sheet-Auswahl und Editor-Ausgangsdatensatz gehören zur UI; der Controller nutzt explizite UI-Callbacks für Darstellung, Rückmeldungen und Rettungsdialog. Der ungenutzte `normalizeEvent`-Index sowie durchgereichte `migrated`-/`updatedAt`-Snapshotdaten entfallen; alte Array- und v2-Daten bleiben lesbar. App-Shell-Version `v11`.
 - **Übergabe an Folgepakete:** P02-Bearbeitungskonflikte verwenden weiterhin den beim Öffnen erfassten Ausgangsdatensatz; Store-Mutationen werden vor Erfolg und Sheet-Schließen abgewartet. Externe Änderungen, Rettungsstatus und Benachrichtigungen laufen über `createEventControllerUI`; P11 kann diese Schnittstelle verwenden, ohne Speicher- oder Kalendersemantik zu ändern. Die Browser-/Zwei-Tab-/Fokusprüfung steht noch aus; eine weitere Änderung an `app.js` oder anderen Shell-Dateien verlangt eine neue `CACHE_VERSION`.
-- **Paketfremder offener Statuspunkt:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8) und [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9) sind laut GitHub als `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90` beziehungsweise `8bdd7f412ff7274dd99862a3ceab68cb51ac961e` gemergt, während ihre Zeilen und Protokolle noch `In Arbeit` ausweisen. Beide tatsächlichen Merge-/Testnachträge gesondert berichtigen; kein P10-Scope.
-- **Vorformulierter Nachtrag erst nach tatsächlichem Merge:** Überblick: `| P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #10, tatsächlicher Merge-Commit, letzter getesteter Branch-Commit und beobachteter CI-Lauf samt Ergebnis ergänzen. Sheet-Auswahl bleibt UI-eigen; Altformate bleiben lesbar.
+- **Statusnachtrag:** GitHub bestätigt die Merges von PR #8 bis PR #10. Überblick und Protokoll führen die tatsächlichen Merge-Commits und beobachteten CI-Läufe jetzt nach. Sheet-Auswahl bleibt UI-eigen; Altformate bleiben lesbar.
 
 ### P11 – Ereignislisten gezielt aktualisieren
 
