@@ -26,7 +26,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Gemergt | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) / `c07cb664a102dc7b1f97afa762113729087f1d9e` |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Gemergt | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7) / `3e8019ed5fe58285333c265f6c0f5b9b8452e923` |
 | P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`; Merge-Commit nach Merge |
-| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Geplant | P02, P04, P07 | — |
+| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | In Arbeit | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9); Merge-Commit nach Merge |
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Geplant | P02, P07 | — |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Geplant | P03, P05, P10 | — |
 | P12 | Schriftarten lokal bereitstellen | B5 | Geplant | P04 | — |
@@ -101,10 +101,12 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P09 – Installationsbezogene Speicherung und Präferenzen
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9), Branch `p09-installationsbezogene-speicherung-praeferenzen`. Merge-Commit und `Gemergt` erst nach tatsächlichem Merge.
+- **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Verzeichnispfad-basierte Installationsschlüssel, Channel-/Lock-Namen und Shell-Caches; früh gelesene Präferenzen; explizite Altquellenwahl und persistenzfehlerbezogener UI-Hinweis. Shell-Version `v10`.
+- **Übergabe an Folgepakete:** Alte originweite Ereignisse, Rettungskopien und Einstellungen werden nicht automatisch einer Installation zugeordnet oder gelöscht. Übernahme braucht explizite Bestätigung; Ereignisse nur in unbeschriebenen Zielbestand unter altem und neuem Web Lock mit Quellen-/Zielvergleich und Read-back. Alte sendende Tabs werden über den bisherigen Channel beziehungsweise den alten Storage-Schlüssel erkannt und sperren weitere Schreibvorgänge; stumme alte Tabs bleiben nicht zuverlässig erkennbar. Präferenzauswahl wirkt sofort, ein fehlgeschlagener dauerhafter Schreibzugriff wird gemeldet. Jede weitere App-Shell-Änderung benötigt eine neue Cache-Version.
+- **Paketfremder offener Statuspunkt:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8) ist laut GitHub als `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90` gemergt; P08 steht in Überblick und Protokoll noch auf `In Arbeit`. Der P08-Nachtrag mit tatsächlichem Merge-Commit und finalem Teststand muss gesondert erfolgen; die P09-Implementierung erweitert diesen Scope nicht.
+- **Vorformulierter Nachtrag erst nach dem tatsächlichen Merge:** Überblick: `| P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Gemergt | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #9, tatsächlicher Merge-Commit, letzter getesteter Branch-Commit und beobachteter CI-Lauf samt Ergebnis ergänzen. Alte gemeinsame Schlüssel bleiben bis zu einer ausdrücklich bestätigten Auswahl unangetastet.
 
 ### P10 – Controller entkoppeln und überflüssigen Zustand entfernen
 

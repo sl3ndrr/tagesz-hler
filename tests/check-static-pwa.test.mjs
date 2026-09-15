@@ -9,6 +9,7 @@ import './calendar-clock-changes.mjs';
 import './data-validation.mjs';
 import './data-recovery.mjs';
 import './image-processing.mjs';
+import './installation-storage.mjs';
 import './service-worker-cache.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');

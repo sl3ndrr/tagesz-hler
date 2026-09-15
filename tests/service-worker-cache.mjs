@@ -19,6 +19,9 @@ function comparableUrl(value, ignoreSearch = false) {
   return url.href;
 }
 
+const cacheName = (scope, version) =>
+  `tageszaehler:${encodeURIComponent(new URL(scope).pathname)}:shell-${version}`;
+
 class MemoryCache {
   constructor(storage, name) {
     this.storage = storage;
@@ -38,6 +41,9 @@ class MemoryCache {
       if (comparableUrl(url, options.ignoreSearch) === wanted) return response.clone();
     }
     return undefined;
+  }
+  async keys() {
+    return [...this.entries.keys()].map(url => new Request(url));
   }
 }
 
@@ -135,7 +141,7 @@ test('installiert nur eine vollständige App-Shell und nutzt relative Pages-Unte
   assert.equal(requested.length, 12);
   assert.ok(requested.every(url => url.startsWith(worker.scope)));
   assert.equal(worker.caches.putCalls.length, 12);
-  assert.deepEqual(await worker.caches.keys(), ['tageszaehler-v6']);
+  assert.deepEqual(await worker.caches.keys(), [cacheName(worker.scope, 'v6')]);
 });
 
 test('verwirft die Installation bei einem fehlenden Precache-Asset', async () => {
@@ -148,7 +154,7 @@ test('verwirft die Installation bei einem fehlenden Precache-Asset', async () =>
 
   await assert.rejects(worker.dispatchExtendable('install'), /App-Shell-Asset nicht verfügbar/);
   assert.deepEqual(await worker.caches.keys(), []);
-  assert.equal(worker.caches.deleteCalls.at(-1), 'tageszaehler-v6');
+  assert.equal(worker.caches.deleteCalls.at(-1), cacheName(worker.scope, 'v6'));
 });
 
 test('bindet abgelehntes cache.put an die Installation und räumt den Teilcache auf', async () => {
@@ -158,7 +164,7 @@ test('bindet abgelehntes cache.put an die Installation und räumt den Teilcache 
 
   await assert.rejects(worker.dispatchExtendable('install'), /synthetischer cache\.put-Fehler/);
   assert.deepEqual(await caches.keys(), []);
-  assert.equal(caches.deleteCalls.at(-1), 'tageszaehler-v6');
+  assert.equal(caches.deleteCalls.at(-1), cacheName(worker.scope, 'v6'));
 });
 
 test('hält Version N aktiv, während N+1 mit mehreren offenen Clients wartet', async () => {
@@ -193,7 +199,7 @@ test('hält Version N aktiv, während N+1 mit mehreren offenen Clients wartet', 
   const newScript = await workerNext.dispatchFetch('./app.js');
   assert.match(await newHtml.text(), /^N\+1:/);
   assert.match(await newScript.text(), /^N\+1:/);
-  assert.deepEqual(await caches.keys(), ['tageszaehler-v-test-next']);
+  assert.deepEqual(await caches.keys(), [cacheName(workerNext.scope, 'v-test-next')]);
 });
 
 test('liefert Navigation bei HTTP 503, Netzabbruch und hängendem Netz sofort aus der aktiven Shell', async () => {
@@ -261,4 +267,42 @@ test('behält den wartenden Update-Ablauf und die enge Trusted-Types-Policy bei'
   assert.match(appSource, /const source = '\.\/sw\.js';/);
   assert.match(appSource, /Schließen aller App-Tabs aktiviert/);
   assert.match(appSource, /Offene Eingaben bleiben erhalten/);
+});
+
+test('zwei Scopes teilen CacheStorage ohne fremde Versionscaches zu bereinigen', async () => {
+  const caches = new MemoryCacheStorage();
+  const a = createWorkerHarness({ caches, scope: 'https://example.test/a/' });
+  const b = createWorkerHarness({ caches, scope: 'https://example.test/b/' });
+  await a.dispatchExtendable('install');
+  await b.dispatchExtendable('install');
+  const aPrevious = createWorkerHarness({ caches, scope: a.scope, version: 'v-previous' });
+  await aPrevious.dispatchExtendable('install');
+  await a.dispatchExtendable('activate');
+  assert.deepEqual((await caches.keys()).sort(), [cacheName(a.scope, 'v6'), cacheName(b.scope, 'v6')].sort());
+  assert.equal((await b.dispatchFetch('./app.js')).status, 200);
+});
+
+test('entfernt alte globale Caches nur mit eindeutig zugehörigen URLs', async () => {
+  const caches = new MemoryCacheStorage();
+  const a = createWorkerHarness({ caches, scope: 'https://example.test/a/' });
+  await a.dispatchExtendable('install');
+  await (await caches.open('tageszaehler-v9')).put(new Request('https://example.test/a/app.js'), new Response('Alt A'));
+  await (await caches.open('tageszaehler-v8')).put(new Request('https://example.test/b/app.js'), new Response('Alt B'));
+  await (await caches.open('tageszaehler-v7')).put(new Request('https://example.test/a/app.js'), new Response('Alt A'));
+  await (await caches.open('tageszaehler-v7')).put(new Request('https://example.test/b/app.js'), new Response('Alt B'));
+  await a.dispatchExtendable('activate');
+  assert.deepEqual((await caches.keys()).sort(), [cacheName(a.scope, 'v6'), 'tageszaehler-v7', 'tageszaehler-v8'].sort());
+  assert.equal(caches.deleteCalls.includes('tageszaehler-v9'), true);
+  assert.equal(caches.deleteCalls.includes('tageszaehler-v8'), false);
+});
+
+test('unlesbarer alter Cache verhindert die Aktivierung der neuen Shell nicht', async () => {
+  const caches = new MemoryCacheStorage();
+  const a = createWorkerHarness({ caches, scope: 'https://example.test/a/' });
+  await a.dispatchExtendable('install');
+  const old = await caches.open('tageszaehler-v7');
+  old.keys = () => { throw new Error('synthetischer Cache-Lesefehler'); };
+  await a.dispatchExtendable('activate');
+  assert.deepEqual((await caches.keys()).sort(), [cacheName(a.scope, 'v6'), 'tageszaehler-v7'].sort());
+  assert.equal((await a.dispatchFetch('./app.js')).status, 200);
 });

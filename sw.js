@@ -1,7 +1,9 @@
 /* Offline-App-Shell. CACHE_VERSION bei Änderungen an statischen Dateien erhöhen. */
-const CACHE_VERSION = 'v9';
-const CACHE_PREFIX = 'tageszaehler-';
+const CACHE_VERSION = 'v10';
+const scopeUrl = new URL(self.registration.scope);
+const CACHE_PREFIX = `tageszaehler:${encodeURIComponent(scopeUrl.pathname)}:shell-`;
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
+const LEGACY_CACHE_PREFIX = 'tageszaehler-v';
 const NAVIGATION_TIMEOUT_MS = 5000;
 const APP_SHELL = [
   './',
@@ -18,7 +20,6 @@ const APP_SHELL = [
   './icons/icon-maskable-512.png'
 ];
 
-const scopeUrl = new URL(self.registration.scope);
 const appShellRequests = APP_SHELL.map(path => new Request(new URL(path, scopeUrl), { cache: 'reload' }));
 const appShellUrls = new Set(appShellRequests.map(request => request.url));
 const navigationFallbackUrl = new URL('./index.html', scopeUrl).href;
@@ -44,11 +45,20 @@ async function installAppShell() {
 
 async function activateAppShell() {
   const keys = await caches.keys();
-  await Promise.all(
-    keys
-      .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-      .map(key => caches.delete(key))
-  );
+  await Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)));
+  // Alte globale Caches nur dann entfernen, wenn ihre Inhalte eindeutig zu diesem Scope gehören.
+  for (const key of keys.filter(key => key.startsWith(LEGACY_CACHE_PREFIX))) {
+    try {
+      const cache = await caches.open(key);
+      const requests = await cache.keys();
+      if (requests.length && requests.every(request => {
+        const url = new URL(request.url);
+        return url.origin === scopeUrl.origin && url.pathname.startsWith(scopeUrl.pathname);
+      })) await caches.delete(key);
+    } catch (error) {
+      console.warn('Alter Cache konnte nicht eindeutig geprüft werden; er bleibt erhalten.', error);
+    }
+  }
 }
 
 async function matchActiveShell(requestOrUrl) {
