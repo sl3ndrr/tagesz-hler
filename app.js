@@ -45,6 +45,7 @@ let imageCompressionToken = 0;
 let imageProcessing = false;
 let eventSavePending = false;
 let imagePreviewToken = 0;
+let imagePreviewTimer = null;
 let deferredInstallPrompt = null;
 let modalHistoryActive = false;
 let lastFocusedElement = null;
@@ -1292,15 +1293,112 @@ function normalizeImageSource(value) {
   if (typeof value !== 'string') return null;
   const src = value.trim();
   if (!src || src.length > DATA_LIMITS.maxImageSourceChars) return null;
-  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(src)) return src;
+  if (src.startsWith('data:')) {
+    const match = /^data:image\/(png|jpe?g|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(src);
+    if (!match || match[2].length % 4 !== 0) return null;
+    try {
+      const bytes = Uint8Array.from(atob(match[2]), character => character.charCodeAt(0));
+      const image = inspectImageBytes(bytes);
+      const declaredMime = /^jpe?g$/i.test(match[1]) ? 'image/jpeg' : `image/${match[1].toLowerCase()}`;
+      return image && image.mime === declaredMime ? src : null;
+    } catch (_) {
+      return null;
+    }
+  }
   if (src.length > DATA_LIMITS.maxUrlChars) return null;
+  return normalizeImageUrl(src);
+}
+
+function normalizeImageUrl(src) {
+  if (typeof src !== 'string' || !/^https?:\/\//i.test(src) || /[\s\\]/.test(src)) return null;
   try {
-    const url = new URL(src, location.href);
+    const url = new URL(src);
     const allowed = url.protocol === 'https:' || (url.protocol === 'http:' && url.origin === location.origin);
-    return allowed ? url.href : null;
+    if (!allowed || !url.hostname || url.username || url.password || (url.protocol === 'https:' && !url.hostname.includes('.'))) return null;
+    return url.href;
   } catch (_) {
     return null;
   }
+}
+
+const MAX_IMAGE_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_IMAGE_PIXELS = 24_000_000;
+const MAX_IMAGE_DIMENSION = 10_000;
+
+function inspectImageBytes(bytes) {
+  if (!(bytes instanceof Uint8Array) || bytes.length < 16) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u16 = offset => view.getUint16(offset, false);
+  const u32 = offset => view.getUint32(offset, false);
+  const ascii = (offset, length) => String.fromCharCode(...bytes.subarray(offset, offset + length));
+  let mime = null;
+  let width = 0;
+  let height = 0;
+
+  if (bytes.length >= 33 && ascii(1, 3) === 'PNG' && bytes[0] === 137 &&
+      bytes[4] === 13 && bytes[5] === 10 && bytes[6] === 26 && bytes[7] === 10 &&
+      u32(8) === 13 && ascii(12, 4) === 'IHDR') {
+    mime = 'image/png';
+    width = u32(16);
+    height = u32(20);
+    if (![1, 2, 4, 8, 16].includes(bytes[24]) || ![0, 2, 3, 4, 6].includes(bytes[25])) return null;
+    let offset = 8;
+    let hasData = false;
+    let ended = false;
+    while (offset + 12 <= bytes.length) {
+      const length = u32(offset);
+      if (length > bytes.length - offset - 12) return null;
+      const type = ascii(offset + 4, 4);
+      if (type === 'IDAT') hasData = true;
+      if (type === 'IEND') {
+        ended = length === 0 && offset + 12 === bytes.length;
+        break;
+      }
+      offset += length + 12;
+    }
+    if (!hasData || !ended) return null;
+  } else if (ascii(0, 3) === 'GIF' && ['87a', '89a'].includes(ascii(3, 3))) {
+    mime = 'image/gif';
+    width = view.getUint16(6, true);
+    height = view.getUint16(8, true);
+    if (bytes.at(-1) !== 0x3b || !bytes.includes(0x2c, 13)) return null;
+  } else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    mime = 'image/jpeg';
+    if (bytes.at(-2) !== 0xff || bytes.at(-1) !== 0xd9) return null;
+    let offset = 2;
+    while (offset + 4 <= bytes.length) {
+      if (bytes[offset] !== 0xff) return null;
+      while (bytes[offset] === 0xff) offset++;
+      const marker = bytes[offset++];
+      if (marker === 0xda) break;
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+      if (offset + 2 > bytes.length) return null;
+      const length = u16(offset);
+      if (length < 2 || offset + length > bytes.length) return null;
+      if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+        if (length < 7) return null;
+        height = u16(offset + 3);
+        width = u16(offset + 5);
+      }
+      offset += length;
+    }
+  } else if (ascii(0, 4) === 'RIFF' && ascii(8, 4) === 'WEBP' && view.getUint32(4, true) + 8 === bytes.length) {
+    mime = 'image/webp';
+    const chunk = ascii(12, 4);
+    if (chunk === 'VP8X' && bytes.length >= 30) {
+      width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+      height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+    } else if (chunk === 'VP8L' && bytes.length >= 25 && bytes[20] === 0x2f) {
+      width = 1 + (((bytes[22] & 0x3f) << 8) | bytes[21]);
+      height = 1 + (((bytes[24] & 0x0f) << 10) | (bytes[23] << 2) | (bytes[22] >> 6));
+    } else if (chunk === 'VP8 ' && bytes.length >= 30 && bytes[23] === 0x9d && bytes[24] === 0x01 && bytes[25] === 0x2a) {
+      width = view.getUint16(26, true) & 0x3fff;
+      height = view.getUint16(28, true) & 0x3fff;
+    }
+  }
+  if (!mime || !width || !height || width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION ||
+      width * height > MAX_IMAGE_PIXELS) return null;
+  return { mime, width, height };
 }
 
 /* ── CIVIL DATE & ZONED TIME MODEL ── */
@@ -2844,6 +2942,7 @@ function hideSheets(restoreFocus = true, resetIds = true) {
 
 function closeSheets() {
   abortImageProcessing();
+  cancelImagePreview();
   hideSheets(true, true);
   currentEditId = null;
   currentEditBaseEvent = null;
@@ -2857,6 +2956,7 @@ function closeSheets() {
 function closeEditSheet() {
   const editId = currentEditId;
   abortImageProcessing();
+  cancelImagePreview();
   currentEditId = null;
   currentEditBaseEvent = null;
   currentEditTimeZone = null;
@@ -3301,14 +3401,23 @@ function blobToDataUrl(blob, signal) {
 }
 
 async function compressImage(file, { signal } = {}) {
-  if (!(file instanceof Blob) || !file.type.startsWith('image/')) throw new Error('Bitte eine Bilddatei auswählen.');
-  if (file.size > 20 * 1024 * 1024) throw new Error('Das Bild ist zu groß. Bitte maximal 20 MB verwenden.');
+  if (!(file instanceof Blob) || !['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'].includes(file.type.toLowerCase())) {
+    throw new Error('Bitte ein PNG-, JPEG-, WebP- oder GIF-Bild auswählen.');
+  }
+  if (file.size > MAX_IMAGE_FILE_BYTES) throw new Error('Das Bild ist zu groß. Bitte maximal 20 MiB verwenden.');
+  throwIfAborted(signal);
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  throwIfAborted(signal);
+  const inspected = inspectImageBytes(bytes);
+  if (!inspected) throw new Error('Bilddaten oder Abmessungen sind ungültig oder zu groß.');
+  const declaredMime = file.type.toLowerCase() === 'image/jpg' ? 'image/jpeg' : file.type.toLowerCase();
+  if (inspected.mime !== declaredMime) throw new Error('Bildformat und angegebener Dateityp stimmen nicht überein.');
 
   const decoded = await decodeImageFile(file, signal);
   try {
     throwIfAborted(signal);
-    if (!decoded.width || !decoded.height || decoded.width * decoded.height > 100_000_000) {
-      throw new Error('Das Bild hat ungültige oder zu große Abmessungen.');
+    if (!matchesImageDimensions(decoded, inspected)) {
+      throw new Error('Bilddaten und tatsächliche Abmessungen stimmen nicht überein.');
     }
 
     const maxDimension = 1000;
@@ -3348,6 +3457,37 @@ async function compressImage(file, { signal } = {}) {
   }
 }
 
+function matchesImageDimensions(decoded, inspected) {
+  const { width, height } = decoded;
+  return (width === inspected.width && height === inspected.height) ||
+    (width === inspected.height && height === inspected.width);
+}
+
+async function validateEmbeddedImages(events, signal) {
+  const checked = new Set();
+  for (const event of events) {
+    throwIfAborted(signal);
+    const src = event.img;
+    if (!src?.startsWith('data:') || checked.has(src)) continue;
+    checked.add(src);
+    const match = /^data:image\/(png|jpe?g|webp|gif);base64,(.+)$/i.exec(src);
+    if (!match) throw new Error('Importiertes Bild hat ungültige Daten.');
+    const bytes = Uint8Array.from(atob(match[2]), character => character.charCodeAt(0));
+    const inspected = inspectImageBytes(bytes);
+    const declaredMime = /^jpe?g$/i.test(match[1]) ? 'image/jpeg' : `image/${match[1].toLowerCase()}`;
+    if (!inspected || inspected.mime !== declaredMime) {
+      throw new Error('Importiertes Bild hat ein falsches Format oder zu große Abmessungen.');
+    }
+    const decoded = await decodeImageFile(new Blob([bytes], { type: inspected.mime }), signal);
+    try {
+      throwIfAborted(signal);
+      if (!matchesImageDimensions(decoded, inspected)) throw new Error('Importiertes Bild hat beschädigte Daten.');
+    } finally {
+      decoded.release();
+    }
+  }
+}
+
 async function handleImageUpload(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -3356,6 +3496,7 @@ async function handleImageUpload(event) {
   const controller = new AbortController();
   imageCompressionController = controller;
   setImageProcessingState(true);
+  document.getElementById('img-file-error').textContent = '';
 
   try {
     const compressedDataUrl = await compressImage(file, { signal: controller.signal });
@@ -3365,9 +3506,11 @@ async function handleImageUpload(event) {
     clearEditorError(imageUrlInput);
     setPreview(imgData);
   } catch (error) {
-    if (error?.name !== 'AbortError') {
+    if (error?.name !== 'AbortError' && token === imageCompressionToken) {
       imageFileInput.value = '';
-      showSnackbar(error?.message || 'Bild konnte nicht verarbeitet werden.');
+      const message = error?.message || 'Bild konnte nicht verarbeitet werden.';
+      document.getElementById('img-file-error').textContent = message;
+      showSnackbar(message);
     }
   } finally {
     if (token === imageCompressionToken) {
@@ -3381,41 +3524,70 @@ function handleImageUrlInput(event) {
   abortImageProcessing();
   imgData = null;
   imageFileInput.value = '';
-  setPreview(event.target.value.trim(), true);
+  document.getElementById('img-file-error').textContent = '';
+  clearEditorError(imageUrlInput);
+  cancelImagePreview();
+  const src = event.target.value.trim();
+  if (!src || src.length > DATA_LIMITS.maxUrlChars || imageUrlInput.validity.typeMismatch) return;
+  const normalized = normalizeImageUrl(src);
+  if (!normalized) return;
+  const token = imagePreviewToken;
+  imagePreviewTimer = setTimeout(() => {
+    imagePreviewTimer = null;
+    if (token === imagePreviewToken && imageUrlInput.value.trim() === src) setPreview(normalized);
+  }, 400);
 }
 
-function setPreview(src, allowUnvalidatedUrl = false) {
+function cancelImagePreview() {
+  clearTimeout(imagePreviewTimer);
+  imagePreviewTimer = null;
+  imagePreviewToken++;
   const wrap = document.getElementById('img-preview-wrap');
-  const img = document.getElementById('img-preview');
+  const previous = document.getElementById('img-preview');
+  previous?.removeAttribute('src');
+  wrap.style.display = 'none';
+  document.getElementById('img-clear-btn').style.display = 'none';
+}
+
+function setPreview(src) {
+  if (!normalizeImageSource(src)) return cancelImagePreview();
+  cancelImagePreview();
+  const wrap = document.getElementById('img-preview-wrap');
   const clear = document.getElementById('img-clear-btn');
-  if (!src) return clearImage();
-  if (!allowUnvalidatedUrl && !normalizeImageSource(src)) return clearImage();
-  const token = ++imagePreviewToken;
+  const token = imagePreviewToken;
+  const img = new Image();
+  img.id = 'img-preview';
+  img.alt = 'Vorschau';
+  img.referrerPolicy = 'no-referrer';
+  wrap.replaceChildren(img);
 
   img.onload = () => {
     if (token !== imagePreviewToken) return;
+    clearEditorError(imageUrlInput);
     wrap.style.display = 'block';
     clear.style.display = 'block';
   };
   img.onerror = () => {
     if (token !== imagePreviewToken) return;
     wrap.style.display = 'none';
-    if (allowUnvalidatedUrl) clear.style.display = 'block';
+    clear.style.display = 'block';
+    if (imageUrlInput.value.trim()) {
+      editorErrorElements.get(imageUrlInput).textContent = 'Die Bild-URL konnte nicht als Bild geladen werden.';
+    } else {
+      document.getElementById('img-file-error').textContent = 'Das Bild konnte nicht als Vorschau geladen werden.';
+    }
   };
   img.src = src;
 }
 
 function clearImage() {
   abortImageProcessing();
-  imagePreviewToken++;
+  cancelImagePreview();
   imgData = null;
   imageUrlInput.value = '';
   clearEditorError(imageUrlInput);
+  document.getElementById('img-file-error').textContent = '';
   imageFileInput.value = '';
-  const preview = document.getElementById('img-preview');
-  preview.removeAttribute('src');
-  document.getElementById('img-preview-wrap').style.display = 'none';
-  document.getElementById('img-clear-btn').style.display = 'none';
 }
 
 /* ── DATENRETTUNG: ROHDATEN, ERSETZUNG UND GEZIELTE LÖSCHUNG ── */
@@ -3549,13 +3721,14 @@ function importRecoveryFile(event) {
     return;
   }
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const raw = String(reader.result || '');
       if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Datei überschreitet 8 MiB.');
       const data = JSON.parse(raw);
       const collection = normalizeEventCollection(data, { regenerateIds: true });
       if (!collection.ok || collection.invalidCount) throw new Error('Datei enthält kein vollständig gültiges Ereignis-Array.');
+      await validateEmbeddedImages(collection.events);
       requestRecoveryConfirmation(
         `Beschädigte aktive Daten mit ${collection.events.length} gültigen Ereignissen aus der Datei ersetzen? Der aktive Rohbestand wird überschrieben; vorhandene Rettungskopien bleiben erhalten. Exportiere aktive Rohdaten vorher, falls sie noch benötigt werden.`,
         async () => {
@@ -3693,6 +3866,7 @@ function importData(event) {
       if (!collection.ok) throw new Error(`Importlimit oder Datenschema verletzt: ${collection.code}.`);
       if (collection.invalidCount) throw new Error(`${collection.invalidCount} ungültige Ereignisse gefunden.`);
       const normalized = collection.events;
+      await validateEmbeddedImages(normalized);
       if (!confirm(`${normalized.length} Ereignis${normalized.length === 1 ? '' : 'se'} importieren und aktuelle Daten ersetzen?`)) return;
       await eventController.importEvents(normalized);
     } catch (error) {

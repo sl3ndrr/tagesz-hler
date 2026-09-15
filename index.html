@@ -9,7 +9,7 @@
 <meta name="application-name" content="Tageszähler">
 <meta name="apple-mobile-web-app-title" content="Tageszähler">
 <meta name="color-scheme" content="light dark">
-<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="referrer" content="no-referrer">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#65558F" id="theme-color-meta">
 <meta name="mobile-web-app-capable" content="yes">
@@ -329,8 +329,9 @@
       <div class="img-or-divider">oder</div>
       <button type="button" class="img-file-btn ripple-host" id="img-file-btn">Datei</button>
     </div>
-    <p class="field-error" id="f-img-url-error"></p>
-    <div class="img-preview-wrap" id="img-preview-wrap"><img id="img-preview" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Vorschau"></div>
+    <p class="field-error" id="f-img-url-error" role="status"></p>
+    <p class="field-error" id="img-file-error" role="status"></p>
+    <div class="img-preview-wrap" id="img-preview-wrap"><img id="img-preview" referrerpolicy="no-referrer" alt="Vorschau"></div>
     <button type="button" class="img-clear-btn ripple-host" id="img-clear-btn">Bild entfernen</button>
     <div class="form-actions">
       <button type="button" class="m3-btn ripple-host" id="edit-cancel-btn">Abbrechen</button>
