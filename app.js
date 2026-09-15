@@ -2057,7 +2057,7 @@ function eventDifference(event, model, nowTime) {
 function getEventRenderKey(event) {
   return [
     event.name, event.kind, event.date, event.time, event.timeZone,
-    event.disambiguation, event.refDate, event.img, event.units.join('|')
+    event.disambiguation, event.refDate, event.desc, event.img, event.units.join('|')
   ].join('\u001f');
 }
 
