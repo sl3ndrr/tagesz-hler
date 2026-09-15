@@ -48,12 +48,16 @@ async function activateAppShell() {
   await Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map(key => caches.delete(key)));
   // Alte globale Caches nur dann entfernen, wenn ihre Inhalte eindeutig zu diesem Scope gehören.
   for (const key of keys.filter(key => key.startsWith(LEGACY_CACHE_PREFIX))) {
-    const cache = await caches.open(key);
-    const requests = await cache.keys();
-    if (requests.length && requests.every(request => {
-      const url = new URL(request.url);
-      return url.origin === scopeUrl.origin && url.pathname.startsWith(scopeUrl.pathname);
-    })) await caches.delete(key);
+    try {
+      const cache = await caches.open(key);
+      const requests = await cache.keys();
+      if (requests.length && requests.every(request => {
+        const url = new URL(request.url);
+        return url.origin === scopeUrl.origin && url.pathname.startsWith(scopeUrl.pathname);
+      })) await caches.delete(key);
+    } catch (error) {
+      console.warn('Alter Cache konnte nicht eindeutig geprüft werden; er bleibt erhalten.', error);
+    }
   }
 }
 

@@ -16,9 +16,13 @@ class Storage {
   constructor() {
     this.data = new Map([['other-project', 'unverändert']]);
     this.failKey = null;
+    this.readFailKey = null;
     this.afterWrite = null;
   }
-  getItem(key) { return this.data.get(key) ?? null; }
+  getItem(key) {
+    if (key === this.readFailKey) throw new Error('synthetischer Lesefehler');
+    return this.data.get(key) ?? null;
+  }
   setItem(key, value) {
     if (key === this.failKey) throw new DOMException('synthetisch voll', 'QuotaExceededError');
     this.data.set(key, String(value));
@@ -135,16 +139,18 @@ test('alte gemeinsame Rohquelle wird nur ausdrücklich und einmalig unter beiden
   assert.equal(storage.getItem('other-project'), 'unverändert');
 });
 
-test('Migration bricht bei Quellenänderung, Quota und fehlendem Lock ohne Zielschreiben ab', async () => {
+test('Migration bricht bei Quellenänderung, Quota, Ziellesefehler und fehlendem Lock ohne Zielschreiben ab', async () => {
   const raw = JSON.stringify([{ id: 'alt', name: 'Alt' }]);
-  for (const mode of ['changed', 'quota', 'no-lock']) {
+  for (const mode of ['changed', 'quota', 'read-error', 'no-lock']) {
     const storage = new Storage();
     storage.setItem('events', raw);
     const a = fixture('/a/', storage, mode === 'no-lock' ? null : new Locks());
     if (mode === 'changed') storage.setItem('events', '[]');
     if (mode === 'quota') storage.failKey = a.context.keys.events;
+    if (mode === 'read-error') storage.readFailKey = a.context.keys.events;
     const result = await a.store.migrateLegacy('legacy-active', raw, [{ id: 'alt', name: 'Alt' }]);
     assert.equal(result.ok, false, mode);
+    storage.readFailKey = null;
     assert.equal(storage.getItem(a.context.keys.events), null, mode);
     assert.equal(storage.getItem('other-project'), 'unverändert');
   }

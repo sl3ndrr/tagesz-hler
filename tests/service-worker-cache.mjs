@@ -295,3 +295,14 @@ test('entfernt alte globale Caches nur mit eindeutig zugehörigen URLs', async (
   assert.equal(caches.deleteCalls.includes('tageszaehler-v9'), true);
   assert.equal(caches.deleteCalls.includes('tageszaehler-v8'), false);
 });
+
+test('unlesbarer alter Cache verhindert die Aktivierung der neuen Shell nicht', async () => {
+  const caches = new MemoryCacheStorage();
+  const a = createWorkerHarness({ caches, scope: 'https://example.test/a/' });
+  await a.dispatchExtendable('install');
+  const old = await caches.open('tageszaehler-v7');
+  old.keys = () => { throw new Error('synthetischer Cache-Lesefehler'); };
+  await a.dispatchExtendable('activate');
+  assert.deepEqual((await caches.keys()).sort(), [cacheName(a.scope, 'v6'), 'tageszaehler-v7'].sort());
+  assert.equal((await a.dispatchFetch('./app.js')).status, 200);
+});

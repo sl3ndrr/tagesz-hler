@@ -1139,7 +1139,9 @@ class EventStore {
 
   async migrateLegacy(sourceId, expectedSourceRaw, events) {
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
-    const expectedTargetRaw = this.repository.readRecoverySources().activeRaw;
+    const inventory = this.repository.readRecoverySources();
+    if (inventory.activeReadError) return { ok: false, code: 'storage-unavailable' };
+    const expectedTargetRaw = inventory.activeRaw;
     const result = await this.repository.migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, this.sourceId);
     if (!result.ok) {
       if (result.persisted) this.applyExternal(this.repository.loadCurrent(), 'migration-race');
