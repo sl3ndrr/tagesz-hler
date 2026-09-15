@@ -43,13 +43,11 @@ let liveScheduler = null;
 let midnightScheduler = null;
 let temporalContextTracker = null;
 let activeTab = 0;
-let currentDetailId = null;
-let detailNextUpdateAt = 0;
-let detailNextClockUpdateAt = 0;
-let detailNextProgressUpdateAt = 0;
-let currentEditId = null;
-let currentEditBaseEvent = null;
-let currentEditTimeZone = null;
+// Sichtbarer Detail- und Bearbeitungszustand gehört den Sheets, nicht dem Store.
+const sheetState = {
+  detail: { id: null, nextUpdateAt: 0, nextClockUpdateAt: 0, nextProgressUpdateAt: 0 },
+  editor: { id: null, baseEvent: null, timeZone: null }
+};
 let imgData = null;
 let imageCompressionController = null;
 let imageCompressionToken = 0;
@@ -201,7 +199,7 @@ function init() {
     setMenuOpen(!menuPopup.classList.contains('open'));
   });
   document.getElementById('detail-close-btn').addEventListener('click', closeSheets);
-  document.getElementById('detail-edit-btn').addEventListener('click', () => openEditSheet(currentDetailId));
+  document.getElementById('detail-edit-btn').addEventListener('click', () => openEditSheet(sheetState.detail.id));
   document.getElementById('detail-delete-btn').addEventListener('click', deleteCurrentEvent);
   document.getElementById('edit-cancel-btn').addEventListener('click', closeEditSheet);
   document.getElementById('edit-top-close-btn').addEventListener('click', closeEditSheet);
@@ -224,9 +222,7 @@ function init() {
   window.addEventListener('popstate', () => {
     if (modalHistoryActive) {
       modalHistoryActive = false;
-      currentEditId = null;
-      currentEditBaseEvent = null;
-      currentEditTimeZone = null;
+      resetEditorState();
       abortImageProcessing();
       hideSheets(true);
     }
@@ -478,7 +474,7 @@ function normalizeEventId(raw, { regenerateId = false } = {}) {
   return rawId;
 }
 
-function normalizeEvent(raw, index = 0, { regenerateId = false } = {}) {
+function normalizeEvent(raw, { regenerateId = false } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   if (typeof raw.name !== 'string' || raw.name.length > DATA_LIMITS.maxNameChars) return null;
   if (raw.desc != null && (typeof raw.desc !== 'string' || raw.desc.length > DATA_LIMITS.maxDescriptionChars)) return null;
@@ -530,10 +526,10 @@ function normalizeEventCollection(rawEvents, { regenerateIds = false } = {}) {
   let invalidCount = 0;
   let totalImageChars = 0;
 
-  rawEvents.forEach((raw, index) => {
+  rawEvents.forEach(raw => {
     let event = null;
     try {
-      event = normalizeEvent(raw, index, { regenerateId: regenerateIds });
+      event = normalizeEvent(raw, { regenerateId: regenerateIds });
     } catch (_) {
       event = null;
     }
@@ -601,11 +597,8 @@ class EventRepository {
         ok: true,
         events: [],
         revision: null,
-        updatedAt: 0,
-        sourceId: null,
         warning: null,
-        writeProtected: false,
-        migrated: false
+        writeProtected: false
       };
     }
     return this.parseStoredRaw(raw, { quarantineOnError });
@@ -626,19 +619,12 @@ class EventRepository {
 
     let payload;
     let revision;
-    let updatedAt = 0;
-    let sourceId = null;
-    let migrated = false;
-
     if (Array.isArray(parsed)) {
       payload = parsed;
       revision = `data:${hashString(raw)}`;
     } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.schemaVersion === DATA_SCHEMA_VERSION && Array.isArray(parsed.events)) {
       payload = parsed.events;
       revision = typeof parsed.revision === 'string' && parsed.revision ? parsed.revision : rawRevision;
-      updatedAt = Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0;
-      sourceId = typeof parsed.sourceId === 'string' ? parsed.sourceId : null;
-      migrated = true;
     } else {
       return this.failureResult(raw, new Error('Unbekanntes oder nicht unterstütztes Datenschema.'), 'schema-migration', { quarantineOnError, revision: rawRevision });
     }
@@ -661,9 +647,6 @@ class EventRepository {
         ok: true,
         events: collection.events,
         revision,
-        updatedAt,
-        sourceId,
-        migrated,
         invalidCount: collection.invalidCount,
         warning: quarantine.hasRawCopy
           ? `${collection.invalidCount} ungültige Ereignisse wurden nur zur Ansicht ausgelassen. Der aktive Rohbestand und eine Rettungskopie bleiben erhalten; Änderungen erfordern eine bewusste Wiederherstellung.`
@@ -676,9 +659,6 @@ class EventRepository {
       ok: true,
       events: collection.events,
       revision,
-      updatedAt,
-      sourceId,
-      migrated,
       warning: null,
       writeProtected: false
     };
@@ -694,9 +674,6 @@ class EventRepository {
       ok: false,
       events: [],
       revision: revision ?? (raw == null ? null : `raw:${hashString(raw)}`),
-      updatedAt: 0,
-      sourceId: null,
-      migrated: false,
       warning: quarantine.hasRawCopy
         ? 'Gespeicherte Daten konnten nicht geladen werden. Der aktive Rohbestand blieb erhalten; eine Rettungskopie wurde gesichert. Änderungen sind gesperrt.'
         : 'Gespeicherte Daten konnten nicht geladen werden. Wenn der aktive Rohbestand lesbar ist, blieb er unverändert; Änderungen sind gesperrt.',
@@ -849,7 +826,7 @@ class EventRepository {
     return { sources, activeRaw, activeReadError, copiesReadError, metadataCount, legacyReadError, legacyCopiesReadError, legacyMetadataCount };
   }
 
-  async recover(expectedRaw, events, sourceId) {
+  async recover(expectedRaw, events) {
     const lockManager = window.navigator?.locks;
     if (!lockManager || typeof lockManager.request !== 'function') return { ok: false, code: 'lock-unavailable' };
     try {
@@ -863,14 +840,14 @@ class EventRepository {
         if (currentRaw !== expectedRaw) {
           return { ok: false, code: 'collection-conflict', latest: this.loadCurrent({ quarantineOnError: true }) };
         }
-        return this.persist(events, currentRaw == null ? null : this.extractRevision(currentRaw), sourceId);
+        return this.persist(events, currentRaw == null ? null : this.extractRevision(currentRaw));
       });
     } catch (error) {
       return { ok: false, code: 'lock-failed', error };
     }
   }
 
-  async migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, writerId) {
+  async migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events) {
     const locks = window.navigator?.locks;
     if (!locks || typeof locks.request !== 'function') return { ok: false, code: 'lock-unavailable' };
     if (expectedTargetRaw !== null) return { ok: false, code: 'target-not-empty' };
@@ -887,7 +864,7 @@ class EventRepository {
             return { ok: false, code: 'storage-unavailable', error };
           }
           if (currentTarget !== expectedTargetRaw) return { ok: false, code: 'collection-conflict' };
-          const result = this.persist(events, null, writerId);
+          const result = this.persist(events, null);
           if (!result.ok) return result;
           const after = this.readRecoverySources().sources.find(item => item.id === sourceId);
           if (!after || after.raw !== expectedSourceRaw) return { ok: false, code: 'legacy-source-raced-after-write', persisted: true };
@@ -940,7 +917,7 @@ class EventRepository {
     }
   }
 
-  async save(mutate, sourceId) {
+  async save(mutate) {
     const lockManager = window.navigator?.locks;
     if (!lockManager || typeof lockManager.request !== 'function') {
       return { ok: false, code: 'lock-unavailable' };
@@ -960,14 +937,14 @@ class EventRepository {
           return { ok: false, code: 'mutation-failed', error, latest };
         }
         if (!mutation?.ok) return { ...mutation, ok: false, latest };
-        return this.persist(mutation.events, latest.revision, sourceId);
+        return this.persist(mutation.events, latest.revision);
       });
     } catch (error) {
       return { ok: false, code: 'lock-failed', error };
     }
   }
 
-  persist(events, expectedRevision, sourceId) {
+  persist(events, expectedRevision) {
     let storage;
     let currentRaw;
     try {
@@ -1004,8 +981,6 @@ class EventRepository {
     const snapshot = {
       schemaVersion: DATA_SCHEMA_VERSION,
       revision: `data:${hashString(serialized)}`,
-      updatedAt: Date.now(),
-      sourceId,
       events: collection.events
     };
 
@@ -1044,7 +1019,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(initialSnapshot.events || []),
       revision: initialSnapshot.revision ?? null,
-      updatedAt: initialSnapshot.updatedAt || 0,
       writeProtected: Boolean(initialSnapshot.writeProtected),
       loadState: !initialSnapshot.ok ? 'read-error' : initialSnapshot.writeProtected ? 'partial' : 'ok'
     };
@@ -1121,7 +1095,7 @@ class EventStore {
 
   async recoverReplaceAll(events, expectedRaw) {
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
-    const result = await this.repository.recover(expectedRaw, events, this.sourceId);
+    const result = await this.repository.recover(expectedRaw, events);
     if (!result.ok) {
       if (result.latest?.ok) this.applyExternal(result.latest, 'conflict');
       return result;
@@ -1129,7 +1103,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1142,7 +1115,7 @@ class EventStore {
     const inventory = this.repository.readRecoverySources();
     if (inventory.activeReadError) return { ok: false, code: 'storage-unavailable' };
     const expectedTargetRaw = inventory.activeRaw;
-    const result = await this.repository.migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, this.sourceId);
+    const result = await this.repository.migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events);
     if (!result.ok) {
       if (result.persisted) this.applyExternal(this.repository.loadCurrent(), 'migration-race');
       return result;
@@ -1150,7 +1123,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1161,7 +1133,7 @@ class EventStore {
   async commit(action, mutate) {
     if (this.state.writeProtected) return { ok: false, code: 'write-protected' };
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
-    const result = await this.repository.save(mutate, this.sourceId);
+    const result = await this.repository.save(mutate);
     if (!result.ok) {
       if (result.latest?.ok) this.applyExternal(result.latest, 'conflict');
       return result;
@@ -1170,7 +1142,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(result.events),
       revision: result.revision,
-      updatedAt: result.updatedAt,
       writeProtected: false,
       loadState: 'ok'
     };
@@ -1194,7 +1165,6 @@ class EventStore {
     this.state = {
       events: freezeEvents(snapshot.events || []),
       revision: snapshot.revision ?? null,
-      updatedAt: snapshot.updatedAt || 0,
       writeProtected: Boolean(snapshot.writeProtected),
       loadState: nextLoadState
     };
@@ -1283,9 +1253,10 @@ class EventSync {
 
 /* ── UI CONTROLLER ── */
 class EventUIController {
-  constructor(store, sync) {
+  constructor(store, sync, ui) {
     this.store = store;
     this.sync = sync;
+    this.ui = ui;
     this.unsubscribe = null;
   }
 
@@ -1294,55 +1265,54 @@ class EventUIController {
     this.sync.start((snapshot, origin) => {
       if (!snapshot.ok) {
         this.store.protectAfterExternalLoadFailure(snapshot, `${origin}-error`);
-        showSnackbar('Externe Datenänderung konnte nicht sicher geladen werden; lokaler Stand bleibt erhalten und Schreibzugriffe sind gesperrt.');
+        this.ui.showMessage('Externe Datenänderung konnte nicht sicher geladen werden; lokaler Stand bleibt erhalten und Schreibzugriffe sind gesperrt.');
         return;
       }
       const before = this.store.state.loadState;
       const applied = this.store.applyExternal(snapshot, origin);
       if (applied.ok && before === 'read-error' && !snapshot.writeProtected) {
-        showSnackbar('Aktive Daten sind wieder lesbar; der vorübergehende Schreibschutz ist aufgehoben.');
+        this.ui.showMessage('Aktive Daten sind wieder lesbar; der vorübergehende Schreibschutz ist aufgehoben.');
       }
     }, () => {
       if (!this.store.blockWritesForLegacyPeer()) return;
-      showSnackbar('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
+      this.ui.showMessage('Älterer Tab erkannt. Schreibzugriffe bleiben bis zum Neuladen gesperrt; bitte alle Tabs aktualisieren.');
     });
   }
 
   handleStoreChange(change) {
-    const detailEvent = currentDetailId ? this.store.getEvent(currentDetailId) : null;
-    if (currentDetailId && !detailEvent && detailSheet.classList.contains('open')) {
-      currentEditId = null;
-      currentEditBaseEvent = null;
-      closeSheets();
-    } else if (detailEvent && detailSheet.classList.contains('open')) {
-      populateDetailSheet(detailEvent);
+    const detail = this.ui.getDetailState();
+    if (detail.id && !this.store.getEvent(detail.id) && detail.isOpen) {
+      this.ui.resetEditorState();
+      this.ui.closeSheets();
+    } else if (detail.id && detail.isOpen) {
+      this.ui.updateDetail(this.store.getEvent(detail.id));
     }
 
-    if (currentEditId && editSheet.classList.contains('open') && change.origin !== 'local') {
-      const currentEvent = this.store.getEvent(currentEditId);
+    const editor = this.ui.getEditorState();
+    if (editor.id && editor.isOpen && change.origin !== 'local') {
+      const currentEvent = this.store.getEvent(editor.id);
       if (!currentEvent) {
-        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.';
-      } else if (!eventsEqual(currentEvent, currentEditBaseEvent)) {
-        editFormStatus.textContent = 'Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt bis zur Konfliktentscheidung geöffnet.';
+        this.ui.setEditorStatus('Dieses Ereignis wurde in einem anderen Tab gelöscht. Dein Entwurf bleibt geöffnet.');
+      } else if (!eventsEqual(currentEvent, editor.baseEvent)) {
+        this.ui.setEditorStatus('Dieses Ereignis wurde in einem anderen Tab geändert. Dein Entwurf bleibt bis zur Konfliktentscheidung geöffnet.');
       }
     }
 
-    renderEvents();
-    updateRecoveryStatus();
+    this.ui.renderEvents();
+    this.ui.updateRecoveryStatus();
     if (change.origin === 'local') this.sync.publish(change.revision);
-    if ((change.origin === 'storage' || change.origin === 'broadcast') && change.action === 'replace' && change.state.loadState === 'ok') showSnackbar('Daten aus einem anderen Tab wurden übernommen.');
+    if ((change.origin === 'storage' || change.origin === 'broadcast') && change.action === 'replace' && change.state.loadState === 'ok') this.ui.showMessage('Daten aus einem anderen Tab wurden übernommen.');
   }
 
-  async upsert(event, wasEdit) {
+  async upsert(event, { wasEdit, baseEvent }) {
     const result = await this.store.upsert(event, {
       requireExisting: wasEdit,
-      baseEvent: wasEdit ? currentEditBaseEvent : null
+      baseEvent: wasEdit ? baseEvent : null
     });
     if (!result.ok) return this.handleFailure(result);
-    currentEditId = null;
-    currentEditBaseEvent = null;
-    closeSheets();
-    showSnackbar(wasEdit ? 'Geändert.' : 'Erstellt.');
+    this.ui.resetEditorState();
+    this.ui.closeSheets();
+    this.ui.showMessage(wasEdit ? 'Geändert.' : 'Erstellt.');
     return true;
   }
 
@@ -1350,19 +1320,19 @@ class EventUIController {
     const baseEvent = this.store.getEvent(id);
     const result = await this.store.remove(id, baseEvent);
     if (!result.ok) return this.handleFailure(result);
-    showSnackbar('Gelöscht.');
+    this.ui.showMessage('Gelöscht.');
     return true;
   }
 
   async clearAll() {
-    openRecoveryDialog();
+    this.ui.openRecoveryDialog();
     return true;
   }
 
   async importEvents(importedEvents) {
     const result = await this.store.replaceAll(importedEvents);
     if (!result.ok) return this.handleFailure(result);
-    showSnackbar(`${importedEvents.length} Ereignis${importedEvents.length === 1 ? '' : 'se'} importiert.`);
+    this.ui.showMessage(`${importedEvents.length} Ereignis${importedEvents.length === 1 ? '' : 'se'} importiert.`);
     return true;
   }
 
@@ -1388,10 +1358,28 @@ class EventUIController {
     };
     console.warn('Store-Änderung fehlgeschlagen:', result);
     const message = messages[result.code] || 'Änderung konnte nicht sicher gespeichert werden.';
-    if (editSheet.classList.contains('open')) editFormStatus.textContent = message;
-    showSnackbar(message);
+    this.ui.reportMutationFailure(message);
     return false;
   }
+}
+
+function createEventControllerUi() {
+  return {
+    getDetailState: () => ({ id: sheetState.detail.id, isOpen: detailSheet.classList.contains('open') }),
+    getEditorState: () => ({ ...sheetState.editor, isOpen: editSheet.classList.contains('open') }),
+    resetEditorState,
+    closeSheets,
+    updateDetail: populateDetailSheet,
+    setEditorStatus: message => { editFormStatus.textContent = message; },
+    renderEvents,
+    updateRecoveryStatus,
+    showMessage: showSnackbar,
+    reportMutationFailure: message => {
+      if (editSheet.classList.contains('open')) editFormStatus.textContent = message;
+      showSnackbar(message);
+    },
+    openRecoveryDialog
+  };
 }
 
 function initializeDataArchitecture() {
@@ -1399,7 +1387,7 @@ function initializeDataArchitecture() {
   const initialSnapshot = loadEvents();
   eventStore = new EventStore(eventRepository, initialSnapshot);
   eventSync = new EventSync(eventRepository, eventStore.sourceId);
-  eventController = new EventUIController(eventStore, eventSync);
+  eventController = new EventUIController(eventStore, eventSync, createEventControllerUi());
   eventController.connect();
   dataLoadWarning = initialSnapshot.warning;
 }
@@ -2329,14 +2317,15 @@ function renderEvents(nowTime = Date.now()) {
 }
 
 function updateDetailLive(nowTime, force = false) {
-  if (!currentDetailId || !detailSheet.classList.contains('open')) return;
-  if (!force && nowTime < detailNextUpdateAt) return;
-  const event = eventStore.getEvent(currentDetailId);
+  const detail = sheetState.detail;
+  if (!detail.id || !detailSheet.classList.contains('open')) return;
+  if (!force && nowTime < detail.nextUpdateAt) return;
+  const event = eventStore.getEvent(detail.id);
   if (!event) return;
   const model = createEventTimeModel(event, nowTime);
   if (!model) return;
-  const clockDue = force || nowTime >= detailNextClockUpdateAt;
-  const progressDue = event.refDate !== '' && (force || nowTime >= detailNextProgressUpdateAt);
+  const clockDue = force || nowTime >= detail.nextClockUpdateAt;
+  const progressDue = event.refDate !== '' && (force || nowTime >= detail.nextProgressUpdateAt);
 
   if (clockDue) {
     renderFlipClock(
@@ -2349,7 +2338,7 @@ function updateDetailLive(nowTime, force = false) {
     if (event.kind === 'timed') {
       clockCadence = event.units.includes('seconds') ? MS_PER_SECOND : MS_PER_MINUTE;
     }
-    detailNextClockUpdateAt = Number.isFinite(clockCadence)
+    detail.nextClockUpdateAt = Number.isFinite(clockCadence)
       ? Math.floor(nowTime / clockCadence) * clockCadence + clockCadence
       : Infinity;
   }
@@ -2362,13 +2351,13 @@ function updateDetailLive(nowTime, force = false) {
     setAttributeIfChanged(detailProgressWrap, 'aria-valuenow', progress.toFixed(1));
     setAttributeIfChanged(detailProgressWrap, 'aria-valuetext', formatProgressText(progress));
     const progressCadence = event.kind === 'timed' ? MS_PER_SECOND : Infinity;
-    detailNextProgressUpdateAt = Number.isFinite(progressCadence)
+    detail.nextProgressUpdateAt = Number.isFinite(progressCadence)
       ? Math.floor(nowTime / progressCadence) * progressCadence + progressCadence
       : Infinity;
   } else if (event.refDate === '') {
-    detailNextProgressUpdateAt = Infinity;
+    detail.nextProgressUpdateAt = Infinity;
   }
-  detailNextUpdateAt = Math.min(detailNextClockUpdateAt, detailNextProgressUpdateAt);
+  detail.nextUpdateAt = Math.min(detail.nextClockUpdateAt, detail.nextProgressUpdateAt);
 }
 
 function getMonotonicTime() {
@@ -2406,8 +2395,8 @@ class TemporalContextTracker {
 }
 
 function detailNeedsSecondUpdates() {
-  if (!currentDetailId || !detailSheet.classList.contains('open')) return false;
-  const event = eventStore.getEvent(currentDetailId);
+  if (!sheetState.detail.id || !detailSheet.classList.contains('open')) return false;
+  const event = eventStore.getEvent(sheetState.detail.id);
   return Boolean(event?.kind === 'timed' && (event.units.includes('seconds') || event.refDate !== ''));
 }
 
@@ -2569,9 +2558,9 @@ class MidnightRefreshScheduler {
 
 function refreshTemporalViews(nowTime) {
   updateTodayLabel(new Date(nowTime));
-  detailNextUpdateAt = 0;
-  detailNextClockUpdateAt = 0;
-  detailNextProgressUpdateAt = 0;
+  sheetState.detail.nextUpdateAt = 0;
+  sheetState.detail.nextClockUpdateAt = 0;
+  sheetState.detail.nextProgressUpdateAt = 0;
   renderEvents(nowTime);
   updateDetailLive(nowTime, true);
   updateLiveSchedulerCadence();
@@ -2888,11 +2877,17 @@ function getFlipAnimationDuration() {
 }
 
 /* ── MODALS & FORMS ── */
+function resetEditorState() {
+  sheetState.editor.id = null;
+  sheetState.editor.baseEvent = null;
+  sheetState.editor.timeZone = null;
+}
+
 function openDetailSheet(id) {
   const ev = eventStore.getEvent(id);
   if (!ev) return;
   if (!modalHistoryActive) lastFocusedElement = document.activeElement;
-  currentDetailId = id;
+  sheetState.detail.id = id;
   populateDetailSheet(ev);
   clearFlipClock(detailFlipClock);
   showSheet(detailSheet);
@@ -2901,9 +2896,9 @@ function openDetailSheet(id) {
 }
 
 function populateDetailSheet(ev) {
-  detailNextUpdateAt = 0;
-  detailNextClockUpdateAt = 0;
-  detailNextProgressUpdateAt = 0;
+  sheetState.detail.nextUpdateAt = 0;
+  sheetState.detail.nextClockUpdateAt = 0;
+  sheetState.detail.nextProgressUpdateAt = 0;
   document.getElementById('detail-name').textContent = ev.name;
   const heroBg = document.getElementById('detail-hero-bg');
   heroBg.style.backgroundImage = ev.img ? `url(${JSON.stringify(ev.img)})` : 'linear-gradient(145deg, hsl(var(--hue-primary), 48%, 30%), hsl(var(--hue-primary), 38%, 17%))';
@@ -2936,19 +2931,18 @@ function openEditSheet(id = null) {
   const previousFocus = document.activeElement;
   if (!modalHistoryActive) lastFocusedElement = previousFocus;
   hideSheets(false, false);
-  currentEditId = id;
+  sheetState.editor.id = id;
   imgData = null;
   clearImage();
   document.getElementById('edit-headline').textContent = id ? 'Ereignis bearbeiten' : 'Neues Ereignis';
 
   const ev = id ? eventStore.getEvent(id) : null;
   if (id && !ev) {
-    currentEditId = null;
-    currentEditBaseEvent = null;
+    resetEditorState();
     return showSnackbar('Ereignis wurde nicht gefunden.');
   }
-  currentEditBaseEvent = ev;
-  currentEditTimeZone = ev?.timeZone || getSystemTimeZone();
+  sheetState.editor.baseEvent = ev;
+  sheetState.editor.timeZone = ev?.timeZone || getSystemTimeZone();
   eventNameInput.value = ev?.name || '';
   eventDateInput.value = ev?.date || '';
   eventTimeInput.value = ev?.time || '';
@@ -3065,7 +3059,7 @@ function hideSheets(restoreFocus = true, resetIds = true) {
     sheet.setAttribute('inert', '');
   });
   setModalBackgroundInert(false);
-  if (resetIds) currentDetailId = null;
+  if (resetIds) sheetState.detail.id = null;
   if (restoreFocus) restoreModalFocus(focusTarget);
 }
 
@@ -3073,9 +3067,7 @@ function closeSheets() {
   abortImageProcessing();
   cancelImagePreview();
   hideSheets(true, true);
-  currentEditId = null;
-  currentEditBaseEvent = null;
-  currentEditTimeZone = null;
+  resetEditorState();
   if (modalHistoryActive) {
     modalHistoryActive = false;
     history.back();
@@ -3083,12 +3075,10 @@ function closeSheets() {
 }
 
 function closeEditSheet() {
-  const editId = currentEditId;
+  const editId = sheetState.editor.id;
   abortImageProcessing();
   cancelImagePreview();
-  currentEditId = null;
-  currentEditBaseEvent = null;
-  currentEditTimeZone = null;
+  resetEditorState();
   if (editId && eventStore.getEvent(editId)) {
     hideSheets(false, false);
     openDetailSheet(editId);
@@ -3100,7 +3090,7 @@ function closeEditSheet() {
 function updateDateTimeDisambiguation() {
   const date = eventDateInput.value;
   const time = eventTimeInput.value;
-  const timeZone = isValidTimeZone(currentEditTimeZone) ? currentEditTimeZone : getSystemTimeZone();
+  const timeZone = isValidTimeZone(sheetState.editor.timeZone) ? sheetState.editor.timeZone : getSystemTimeZone();
   eventTimeInput.setCustomValidity('');
   timeZoneHint.classList.remove('error');
 
@@ -3203,8 +3193,8 @@ function validateEditorForm({ focusFirst = true } = {}) {
 
   const hasInvalidTimeInput = eventTimeInput.validity.badInput;
   const kind = time === '' ? 'all-day' : 'timed';
-  const timeZone = kind === 'timed' && isValidTimeZone(currentEditTimeZone)
-    ? currentEditTimeZone
+  const timeZone = kind === 'timed' && isValidTimeZone(sheetState.editor.timeZone)
+    ? sheetState.editor.timeZone
     : kind === 'timed'
       ? getSystemTimeZone()
       : '';
@@ -3282,25 +3272,25 @@ async function saveEvent() {
   if (normalizedImageUrl) image = normalizedImageUrl;
 
   const event = normalizeEvent({
-    id: currentEditId || createEventId(),
+    id: sheetState.editor.id || createEventId(),
     name, kind, date, time, timeZone, disambiguation, refDate, desc, units, img: image
   });
   if (!event) {
     showSnackbar('Ereignis konnte nicht gespeichert werden. Eingaben prüfen.');
     return false;
   }
-  const wasEdit = Boolean(currentEditId);
+  const wasEdit = Boolean(sheetState.editor.id);
   setEventSavePending(true);
   try {
-    return await eventController.upsert(event, wasEdit);
+    return await eventController.upsert(event, { wasEdit, baseEvent: sheetState.editor.baseEvent });
   } finally {
     setEventSavePending(false);
   }
 }
 
 async function deleteCurrentEvent() {
-  if (!currentDetailId || !confirm('Dieses Ereignis löschen?')) return;
-  await eventController.deleteById(currentDetailId);
+  if (!sheetState.detail.id || !confirm('Dieses Ereignis löschen?')) return;
+  await eventController.deleteById(sheetState.detail.id);
 }
 
 /* ── SHEET GESTURES / ACCESSIBILITY ── */
