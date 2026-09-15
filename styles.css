@@ -1527,3 +1527,46 @@ select.m3-input + .m3-field-label {
   .tab-item.active, .unit-chip.selected { outline: 2px solid CanvasText; }
 }
 }
+
+/* Datenrettung: dauerhafter Fehlerzustand und nativer modaler Dialog. */
+.recovery-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px;
+  color: var(--md-sys-color-on-error-container);
+  background: var(--md-sys-color-error-container);
+}
+.recovery-status[hidden] { display: none; }
+.recovery-dialog {
+  width: min(92vw, 640px);
+  max-height: 88dvh;
+  padding: 0;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 20px;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface);
+  box-shadow: var(--md-elevation-4);
+}
+.recovery-dialog::backdrop { background: rgba(0, 0, 0, .65); }
+.recovery-dialog-inner { display: grid; gap: 14px; padding: 24px; }
+.recovery-dialog h2, .recovery-dialog h3, .recovery-dialog p { margin: 0; }
+.recovery-dialog h2 { font-size: 1.35rem; }
+.recovery-dialog h3 { font-size: 1.05rem; }
+.recovery-dialog .m3-input { width: 100%; min-height: 48px; }
+.recovery-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.recovery-actions .m3-btn { min-height: 44px; white-space: normal; text-align: left; }
+.recovery-message { min-height: 1.5em; overflow-wrap: anywhere; }
+.recovery-confirmation {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 2px solid var(--md-sys-color-error);
+  border-radius: 14px;
+}
+.recovery-confirmation[hidden] { display: none; }
+.recovery-dialog :focus-visible, .recovery-status :focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 3px;
+}

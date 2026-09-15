@@ -50,6 +50,10 @@
   <p class="offline-status" id="offline-status" role="status" aria-live="polite" hidden>
     Offline-Modus – deine lokal gespeicherten Ereignisse bleiben verfügbar.
   </p>
+  <div class="recovery-status" id="recovery-status" role="alert" hidden>
+    <span id="recovery-status-copy"></span>
+    <button type="button" class="m3-btn ripple-host" id="recovery-status-btn">Datenrettung öffnen</button>
+  </div>
 
   <div class="tab-bar" id="tab-bar" role="tablist" aria-label="Bereiche" aria-orientation="horizontal">
     <button type="button" class="tab-item active ripple-host" id="tab-future" data-tab="0" role="tab" aria-selected="true" aria-controls="tab-0">
@@ -182,13 +186,45 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Exportieren
   </button>
+  <button type="button" class="menu-popup-item ripple-host" id="recovery-btn">Datenrettung und Rettungskopien</button>
   <button type="button" class="menu-popup-item danger ripple-host" id="clear-btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-    Alle löschen
+    Daten gezielt löschen
   </button>
 </div>
 
 <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+
+<dialog class="recovery-dialog" id="recovery-dialog" aria-labelledby="recovery-heading" aria-describedby="recovery-intro">
+  <div class="recovery-dialog-inner">
+    <h2 id="recovery-heading">Datenrettung und Speicherzustand</h2>
+    <p id="recovery-intro">Aktive Ereignisse und Rettungskopien sind getrennt. Rohdaten bleiben bei teilweiser Validierung erhalten; Wiederherstellung und Löschung brauchen deine ausdrückliche Bestätigung.</p>
+    <p class="recovery-message" id="recovery-message" role="status" aria-live="polite" aria-atomic="true"></p>
+    <label for="recovery-source">Rohdatenquelle</label>
+    <select id="recovery-source" class="m3-input"></select>
+    <div class="recovery-actions">
+      <button type="button" class="m3-btn ripple-host" id="recovery-export-btn">Gewählte Rohdaten exportieren</button>
+      <button type="button" class="m3-btn ripple-host" id="recovery-restore-btn">Gültige Ereignisse aus Quelle übernehmen</button>
+      <button type="button" class="m3-btn ripple-host" id="recovery-file-btn">Aktive Daten mit Importdatei ersetzen</button>
+      <input type="file" id="recovery-file-input" accept=".json,application/json" hidden>
+    </div>
+    <h3>Löschung gezielt wählen</h3>
+    <div class="recovery-actions">
+      <button type="button" class="m3-btn danger ripple-host" id="recovery-clear-active-btn">Nur aktive Ereignisse löschen</button>
+      <button type="button" class="m3-btn danger ripple-host" id="recovery-clear-copies-btn">Nur Rettungskopien löschen</button>
+      <button type="button" class="m3-btn danger ripple-host" id="recovery-clear-both-btn">Aktive Ereignisse und Rettungskopien löschen</button>
+    </div>
+    <section class="recovery-confirmation" id="recovery-confirmation" aria-labelledby="recovery-confirm-heading" hidden>
+      <h3 id="recovery-confirm-heading">Vorgang bestätigen</h3>
+      <p id="recovery-confirm-copy"></p>
+      <div class="recovery-actions">
+        <button type="button" class="m3-btn danger ripple-host" id="recovery-confirm-btn">Ja, diesen Vorgang ausführen</button>
+        <button type="button" class="m3-btn ripple-host" id="recovery-cancel-btn">Abbrechen</button>
+      </div>
+    </section>
+    <button type="button" class="m3-btn ripple-host" id="recovery-close-btn">Schließen</button>
+  </div>
+</dialog>
 
 <div class="sheet" id="detail-sheet" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="detail-name" tabindex="-1" inert>
   <div class="sheet-handle" aria-hidden="true"></div>

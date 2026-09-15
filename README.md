@@ -97,7 +97,7 @@ anzeigt.
 
 ## Schreibsicherheit und mehrere Tabs
 
-Alle Änderungen am Ereignisbestand laufen über denselben exklusiven Web Lock. Innerhalb der Sperre wird der aktuelle `localStorage`-Stand erneut gelesen, der fachliche Konflikt geprüft und erst danach geschrieben. Neue Ereignisse und Änderungen an unterschiedlichen Ereignissen werden dadurch auf dem frischen Gesamtbestand zusammengeführt. Bei Änderungen desselben Ereignisses, Bearbeiten gegen Löschen sowie einem Import oder „Alle löschen“ gegen eine parallele Änderung wird der Vorgang abgebrochen; ein geöffneter Bearbeitungsentwurf bleibt erhalten.
+Alle Änderungen am Ereignisbestand laufen über denselben exklusiven Web Lock. Innerhalb der Sperre wird der aktuelle `localStorage`-Stand erneut gelesen, der fachliche Konflikt geprüft und erst danach geschrieben. Neue Ereignisse und Änderungen an unterschiedlichen Ereignissen werden dadurch auf dem frischen Gesamtbestand zusammengeführt. Bei Änderungen desselben Ereignisses, Bearbeiten gegen Löschen sowie einem Import oder dem Löschen aktiver Ereignisse gegen eine parallele Änderung wird der Vorgang abgebrochen; ein geöffneter Bearbeitungsentwurf bleibt erhalten.
 
 Fehlt die Web-Locks-Unterstützung, blockiert die App Schreibvorgänge, statt einen unkoordinierten Erfolg zu melden. Tabs mit einer älteren App-Version beachten die Sperre nicht und können daher nicht vollständig geschützt werden. Meldet sich ein solcher Tab über den bestehenden Broadcast-Kanal, sperrt die aktuelle Sitzung weitere Schreibvorgänge bis zum Neuladen. Alte Tabs ohne Broadcast-Unterstützung lassen sich nicht zuverlässig erkennen; vor Änderungen sollten deshalb alle bereits geöffneten Tabs aktualisiert oder geschlossen werden.
 
@@ -112,6 +112,10 @@ Falls Pages für das Repository noch nicht aktiviert ist:
 Ereignisse und Einstellungen verbleiben im jeweiligen Browserprofil. Das Projekt besitzt kein Backend und überträgt keine Ereignisdaten. Netzwerkzugriffe entstehen für Google Fonts sowie für externe Bild-URLs, die Nutzer selbst hinterlegen.
 
 Import, lokaler Ereignisbestand und formatierter JSON-Export teilen ein Limit von 8 MiB UTF-8-Daten. Dadurch bleibt jeder regulär speicherbare Bestand auch wieder exportier- und importierbar; nichtlateinische Zeichen und Emoji werden nach ihrer tatsächlichen Bytegröße bewertet.
+
+Über „Datenrettung und Rettungskopien“ im Menü oder die dauerhaft sichtbare Fehlermeldung lassen sich der unveränderte aktive Rohbestand und lesbare Quarantänekopien getrennt exportieren. Bei beschädigten oder teilweise ungültigen aktiven Daten bleiben Änderungen gesperrt, bis gültige Ereignisse aus einer ausdrücklich gewählten Quelle oder einer vollständig validierten JSON-Datei nach Bestätigung über den Web-Lock-Schreibpfad übernommen werden. Ungültige Einträge werden dabei nicht still in den neuen aktiven Bestand übernommen; exportiere die Rohdaten vorher. Frühere Rettungskopien bleiben nach erfolgreicher Wiederherstellung erhalten.
+
+„Daten gezielt löschen“ bietet nach einer zweiten Bestätigung drei Varianten: nur aktive Ereignisse, nur die beiden zugehörigen Rettungsschlüssel (Kopien und Metadaten) oder beides in dieser Reihenfolge. Andere Origin-Daten und Einstellungen bleiben unangetastet. Bei fehlendem Web Lock, zwischenzeitlichen Änderungen oder Speicherfehlern wird kein Erfolg behauptet; nach einem Teilerfolg nennt die App verbliebene Kopien. Der Rohdatenexport ist kein vollständiges Backup der Einstellungen.
 
 ## Migration
 

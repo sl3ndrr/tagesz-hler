@@ -1,5 +1,5 @@
 /* Offline-App-Shell. CACHE_VERSION bei Änderungen an statischen Dateien erhöhen. */
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const CACHE_PREFIX = 'tageszaehler-';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const NAVIGATION_TIMEOUT_MS = 5000;
