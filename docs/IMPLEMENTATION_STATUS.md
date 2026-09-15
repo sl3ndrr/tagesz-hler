@@ -25,7 +25,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P05 | Zugängliche und konsistente Darstellung | A4, A12, B11, B14, B15 | Gemergt | P01 | [PR #5](https://github.com/sl3ndrr/tagesz-hler/pull/5) / `c697b2da28ec1c549f129f81cd76fbd6c3853627` |
 | P06 | Einheitliche Daten- und Formularvalidierung | A5, A9, A10, B7, B13 | Gemergt | P01 | [PR #6](https://github.com/sl3ndrr/tagesz-hler/pull/6) / `c07cb664a102dc7b1f97afa762113729087f1d9e` |
 | P07 | Datenrettung und verständliche Speicherzustände | A6, A8 | Gemergt | P02, P06 | [PR #7](https://github.com/sl3ndrr/tagesz-hler/pull/7) / `3e8019ed5fe58285333c265f6c0f5b9b8452e923` |
-| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | Branch `p08-belastbare-bildverarbeitung-url-vorschau`; PR-Link wird ergänzt |
+| P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | In Arbeit | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`; Merge-Commit nach Merge |
 | P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Geplant | P02, P04, P07 | — |
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Geplant | P02, P07 | — |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Geplant | P03, P05, P10 | — |
@@ -94,7 +94,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 ### P08 – Belastbare Bildverarbeitung und URL-Vorschau
 
 - **Status:** In Arbeit
-- **PR / Merge-Commit:** Branch `p08-belastbare-bildverarbeitung-url-vorschau`; PR-Link wird ergänzt. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **PR / Merge-Commit:** [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8), Branch `p08-belastbare-bildverarbeitung-url-vorschau`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
 - **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Upload und JSON-Bildimport prüfen Base64, Bildsignaturen, MIME und Headerdimensionen vor dem Dekodieren; eingebettete Importbilder werden zusätzlich tatsächlich dekodiert. URL-Vorschauen warten 400 ms auf vollständige absolute URLs und verwerfen überholte Ergebnisse. Die Darstellung verwendet `no-referrer`; App-Shell-Version `v9`.
 - **Übergabe an Folgepakete:** Uploadlimit 20 MiB, maximal 24 Mio. Bildpixel und 10.000 Pixel je Achse; eingebettete Bilder bleiben zusätzlich durch P06-Quellen-/Bestandslimits begrenzt. Headerprüfung verhindert den großen Dekodierschritt für erkannte Ausreißer, kann jedoch nicht die Browserinternen Ressourcen der anschließenden Dekodierung oder jedes beschädigte Kompressionsdetail vorab beweisen. CSS-Hintergrundbilder übernehmen den dokumentweiten `no-referrer`-Wert; externe Bilder werden nicht offline gespeichert. Reale Browserprüfung bleibt vor Merge offen.
 - **Statuskorrektur außerhalb P08:** P03–P07 sind nach GitHub-PRs und Vorfahrvergleich auf `main` gemergt; ihre veralteten Zeilen und Protokolle wurden auf den tatsächlichen Merge-Stand gebracht. Historische offene Statushinweise in den alten Paketprotokollen sind damit erledigt; andere fachliche Restrisiken bleiben bestehen.
