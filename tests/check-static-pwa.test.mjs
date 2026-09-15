@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import './event-write-conflicts.mjs';
 import './calendar-clock-changes.mjs';
+import './controller-boundaries.mjs';
 import './data-validation.mjs';
 import './data-recovery.mjs';
 import './image-processing.mjs';
