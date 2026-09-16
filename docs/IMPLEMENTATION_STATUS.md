@@ -3,7 +3,7 @@
 Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzungsplans. Sie wird mit jeder Umsetzung im selben Pull Request aktualisiert. Folgepakete prüfen den aktuellen `main` und lesen zusätzlich die verlinkten Abschlussberichte der direkten Voraussetzungen.
 
 **Ausgangsstand:** `081d5abf3e04f85b4b00d9df3f8af1d2c64cd454`  
-**Stand:** 2026-09-15  
+**Stand:** 2026-09-16  
 **Statuswerte:** `Geplant` · `In Arbeit` · `Gemergt` · `Blockiert` · `Entfällt`
 
 ## Arbeitsregeln
@@ -31,8 +31,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / `65d5cb5e77607cf94d503ee121d1856cbcc834fb` |
 | P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Gemergt | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17) / `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7` |
-| P14 | Ereignisse suchen und filtern | C1 | In Arbeit | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18), Branch `p14-ereignisse-suchen-filtern`; Merge-Commit nach Merge |
-| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Geplant | P06, P07, P09 | — |
+| P14 | Ereignisse suchen und filtern | C1 | Gemergt | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18) / `8a3b4634afe0637f51937d73592f393f53cc012d` |
+| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | In Arbeit | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), Branch `p15-vollstaendiges-backup-einstellungen`; Merge-Commit nach Merge |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Geplant | P03, P06, P09, P11; P15, falls das Backup bereits existiert | — |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Geplant | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | — |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
@@ -140,17 +140,17 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P14 – Ereignisse suchen und filtern
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18), Branch `p14-ereignisse-suchen-filtern`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18), Merge-Commit `8a3b4634afe0637f51937d73592f393f53cc012d`, getesteter Branch-Commit `5879f3cc18ccfd08f92888e199e0fe2ab1a5cc59`; [Actions #61](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35113276632) erfolgreich.
 - **Abschlussbericht:** Lokale Suche über Name/Beschreibung und Filter für Zeitlage sowie Ganztägig/Uhrzeit; Karten und Kompaktansicht verwenden denselben gefilterten Rendererbestand. Trefferzahl, Zurücksetzen und getrennte Leerzustände ergänzen die bestehende Liste ohne Datenänderung.
-- **Übergabe an Folgepakete:** Die Suche normalisiert deutschsprachige Akzente und `ß` zu `ss`; mehrteilige Eingaben sind eine UND-Suche über Name/Beschreibung. Nach Merge tatsächlichen Merge-Commit, getesteten Branch-Commit und CI-Lauf ergänzen.
+- **Übergabe an Folgepakete:** Die Suche normalisiert deutschsprachige Akzente und `ß` zu `ss`; mehrteilige Eingaben sind eine UND-Suche über Name/Beschreibung. Reale Browser-, Tastatur-/Screenreader-, Offline- und große-Sammlung-Prüfungen stehen weiterhin aus.
 
 ### P15 – Vollständiges Backup mit Einstellungen
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), Branch `p15-vollstaendiges-backup-einstellungen`; letzter getesteter Commit und CI-Lauf werden im PR-Abschlussbericht geführt. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Abschlussbericht:** Versioniertes Vollbackup (`tageszaehler-backup`, Version 1) für Ereignisse sowie Theme, Farbe und Ansicht; bisherige Ereignis-Arrays bleiben importierbar. Die Wiederherstellung validiert Datei, Bilder, Größen und Präferenztypen vollständig vor produktiven Schreibzugriffen und verwendet ein installationsbezogenes, per Read-back bestätigtes Rollback-Journal. App-Shell-Version `v17`.
+- **Übergabe an Folgepakete:** Das Journal stellt keine echte `localStorage`-Mehrschlüsseltransaktion dar. Es ermöglicht bestätigten Commit oder sichtbaren Rollback beim Start; kann die Rücknahme nicht bestätigt werden, bleiben Schreibzugriffe gesperrt. Ereignisse sind auf 8 MiB, vollständige Backup-Dateien auf 10 MiB UTF-8 begrenzt. P07-Rohdaten und Quarantänekopien werden nicht in das Vollbackup aufgenommen, ersetzt oder gelöscht.
 
 ### P16 – Jährlich wiederkehrende Ereignisse
 
