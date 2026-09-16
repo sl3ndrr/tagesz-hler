@@ -69,6 +69,34 @@
   </div>
 
   <main id="main-content" tabindex="-1">
+    <section class="event-filter" aria-labelledby="event-filter-heading">
+      <div class="event-filter-heading">
+        <h2 id="event-filter-heading">Ereignisse finden</h2>
+        <p id="event-filter-status" role="status" aria-live="polite"></p>
+      </div>
+      <div class="event-filter-controls">
+        <label class="event-search-field" for="event-search">
+          <span>Suche nach Name oder Beschreibung</span>
+          <input id="event-search" type="search" autocomplete="off" placeholder="Ereignisse durchsuchen">
+        </label>
+        <label for="event-time-filter">Zeitlage
+          <select id="event-time-filter">
+            <option value="all">Alle Zeitlagen</option>
+            <option value="future">Kommend</option>
+            <option value="past">Vergangen</option>
+          </select>
+        </label>
+        <label for="event-kind-filter">Art
+          <select id="event-kind-filter">
+            <option value="all">Alle Arten</option>
+            <option value="all-day">Ganztägig</option>
+            <option value="timed">Mit Uhrzeit</option>
+          </select>
+        </label>
+        <button type="button" class="event-filter-reset" id="event-filter-reset">Filter zurücksetzen</button>
+      </div>
+      <p class="event-filter-hint">Mehrteilige Suchbegriffe müssen jeweils in Name oder Beschreibung vorkommen.</p>
+    </section>
     <div class="tab-content active" id="tab-0" role="tabpanel" aria-labelledby="tab-future" tabindex="0">
       <section class="page-intro" aria-labelledby="future-heading">
         <div class="intro-eyebrow">Was vor dir liegt</div>
