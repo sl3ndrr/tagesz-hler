@@ -32,7 +32,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Gemergt | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17) / `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7` |
 | P14 | Ereignisse suchen und filtern | C1 | Gemergt | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18) / `8a3b4634afe0637f51937d73592f393f53cc012d` |
-| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | In Arbeit | P06, P07, P09 | Branch `p15-vollstaendiges-backup-einstellungen`; PR-Link nach Erstellung |
+| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | In Arbeit | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), Branch `p15-vollstaendiges-backup-einstellungen`; Merge-Commit nach Merge |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Geplant | P03, P06, P09, P11; P15, falls das Backup bereits existiert | — |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Geplant | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | — |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
@@ -148,7 +148,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 ### P15 – Vollständiges Backup mit Einstellungen
 
 - **Status:** In Arbeit
-- **PR / Merge-Commit:** Branch `p15-vollstaendiges-backup-einstellungen`; PR-Link, letzter getesteter Commit und CI-Lauf werden im Verlauf dieser PR ergänzt. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **PR / Merge-Commit:** [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), Branch `p15-vollstaendiges-backup-einstellungen`; letzter getesteter Commit und CI-Lauf werden im PR-Abschlussbericht geführt. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
 - **Abschlussbericht:** Versioniertes Vollbackup (`tageszaehler-backup`, Version 1) für Ereignisse sowie Theme, Farbe und Ansicht; bisherige Ereignis-Arrays bleiben importierbar. Die Wiederherstellung validiert Datei, Bilder, Größen und Präferenztypen vollständig vor produktiven Schreibzugriffen und verwendet ein installationsbezogenes, per Read-back bestätigtes Rollback-Journal. App-Shell-Version `v17`.
 - **Übergabe an Folgepakete:** Das Journal stellt keine echte `localStorage`-Mehrschlüsseltransaktion dar. Es ermöglicht bestätigten Commit oder sichtbaren Rollback beim Start; kann die Rücknahme nicht bestätigt werden, bleiben Schreibzugriffe gesperrt. Ereignisse sind auf 8 MiB, vollständige Backup-Dateien auf 10 MiB UTF-8 begrenzt. P07-Rohdaten und Quarantänekopien werden nicht in das Vollbackup aufgenommen, ersetzt oder gelöscht.
 
