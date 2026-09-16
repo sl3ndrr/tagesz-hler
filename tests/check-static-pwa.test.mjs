@@ -7,6 +7,7 @@ import test from 'node:test';
 import './event-write-conflicts.mjs';
 import './controller-ui.mjs';
 import './event-list-renderer.mjs';
+import './event-filter.mjs';
 import './calendar-clock-changes.mjs';
 import './data-validation.mjs';
 import './data-recovery.mjs';
