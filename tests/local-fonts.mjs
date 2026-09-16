@@ -7,6 +7,7 @@ const projectRoot = resolve(import.meta.dirname, '..');
 const index = readFileSync(resolve(projectRoot, 'index.html'), 'utf8');
 const styles = readFileSync(resolve(projectRoot, 'styles.css'), 'utf8');
 const serviceWorker = readFileSync(resolve(projectRoot, 'sw.js'), 'utf8');
+const deploymentWorkflow = readFileSync(resolve(projectRoot, '.github/workflows/deploy-pages.yml'), 'utf8');
 
 test('stellt Roboto Flex ohne Google-Fonts-Anfrage lokal und precached bereit', () => {
   assert.doesNotMatch(index, /https:\/\/fonts\.(?:googleapis|gstatic)\.com/);
@@ -27,4 +28,5 @@ test('stellt Roboto Flex ohne Google-Fonts-Anfrage lokal und precached bereit', 
   assert.match(styles, /font-family: 'Roboto Flex';/);
   assert.match(styles, /font-weight: 300 800;/);
   assert.match(styles, /font-stretch: 75% 125%;/);
+  assert.match(deploymentWorkflow, /cp -R fonts _site\/fonts/);
 });
