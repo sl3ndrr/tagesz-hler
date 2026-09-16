@@ -18,13 +18,57 @@
 
 Die Inhalte der JavaScript- und CSS-Blöcke wurden bei der Extraktion nicht fachlich verändert. Insbesondere Datenmodell, `localStorage`-Schlüssel, Import-/Exportlogik, Bildbehandlung, Rendering, Zeitberechnung und Service-Worker-Registrierung bleiben bestehen.
 
+## Laufzeitstand und Wartung
+
+Die Anwendung bleibt eine statische Vanilla-PWA ohne Paketmanager, Build-Schritt
+oder Backend. `theme.js` wird früh im `head` geladen, `app.js` am Ende
+des `body`. Die App-Shell umfasst HTML, CSS, Skripte, Manifest, Icons und die
+lokalen WOFF2-Dateien. Jede Änderung an diesen Dateien verlangt eine erhöhte
+`CACHE_VERSION` in `sw.js`; der Pages-Workflow kopiert `icons/` und
+`fonts/` in das Artefakt.
+
+### Reproduzierbare Prüfung
+
+Im Repository-Stammverzeichnis:
+
+```bash
+node scripts/check-static-pwa.mjs
+node --test tests/check-static-pwa.test.mjs
+python3 -m http.server 8080
+```
+
+Danach `http://localhost:8080/` mit einem aktuellen Browser öffnen. Vor
+einem Merge ergänzend den Service-Worker-Cache, Offline-Neustart, die
+CSP-Konsole und synthetische Import-/Rettungsdaten prüfen. Browserprüfungen
+sind manuell und nicht durch die Node-Regressionen ersetzt.
+
 ## CSP-Anpassung
 
-Die drei SHA-256-Freigaben der ehemaligen Inline-Blöcke wurden entfernt. `script-src 'self'` und `style-src-elem 'self' https://fonts.googleapis.com` erlauben die neuen externen Dateien. `script-src-attr 'none'`, Trusted-Types-Vorgaben und die übrigen restriktiven Direktiven bleiben erhalten. `style-src-attr 'unsafe-inline'` bleibt erforderlich, weil die vorhandene UI dynamisch einzelne Style-Eigenschaften setzt.
+Die drei SHA-256-Freigaben der ehemaligen Inline-Blöcke wurden entfernt. `script-src 'self'` und `style-src-elem 'self'` erlauben die gleichursprünglichen externen Dateien. Roboto Flex wird ausschließlich aus lokalen relativen WOFF2-Dateien geladen; externe Google-Fonts-Hosts sind nicht freigegeben. `script-src-attr 'none'`, Trusted-Types-Vorgaben und die übrigen restriktiven Direktiven bleiben erhalten. `style-src-attr 'unsafe-inline'` bleibt erforderlich, weil die vorhandene UI dynamisch einzelne Style-Eigenschaften setzt.
 
 ## Freigegebener PWA-Kompatibilitätsfix
 
 Der erste Live-Test zeigte, dass die bereits in der Ausgangsdatei kombinierte Policy `require-trusted-types-for 'script'; trusted-types 'none'` in Chromium die Übergabe des String-Pfads an `navigator.serviceWorker.register()` blockiert. Nach ausdrücklicher Freigabe wurde deshalb die einzelne Policy `tageszaehler-sw` zugelassen. Sie akzeptiert ausschließlich den fest codierten Pfad `./sw.js` und erzeugt dafür eine `TrustedScriptURL`. Die Trusted-Types-Erzwingung bleibt aktiv; die Änderung stellt die vorgesehene Service-Worker- und Offline-Funktion her. Gleichzeitig wurde die Cache-Version auf `v2` erhöht.
+
+## Lokale Schriftarten und Offline-Paket
+
+Roboto Flex liegt als Latin- und Latin-Extended-WOFF2-Teilmenge in `fonts/`.
+Lizenz und Herkunft stehen in `fonts/RobotoFlex-OFL.txt` und
+`fonts/RobotoFlex-SOURCE.md`. Beide Dateien sind in `APP_SHELL` und im
+Pages-Artefakt enthalten. Neue Schriften brauchen lokale, relative URLs,
+Lizenz/Herkunft, einen App-Shell-Eintrag und den Versionsabgleich.
+
+## Datenmigration und Rettung
+
+Bestehende Ereignisse bleiben lokale Browserdaten. Import, aktiver Bestand und
+formatierter Export sind auf 8 MiB UTF-8 begrenzt. Bei beschädigten oder
+teilweise ungültigen Daten zuerst den unveränderten Rohbestand exportieren;
+danach im Rettungsdialog eine validierte Quelle ausdrücklich auswählen und die
+Wiederherstellung bestätigen. Ungültige Einträge werden nicht still in den
+aktiven Bestand übernommen. Rettungskopien werden nach erfolgreicher
+Wiederherstellung nicht automatisch gelöscht; der Rohdatenexport enthält keine
+vollständigen Einstellungen. Alte installationsweite Daten werden nur nach
+expliziter Auswahl übernommen und nie automatisch gelöscht.
 
 ## Ergänzte PWA-Dateien
 
