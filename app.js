@@ -9,10 +9,18 @@ const LEGACY_EVENT_WRITE_LOCK_NAME = 'tageszaehler-events-v2-write';
 const EVENT_CHANNEL_NAME = `${INSTALLATION_NAMESPACE}events-v2`;
 const LEGACY_EVENT_CHANNEL_NAME = 'tageszaehler-events-v2';
 const WRITE_PROTOCOL_VERSION = 2;
+const BACKUP_FORMAT = 'tageszaehler-backup';
+const BACKUP_VERSION = 1;
+const BACKUP_PREFERENCE_VALUES = Object.freeze({
+  theme: ['system', 'light', 'dark'],
+  color: ['purple', 'blue', 'green', 'orange'],
+  view: ['cards', 'compact']
+});
 const STORAGE_KEYS = Object.freeze({
   events: `${INSTALLATION_NAMESPACE}events`,
   quarantine: `${INSTALLATION_NAMESPACE}events:quarantine:v1`,
-  quarantineMeta: `${INSTALLATION_NAMESPACE}events:quarantine-meta:v1`
+  quarantineMeta: `${INSTALLATION_NAMESPACE}events:quarantine-meta:v1`,
+  backupRestore: `${INSTALLATION_NAMESPACE}backup-restore:v1`
 });
 const LEGACY_STORAGE_KEYS = Object.freeze({
   events: 'events',
@@ -24,6 +32,7 @@ const DATA_LIMITS = Object.freeze({
   maxEvents: 1000,
   // Alle Datenwege verwenden die UTF-8-Größe des formatierten Exportformats.
   maxEventDataBytes: 8 * 1024 * 1024,
+  maxBackupBytes: 10 * 1024 * 1024,
   maxNameChars: 200,
   maxDescriptionChars: 4000,
   maxIdChars: 128,
@@ -69,6 +78,8 @@ let serviceWorkerRegistration = null;
 let serviceWorkerUpdateNotified = false;
 let flipSummarySequence = 0;
 let eventViewSequence = 0;
+let backupRestoreBlocked = false;
+let backupStartupMessage = '';
 
 const unitTranslations = {
   years: 'Jahre', months: 'Monate', weeks: 'Wochen',
@@ -135,6 +146,7 @@ const recoveryDialog = document.getElementById('recovery-dialog');
 const recoverySource = document.getElementById('recovery-source');
 const recoveryMessage = document.getElementById('recovery-message');
 const recoveryConfirmation = document.getElementById('recovery-confirmation');
+const backupStatus = document.getElementById('backup-status');
 let recoverySources = [];
 let recoveryExpectedRaw = null;
 let recoveryPendingAction = null;
@@ -161,7 +173,10 @@ const editorErrorElements = new Map([
 ]);
 
 /* ── INITIALIZE ── */
-function init() {
+async function init() {
+  const startupRecovery = await recoverInterruptedBackupRestore();
+  backupRestoreBlocked = !startupRecovery.ok;
+  backupStartupMessage = startupRecovery.message || '';
   initializeDataArchitecture();
   applyPreferences();
   updateTodayLabel();
@@ -289,6 +304,7 @@ function init() {
     recoveryReturnFocus = null;
   });
   document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('backup-export-btn').addEventListener('click', exportFullBackup);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
   installBtn.addEventListener('click', installPwa);
@@ -310,6 +326,7 @@ function init() {
 
   if (dataLoadWarning) showSnackbar(dataLoadWarning);
   updateRecoveryStatus();
+  updateBackupStatus(backupStartupMessage, backupRestoreBlocked);
 }
 
 function setActiveTab(index) {
@@ -364,6 +381,12 @@ function safeStorageSet(key, value) {
 }
 
 function persistPreference(name, value) {
+  const restoreBlocked = typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked;
+  const restoreJournal = typeof hasBackupRestoreJournal === 'function' && hasBackupRestoreJournal();
+  if (restoreBlocked || restoreJournal) {
+    showSnackbar('Einstellung nicht gespeichert: Eine Backup-Wiederherstellung muss zuerst abgeschlossen oder zurückgerollt werden.');
+    return { ok: false, code: 'backup-restore-pending' };
+  }
   const status = safeStorageSet(preferenceKey(name), value);
   if (!status.ok) {
     showSnackbar('Auswahl gilt vorerst nur in diesem Tab: Einstellung konnte nicht dauerhaft gespeichert werden.');
@@ -590,6 +613,213 @@ function eventsEqual(left, right) {
   if (left === right) return true;
   if (!left || !right) return false;
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/* ── VERSIONED FULL BACKUP & RESTORE JOURNAL ── */
+function readActivePreferences() {
+  const root = document.documentElement.dataset;
+  const preferences = {};
+  for (const [name, allowed] of Object.entries(BACKUP_PREFERENCE_VALUES)) {
+    const value = root[name];
+    preferences[name] = allowed.includes(value) ? value : allowed[0];
+  }
+  return preferences;
+}
+
+function readPreferenceStorageSnapshot(storage = window.localStorage) {
+  const preferences = {};
+  for (const name of Object.keys(BACKUP_PREFERENCE_VALUES)) {
+    preferences[name] = storage.getItem(preferenceKey(name));
+  }
+  return preferences;
+}
+
+function validateBackupPreferences(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, code: 'preferences-type' };
+  }
+  const preferences = {};
+  for (const [name, allowed] of Object.entries(BACKUP_PREFERENCE_VALUES)) {
+    if (typeof raw[name] !== 'string' || !allowed.includes(raw[name])) {
+      return { ok: false, code: `preference-${name}` };
+    }
+    preferences[name] = raw[name];
+  }
+  return { ok: true, preferences };
+}
+
+function createFullBackupDocument(events, preferences = readActivePreferences()) {
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    createdAt: new Date().toISOString(),
+    data: {
+      events,
+      preferences
+    }
+  };
+}
+
+function validateFullBackupDocument(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, code: 'document-type' };
+  }
+  if (raw.format !== BACKUP_FORMAT) return { ok: false, code: 'format' };
+  if (raw.version !== BACKUP_VERSION) return { ok: false, code: 'version' };
+  if (typeof raw.createdAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(raw.createdAt) ||
+      !Number.isFinite(Date.parse(raw.createdAt))) {
+    return { ok: false, code: 'created-at' };
+  }
+  if (!raw.data || typeof raw.data !== 'object' || Array.isArray(raw.data) || !Array.isArray(raw.data.events)) {
+    return { ok: false, code: 'data' };
+  }
+  const rawIds = raw.data.events.map(event => event?.id);
+  if (rawIds.some(id => typeof id !== 'string') || new Set(rawIds).size !== rawIds.length) {
+    return { ok: false, code: 'event-ids' };
+  }
+  const collection = normalizeEventCollection(raw.data.events);
+  if (!collection.ok || collection.invalidCount || collection.events.length !== raw.data.events.length) {
+    return { ok: false, code: collection.code || 'events' };
+  }
+  const preferenceResult = validateBackupPreferences(raw.data.preferences);
+  if (!preferenceResult.ok) return preferenceResult;
+  const normalized = createFullBackupDocument(collection.events, preferenceResult.preferences);
+  normalized.createdAt = raw.createdAt;
+  const serialized = JSON.stringify(normalized, null, 2);
+  if (utf8ByteLength(serialized) > DATA_LIMITS.maxBackupBytes) {
+    return { ok: false, code: 'backup-too-large' };
+  }
+  return {
+    ok: true,
+    backup: normalized,
+    events: collection.events,
+    preferences: preferenceResult.preferences,
+    serialized
+  };
+}
+
+function readBackupRestoreJournal(storage = window.localStorage) {
+  const raw = storage.getItem(STORAGE_KEYS.backupRestore);
+  if (raw == null) return { ok: true, journal: null, raw: null };
+  let journal;
+  try {
+    journal = JSON.parse(raw);
+  } catch (error) {
+    return { ok: false, code: 'journal-json', error, raw };
+  }
+  const validPreferences = value => value && typeof value === 'object' &&
+    Object.keys(BACKUP_PREFERENCE_VALUES).every(name => value[name] === null || typeof value[name] === 'string');
+  if (!journal || journal.schemaVersion !== 1 ||
+      !['staged', 'committing', 'committed', 'rollback-error'].includes(journal.state) ||
+      !journal.before || (journal.before.events !== null && typeof journal.before.events !== 'string') ||
+      !validPreferences(journal.before.preferences) ||
+      !journal.target || typeof journal.target.eventsChecksum !== 'string' ||
+      !validateBackupPreferences(journal.target.preferences).ok) {
+    return { ok: false, code: 'journal-schema', raw };
+  }
+  return { ok: true, journal, raw };
+}
+
+function hasBackupRestoreJournal() {
+  try {
+    return window.localStorage.getItem(STORAGE_KEYS.backupRestore) !== null;
+  } catch (_) {
+    return true;
+  }
+}
+
+function writeStorageValue(storage, key, value) {
+  try {
+    if (value === null) storage.removeItem(key);
+    else storage.setItem(key, value);
+    return storage.getItem(key) === value
+      ? { ok: true }
+      : { ok: false, code: 'read-back' };
+  } catch (error) {
+    return { ok: false, code: isQuotaExceededError(error) ? 'quota' : 'storage-unavailable', error };
+  }
+}
+
+function journalCurrentValueIsKnown(current, before, target) {
+  return current === before || current === target;
+}
+
+function rollbackBackupRestoreJournal(storage, journal) {
+  let currentEvents;
+  let currentPreferences;
+  try {
+    currentEvents = storage.getItem(STORAGE_KEYS.events);
+    currentPreferences = readPreferenceStorageSnapshot(storage);
+  } catch (error) {
+    return { ok: false, code: 'storage-unavailable', error };
+  }
+  const eventsAreTarget = currentEvents !== null && hashString(currentEvents) === journal.target.eventsChecksum;
+  const preferencesAreTarget = Object.keys(BACKUP_PREFERENCE_VALUES).every(
+    name => currentPreferences[name] === journal.target.preferences[name]
+  );
+  if (journal.state === 'committed' && eventsAreTarget && preferencesAreTarget) {
+    const cleanup = writeStorageValue(storage, STORAGE_KEYS.backupRestore, null);
+    return cleanup.ok
+      ? { ok: true, action: 'finalized' }
+      : { ok: false, code: 'journal-cleanup', error: cleanup.error };
+  }
+  if (currentEvents !== journal.before.events && !eventsAreTarget) {
+    return { ok: false, code: 'events-conflict' };
+  }
+  for (const name of Object.keys(BACKUP_PREFERENCE_VALUES)) {
+    if (!journalCurrentValueIsKnown(
+      currentPreferences[name],
+      journal.before.preferences[name],
+      journal.target.preferences[name]
+    )) return { ok: false, code: `preference-conflict-${name}` };
+  }
+  const failures = [];
+  for (const name of Object.keys(BACKUP_PREFERENCE_VALUES)) {
+    const result = writeStorageValue(storage, preferenceKey(name), journal.before.preferences[name]);
+    if (!result.ok) failures.push(`${name}:${result.code}`);
+  }
+  const eventsResult = writeStorageValue(storage, STORAGE_KEYS.events, journal.before.events);
+  if (!eventsResult.ok) failures.push(`events:${eventsResult.code}`);
+  if (failures.length) return { ok: false, code: 'rollback-failed', failures };
+  const cleanup = writeStorageValue(storage, STORAGE_KEYS.backupRestore, null);
+  return cleanup.ok
+    ? { ok: true, action: 'rolled-back' }
+    : { ok: false, code: 'journal-cleanup', error: cleanup.error };
+}
+
+async function recoverInterruptedBackupRestore() {
+  let storage;
+  try {
+    storage = window.localStorage;
+    if (storage.getItem(STORAGE_KEYS.backupRestore) === null) return { ok: true };
+  } catch (error) {
+    return { ok: false, code: 'storage-unavailable', error, message: 'Backup-Zustand ist nicht lesbar. Ereignisse und Einstellungen bleiben vorsorglich schreibgeschützt.' };
+  }
+  const locks = window.navigator?.locks;
+  if (!locks || typeof locks.request !== 'function') {
+    return { ok: false, code: 'lock-unavailable', message: 'Eine unterbrochene Backup-Wiederherstellung wartet auf einen Browser mit sicherer Schreibsperre.' };
+  }
+  try {
+    return await locks.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+      const parsed = readBackupRestoreJournal(storage);
+      if (!parsed.ok) {
+        return { ok: false, code: parsed.code, message: 'Das Wiederherstellungsjournal ist beschädigt. Aktive Daten wurden nicht automatisch überschrieben; Datenrettung und Rohkopien bleiben verfügbar.' };
+      }
+      if (!parsed.journal) return { ok: true };
+      const result = rollbackBackupRestoreJournal(storage, parsed.journal);
+      if (!result.ok) {
+        return { ...result, message: 'Unterbrochene Backup-Wiederherstellung konnte nicht sicher bereinigt werden. Ereignisse und Einstellungen bleiben schreibgeschützt; Rohdaten und Rettungskopien wurden nicht gelöscht.' };
+      }
+      return {
+        ok: true,
+        message: result.action === 'finalized'
+          ? 'Eine vollständig geschriebene Backup-Wiederherstellung wurde beim Start bestätigt.'
+          : 'Eine unterbrochene Backup-Wiederherstellung wurde beim Start auf den vorherigen Stand zurückgerollt.'
+      };
+    });
+  } catch (error) {
+    return { ok: false, code: 'lock-failed', error, message: 'Backup-Bereinigung konnte die Schreibsperre nicht verwenden. Daten bleiben vorsorglich schreibgeschützt.' };
+  }
 }
 
 /* ── STORAGE REPOSITORY ── */
@@ -872,6 +1102,102 @@ class EventRepository {
     }
   }
 
+  async restoreFullBackup(expectedRaw, expectedPreferences, events, preferences, sourceId) {
+    const locks = window.navigator?.locks;
+    if (!locks || typeof locks.request !== 'function') return { ok: false, code: 'lock-unavailable' };
+    try {
+      return await locks.request(EVENT_WRITE_LOCK_NAME, { mode: 'exclusive' }, () => {
+        const storage = this.getStorage();
+        let currentRaw;
+        let currentPreferences;
+        try {
+          currentRaw = storage.getItem(this.key);
+          currentPreferences = readPreferenceStorageSnapshot(storage);
+        } catch (error) {
+          return { ok: false, code: 'storage-unavailable', error };
+        }
+        if (currentRaw !== expectedRaw ||
+            JSON.stringify(currentPreferences) !== JSON.stringify(expectedPreferences)) {
+          return { ok: false, code: 'collection-conflict' };
+        }
+        if (storage.getItem(STORAGE_KEYS.backupRestore) !== null) {
+          return { ok: false, code: 'backup-restore-pending' };
+        }
+
+        const targetRaw = serializeEventCollection(events);
+        const journal = {
+          schemaVersion: 1,
+          state: 'staged',
+          createdAt: new Date().toISOString(),
+          before: {
+            events: currentRaw,
+            preferences: currentPreferences
+          },
+          target: {
+            eventsChecksum: hashString(targetRaw),
+            preferences
+          }
+        };
+        const writeJournal = state => {
+          journal.state = state;
+          return writeStorageValue(storage, STORAGE_KEYS.backupRestore, JSON.stringify(journal));
+        };
+        const staged = writeJournal('staged');
+        if (!staged.ok) return { ok: false, code: 'staging-failed', cause: staged.code, error: staged.error };
+        const committing = writeJournal('committing');
+        if (!committing.ok) {
+          const rollback = rollbackBackupRestoreJournal(storage, journal);
+          return rollback.ok
+            ? { ok: false, code: 'journal-write-failed', rolledBack: true }
+            : { ok: false, code: 'rollback-failed', cause: committing.code, rollback };
+        }
+
+        const persisted = this.persist(
+          events,
+          currentRaw == null ? null : this.extractRevision(currentRaw),
+          sourceId
+        );
+        if (!persisted.ok) {
+          const rollback = rollbackBackupRestoreJournal(storage, journal);
+          return rollback.ok
+            ? { ...persisted, rolledBack: true }
+            : { ok: false, code: 'rollback-failed', cause: persisted.code, rollback };
+        }
+
+        let preferenceFailure = null;
+        for (const name of Object.keys(BACKUP_PREFERENCE_VALUES)) {
+          const result = writeStorageValue(storage, preferenceKey(name), preferences[name]);
+          if (!result.ok) {
+            preferenceFailure = { name, ...result };
+            break;
+          }
+        }
+        if (preferenceFailure) {
+          const rollback = rollbackBackupRestoreJournal(storage, journal);
+          return rollback.ok
+            ? { ok: false, code: 'preference-write-failed', preference: preferenceFailure.name, cause: preferenceFailure.code, rolledBack: true }
+            : { ok: false, code: 'rollback-failed', cause: preferenceFailure.code, rollback };
+        }
+
+        const committed = writeJournal('committed');
+        if (!committed.ok) {
+          const rollback = rollbackBackupRestoreJournal(storage, journal);
+          return rollback.ok
+            ? { ok: false, code: 'commit-marker-failed', rolledBack: true }
+            : { ok: false, code: 'rollback-failed', cause: committed.code, rollback };
+        }
+        const cleanup = writeStorageValue(storage, STORAGE_KEYS.backupRestore, null);
+        return {
+          ok: true,
+          ...persisted,
+          cleanupPending: !cleanup.ok
+        };
+      });
+    } catch (error) {
+      return { ok: false, code: 'lock-failed', error };
+    }
+  }
+
   async migrateLegacy(sourceId, expectedSourceRaw, expectedTargetRaw, events, writerId) {
     const locks = window.navigator?.locks;
     if (!locks || typeof locks.request !== 'function') return { ok: false, code: 'lock-unavailable' };
@@ -1042,11 +1368,12 @@ class EventStore {
     this.sourceId = createEventId();
     this.listeners = new Set();
     this.legacyPeerDetected = false;
+    const restoreBlocked = typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked;
     this.state = {
       events: freezeEvents(initialSnapshot.events || []),
       revision: initialSnapshot.revision ?? null,
-      writeProtected: Boolean(initialSnapshot.writeProtected),
-      loadState: !initialSnapshot.ok ? 'read-error' : initialSnapshot.writeProtected ? 'partial' : 'ok'
+      writeProtected: Boolean(initialSnapshot.writeProtected || restoreBlocked),
+      loadState: !initialSnapshot.ok || restoreBlocked ? 'read-error' : initialSnapshot.writeProtected ? 'partial' : 'ok'
     };
   }
 
@@ -1121,6 +1448,9 @@ class EventStore {
 
   async recoverReplaceAll(events, expectedRaw) {
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    if (typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked) {
+      return { ok: false, code: 'backup-restore-pending' };
+    }
     const result = await this.repository.recover(expectedRaw, events, this.sourceId);
     if (!result.ok) {
       if (result.latest?.ok) this.applyExternal(result.latest, 'conflict');
@@ -1136,8 +1466,43 @@ class EventStore {
     return { ok: true, action: 'recovery', revision: result.revision };
   }
 
+  async restoreFullBackup(events, preferences, expectedRaw, expectedPreferences) {
+    if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    if (typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked) {
+      return { ok: false, code: 'backup-restore-pending' };
+    }
+    const result = await this.repository.restoreFullBackup(
+      expectedRaw,
+      expectedPreferences,
+      events,
+      preferences,
+      this.sourceId
+    );
+    if (!result.ok) {
+      if (result.code === 'rollback-failed') {
+        backupRestoreBlocked = true;
+        this.protectAfterExternalLoadFailure({ ok: false }, 'backup-rollback-error');
+      } else if (result.latest?.ok) {
+        this.applyExternal(result.latest, 'backup-conflict');
+      }
+      return result;
+    }
+    this.state = {
+      events: freezeEvents(result.events),
+      revision: result.revision,
+      writeProtected: Boolean(result.cleanupPending),
+      loadState: result.cleanupPending ? 'read-error' : 'ok'
+    };
+    backupRestoreBlocked = Boolean(result.cleanupPending);
+    this.emit({ origin: 'local', action: 'backup-restore', revision: result.revision });
+    return { ok: true, action: 'backup-restore', revision: result.revision, cleanupPending: result.cleanupPending };
+  }
+
   async migrateLegacy(sourceId, expectedSourceRaw, events) {
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
+    if (typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked) {
+      return { ok: false, code: 'backup-restore-pending' };
+    }
     const inventory = this.repository.readRecoverySources();
     if (inventory.activeReadError) return { ok: false, code: 'storage-unavailable' };
     const expectedTargetRaw = inventory.activeRaw;
@@ -1157,6 +1522,9 @@ class EventStore {
   }
 
   async commit(action, mutate) {
+    if (typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked) {
+      return { ok: false, code: 'backup-restore-pending' };
+    }
     if (this.state.writeProtected) return { ok: false, code: 'write-protected' };
     if (this.legacyPeerDetected) return { ok: false, code: 'legacy-peer' };
     const result = await this.repository.save(mutate, this.sourceId);
@@ -1183,7 +1551,8 @@ class EventStore {
 
   applyExternal(snapshot, origin = 'external') {
     if (!snapshot?.ok) return { ok: false, code: 'invalid' };
-    const nextLoadState = snapshot.writeProtected ? 'partial' : 'ok';
+    const restoreBlocked = typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked;
+    const nextLoadState = restoreBlocked ? 'read-error' : snapshot.writeProtected ? 'partial' : 'ok';
     if (snapshot.revision === this.state.revision &&
         Boolean(snapshot.writeProtected) === this.state.writeProtected &&
         nextLoadState === this.state.loadState &&
@@ -1191,7 +1560,7 @@ class EventStore {
     this.state = {
       events: freezeEvents(snapshot.events || []),
       revision: snapshot.revision ?? null,
-      writeProtected: Boolean(snapshot.writeProtected),
+      writeProtected: Boolean(snapshot.writeProtected || restoreBlocked),
       loadState: nextLoadState
     };
     this.emit({ origin, action: 'replace', revision: this.state.revision });
@@ -1360,7 +1729,8 @@ class EventUIController {
       'lock-failed': 'Die Schreibsperre konnte nicht verwendet werden. Die Änderung wurde nicht gespeichert.',
       'write-raced': 'Ein nicht kooperierender Tab hat gleichzeitig geschrieben. Die Änderung wurde nicht als gespeichert bestätigt.',
       'mutation-failed': 'Die Änderung konnte nicht sicher vorbereitet werden.',
-      'legacy-peer': 'Ein älterer Tab ist noch geöffnet. Bitte alle Tabs aktualisieren; die Änderung wurde nicht gespeichert.'
+      'legacy-peer': 'Ein älterer Tab ist noch geöffnet. Bitte alle Tabs aktualisieren; die Änderung wurde nicht gespeichert.',
+      'backup-restore-pending': 'Eine Backup-Wiederherstellung ist noch nicht bestätigt oder zurückgerollt. Schreibzugriffe bleiben gesperrt; lade die App zur erneuten Bereinigung neu.'
     };
     console.warn('Store-Änderung fehlgeschlagen:', result);
     const message = messages[result.code] || 'Änderung konnte nicht sicher gespeichert werden.';
@@ -1410,7 +1780,7 @@ function initializeDataArchitecture() {
   eventSync = new EventSync(eventRepository, eventStore.sourceId);
   eventController = new EventUIController(eventStore, eventSync, createEventControllerUI());
   eventController.connect();
-  dataLoadWarning = initialSnapshot.warning;
+  dataLoadWarning = backupStartupMessage || initialSnapshot.warning;
 }
 
 function loadEvents() {
@@ -3891,9 +4261,11 @@ function clearImage() {
 function updateRecoveryStatus() {
   if (!eventStore || !eventRepository) return;
   const state = eventStore.state;
-  recoveryStatus.hidden = state.loadState === 'ok';
+  recoveryStatus.hidden = state.loadState === 'ok' && !backupRestoreBlocked;
   const copy = document.getElementById('recovery-status-copy');
-  if (state.loadState === 'read-error') {
+  if (backupRestoreBlocked) {
+    copy.textContent = 'Eine Backup-Wiederherstellung ist noch nicht sicher abgeschlossen. Ereignisse und Einstellungen sind schreibgeschützt; aktive Rohdaten und Quarantäne-Rettungskopien bleiben über die Datenrettung getrennt prüfbar.';
+  } else if (state.loadState === 'read-error') {
     copy.textContent = 'Aktive Daten konnten zuletzt nicht sicher gelesen werden. Der angezeigte Stand kann veraltet sein; Änderungen sind gesperrt. Rohdaten und Rettungskopien getrennt prüfen.';
   } else if (state.loadState === 'partial') {
     copy.textContent = 'Nur gültige aktive Ereignisse werden angezeigt; der aktive Rohbestand und eventuelle Rettungskopien bleiben erhalten. Änderungen sind bis zur bewussten Wiederherstellung gesperrt.';
@@ -4199,39 +4571,144 @@ function exportData() {
   showSnackbar(`${events.length} Ereignis${events.length === 1 ? '' : 'se'} exportiert.`);
 }
 
+function updateBackupStatus(message, isError = false) {
+  if (!backupStatus) return;
+  backupStatus.hidden = !message;
+  backupStatus.classList.toggle('error', Boolean(isError));
+  backupStatus.textContent = message;
+}
+
+function downloadJsonDocument(data, filename) {
+  const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportFullBackup() {
+  try {
+    const document = createFullBackupDocument(eventStore.getEvents(), readActivePreferences());
+    const validated = validateFullBackupDocument(document);
+    if (!validated.ok) throw new Error(`Backup kann nicht erstellt werden (${validated.code}).`);
+    downloadJsonDocument(validated.serialized, `tageszaehler_backup_v${BACKUP_VERSION}_${localDateInput()}.json`);
+    setMenuOpen(false);
+    updateBackupStatus(`Vollständiges Backup mit ${validated.events.length} Ereignis${validated.events.length === 1 ? '' : 'sen'} und Darstellungseinstellungen exportiert.`);
+  } catch (error) {
+    console.error('Vollbackup-Export fehlgeschlagen:', error);
+    setMenuOpen(false);
+    updateBackupStatus(`Vollständiges Backup konnte nicht exportiert werden: ${error.message || 'unbekannter Fehler'}`, true);
+  }
+}
+
+function backupValidationMessage(code) {
+  const messages = {
+    version: 'Die Backup-Version ist unbekannt und wird von dieser App nicht unterstützt.',
+    format: 'Die Datei ist kein vollständiges Tageszähler-Backup.',
+    'document-type': 'Die Backup-Wurzel muss ein JSON-Objekt sein.',
+    'created-at': 'Der Erstellungszeitpunkt des Backups ist ungültig.',
+    data: 'Der Datenbereich des Backups fehlt oder ist ungültig.',
+    'event-ids': 'Ereignis-IDs fehlen, haben einen falschen Typ oder sind nicht eindeutig.',
+    events: 'Mindestens ein Ereignis ist ungültig.',
+    'preferences-type': 'Darstellungseinstellungen müssen ein Objekt sein.',
+    'preference-theme': 'Der Theme-Wert im Backup ist ungültig.',
+    'preference-color': 'Der Farbwert im Backup ist ungültig.',
+    'preference-view': 'Der Ansichtswert im Backup ist ungültig.',
+    'backup-too-large': 'Das vollständige Backup überschreitet 10 MiB.'
+  };
+  return messages[code] || `Backup-Validierung fehlgeschlagen (${code}).`;
+}
+
+async function importLegacyEventArray(data) {
+  const collection = normalizeEventCollection(data, { regenerateIds: true });
+  if (!collection.ok) throw new Error(`Importlimit oder Datenschema verletzt: ${collection.code}.`);
+  if (collection.invalidCount) throw new Error(`${collection.invalidCount} ungültige Ereignisse gefunden.`);
+  await validateEmbeddedImages(collection.events);
+  if (!confirm(`${collection.events.length} Ereignis${collection.events.length === 1 ? '' : 'se'} aus dem bisherigen Ereignisformat importieren und aktuelle Ereignisse ersetzen? Darstellungseinstellungen bleiben unverändert.`)) {
+    updateBackupStatus('Import abgebrochen; Ereignisse und Einstellungen blieben unverändert.');
+    return;
+  }
+  const imported = await eventController.importEvents(collection.events);
+  if (imported) updateBackupStatus('Bisheriger Ereignisexport importiert. Darstellungseinstellungen blieben unverändert.');
+}
+
+async function restoreFullBackup(validated) {
+  updateBackupStatus('Backup ist vollständig validiert. Wiederherstellung wird vorbereitet; noch wurden keine produktiven Daten geschrieben.');
+  await validateEmbeddedImages(validated.events);
+  let expectedRaw;
+  let expectedPreferences;
+  try {
+    const storage = window.localStorage;
+    expectedRaw = storage.getItem(STORAGE_KEYS.events);
+    expectedPreferences = readPreferenceStorageSnapshot(storage);
+  } catch (error) {
+    throw new Error('Aktueller Speicherzustand ist nicht vollständig lesbar; Wiederherstellung wurde nicht begonnen.');
+  }
+  if (!confirm(`Vollständiges Backup vom ${new Date(validated.backup.createdAt).toLocaleString('de-DE')} mit ${validated.events.length} Ereignis${validated.events.length === 1 ? '' : 'sen'} sowie Theme, Farbe und Ansicht wiederherstellen? Aktuelle Ereignisse und Darstellungswerte werden ersetzt; Rettungskopien bleiben erhalten.`)) {
+    updateBackupStatus('Wiederherstellung abgebrochen; Ereignisse, Einstellungen und Rettungskopien blieben unverändert.');
+    return;
+  }
+  updateBackupStatus('Wiederherstellung läuft: vorheriger Zustand ist im lokalen Journal vorgemerkt.');
+  const result = await eventStore.restoreFullBackup(
+    validated.events,
+    validated.preferences,
+    expectedRaw,
+    expectedPreferences
+  );
+  if (!result.ok) {
+    const rolledBack = result.rolledBack
+      ? ' Der vorherige Zustand wurde bestätigt wiederhergestellt.'
+      : result.code === 'rollback-failed'
+        ? ' Die Rückkehr zum vorherigen Zustand konnte nicht vollständig bestätigt werden; nach dem Neuladen wird erneut bereinigt und bis dahin bleibt Schreiben gesperrt.'
+        : ' Vor dem produktiven Schreiben oder bei einem Bestandskonflikt wurde abgebrochen.';
+    updateBackupStatus(`Wiederherstellung fehlgeschlagen (${result.code}).${rolledBack} Rettungskopien wurden nicht gelöscht.`, true);
+    return;
+  }
+  applyPreferences();
+  updateBackupStatus(result.cleanupPending
+    ? 'Backup wurde geschrieben, aber das Abschlussjournal konnte nicht entfernt werden. Bitte neu laden; bis zur Bestätigung bleiben Schreibzugriffe gesperrt.'
+    : `Backup vollständig wiederhergestellt: ${validated.events.length} Ereignis${validated.events.length === 1 ? '' : 'se'}, Theme, Farbe und Ansicht. Rettungskopien blieben erhalten.`,
+  result.cleanupPending);
+}
+
 function importData(event) {
   const input = event.target;
   const file = input.files[0];
   if (!file) return;
-  if (file.size > DATA_LIMITS.maxEventDataBytes) {
+  if (file.size > DATA_LIMITS.maxBackupBytes) {
     input.value = '';
     setMenuOpen(false);
-    return showSnackbar(`Import fehlgeschlagen: Datei darf maximal ${Math.floor(DATA_LIMITS.maxEventDataBytes / 1024 / 1024)} MB groß sein.`);
+    updateBackupStatus(`Import fehlgeschlagen: Datei darf maximal ${Math.floor(DATA_LIMITS.maxBackupBytes / 1024 / 1024)} MiB groß sein.`, true);
+    return;
   }
   const reader = new FileReader();
   reader.onload = async readEvent => {
     try {
       const raw = String(readEvent.target.result || '');
-      if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Die Datei überschreitet das zulässige Datenlimit.');
+      if (utf8ByteLength(raw) > DATA_LIMITS.maxBackupBytes) throw new Error('Die Datei überschreitet das zulässige Backup-Limit.');
       const data = JSON.parse(raw);
-      if (!Array.isArray(data)) throw new Error('Die Datei enthält kein Ereignis-Array.');
-      const collection = normalizeEventCollection(data, { regenerateIds: true });
-      if (!collection.ok) throw new Error(`Importlimit oder Datenschema verletzt: ${collection.code}.`);
-      if (collection.invalidCount) throw new Error(`${collection.invalidCount} ungültige Ereignisse gefunden.`);
-      const normalized = collection.events;
-      await validateEmbeddedImages(normalized);
-      if (!confirm(`${normalized.length} Ereignis${normalized.length === 1 ? '' : 'se'} importieren und aktuelle Daten ersetzen?`)) return;
-      await eventController.importEvents(normalized);
+      if (Array.isArray(data)) {
+        if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Der bisherige Ereignisexport überschreitet 8 MiB.');
+        await importLegacyEventArray(data);
+      } else {
+        const validated = validateFullBackupDocument(data);
+        if (!validated.ok) throw new Error(backupValidationMessage(validated.code));
+        await restoreFullBackup(validated);
+      }
     } catch (error) {
       console.error('Import fehlgeschlagen:', error);
-      showSnackbar(`Import fehlgeschlagen: ${error.message || 'ungültige Datei'}`);
+      updateBackupStatus(`Import fehlgeschlagen: ${error.message || 'ungültige Datei'}. Bestehende Daten wurden nicht absichtlich verändert.`, true);
     } finally {
       input.value = '';
     }
   };
   reader.onerror = () => {
     input.value = '';
-    showSnackbar('Datei konnte nicht gelesen werden.');
+    updateBackupStatus('Datei konnte nicht gelesen werden; bestehende Daten blieben unverändert.', true);
   };
   reader.readAsText(file);
   setMenuOpen(false);

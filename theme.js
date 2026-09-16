@@ -3,9 +3,23 @@
   const root = document.documentElement;
   // Die Skript-URL bezeichnet auch beim Start über ./ oder ./index.html denselben Pfad.
   const namespace = `tageszaehler:${encodeURIComponent(new URL('./', document.currentScript.src).pathname)}:`;
+  let journalPreferences = null;
+  try {
+    const journal = JSON.parse(localStorage.getItem(`${namespace}backup-restore:v1`) || 'null');
+    if (journal?.schemaVersion === 1) {
+      journalPreferences = journal.state === 'committed'
+        ? journal.target?.preferences
+        : journal.before?.preferences;
+    }
+  } catch (_) {
+    // Ein unlesbares Journal wird später von app.js sichtbar und schreibgeschützt behandelt.
+  }
   const readPreference = (key, allowed, fallback) => {
     try {
-      const value = localStorage.getItem(`${namespace}${key}`);
+      const journalValue = journalPreferences?.[key];
+      const value = allowed.includes(journalValue)
+        ? journalValue
+        : localStorage.getItem(`${namespace}${key}`);
       return allowed.includes(value) ? value : fallback;
     } catch (_) {
       return fallback;

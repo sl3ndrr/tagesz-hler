@@ -182,9 +182,27 @@ Bilddateien müssen PNG, JPEG, WebP oder GIF sein und dürfen höchstens 20 MiB,
 
 Eine externe Bild-URL wird erst nach 400 ms ohne weitere Eingabe als Vorschau geladen, wenn sie vollständig und absolut ist. Für externe Vorschau- und Hintergrundbilder übermittelt die App keinen Referrer; Bilder bleiben bei Offline-Nutzung weiterhin vom externen Anbieter abhängig.
 
-Über „Datenrettung und Rettungskopien“ im Menü oder die dauerhaft sichtbare Fehlermeldung lassen sich der unveränderte aktive Rohbestand und lesbare Quarantänekopien getrennt exportieren. Bei beschädigten oder teilweise ungültigen aktiven Daten bleiben Änderungen gesperrt, bis gültige Ereignisse aus einer ausdrücklich gewählten Quelle oder einer vollständig validierten JSON-Datei nach Bestätigung über den Web-Lock-Schreibpfad übernommen werden. Ungültige Einträge werden dabei nicht still in den neuen aktiven Bestand übernommen; exportiere die Rohdaten vorher. Frühere Rettungskopien bleiben nach erfolgreicher Wiederherstellung erhalten.
+„Vollständiges Backup exportieren“ erzeugt das explizit versionierte JSON-Format
+`tageszaehler-backup` Version 1 mit Ereignissen sowie Theme, Akzentfarbe und
+Ansicht. Beim Import erkennt die App dieses Format und bisherige reine
+Ereignis-Arrays. Unbekannte Backup-Versionen, ungültige Ereignisse oder
+Einstellungen mit falschem Typ werden vor dem ersten produktiven Schreibzugriff
+abgewiesen. Ereignisdaten bleiben auf 8 MiB UTF-8 begrenzt; die vollständige
+Backup-Datei darf einschließlich Format- und Einstellungsdaten 10 MiB umfassen.
 
-„Daten gezielt löschen“ bietet nach einer zweiten Bestätigung drei Varianten: nur aktive Ereignisse, nur die beiden zugehörigen Rettungsschlüssel (Kopien und Metadaten) oder beides in dieser Reihenfolge. Andere Origin-Daten und Einstellungen bleiben unangetastet. Bei fehlendem Web Lock, zwischenzeitlichen Änderungen oder Speicherfehlern wird kein Erfolg behauptet; nach einem Teilerfolg nennt die App verbliebene Kopien. Der Rohdatenexport ist kein vollständiges Backup der Einstellungen.
+Die vollständige Wiederherstellung legt vor Änderungen ein
+installationsbezogenes Journal mit dem vorherigen Ereignis- und
+Einstellungsstand an und bestätigt jeden Schreibschritt durch erneutes Lesen.
+Schlägt ein Schritt fehl, wird der vorherige Stand zurückgeschrieben; ein beim
+Neustart gefundenes unvollständiges Journal wird vor der normalen
+Initialisierung bereinigt. `localStorage` bietet keine Mehrschlüsseltransaktion:
+Bei Quota-, Browser- oder nicht kooperierenden Alttab-Fehlern kann auch die
+Rücknahme scheitern. Dieser Zustand wird dauerhaft angezeigt und sperrt weitere
+Schreibzugriffe, bis ein späterer Start die Bereinigung bestätigen kann.
+
+Über „Datenrettung und Rettungskopien“ im Menü oder die dauerhaft sichtbare Fehlermeldung lassen sich der unveränderte aktive Rohbestand und lesbare Quarantänekopien getrennt exportieren. Bei beschädigten oder teilweise ungültigen aktiven Daten bleiben Änderungen gesperrt, bis gültige Ereignisse aus einer ausdrücklich gewählten Quelle oder einer vollständig validierten JSON-Datei nach Bestätigung über den Web-Lock-Schreibpfad übernommen werden. Ungültige Einträge werden dabei nicht still in den neuen aktiven Bestand übernommen; exportiere die Rohdaten vorher. Frühere Rettungskopien bleiben nach erfolgreicher Wiederherstellung erhalten. Dieser Rohdatenrettungsweg bleibt vom Vollbackup getrennt und wird durch dessen Wiederherstellung nicht gelöscht.
+
+„Daten gezielt löschen“ bietet nach einer zweiten Bestätigung drei Varianten: nur aktive Ereignisse, nur die beiden zugehörigen Rettungsschlüssel (Kopien und Metadaten) oder beides in dieser Reihenfolge. Andere Origin-Daten und Einstellungen bleiben unangetastet. Bei fehlendem Web Lock, zwischenzeitlichen Änderungen oder Speicherfehlern wird kein Erfolg behauptet; nach einem Teilerfolg nennt die App verbliebene Kopien. Der unveränderte Rohdatenexport ist weiterhin kein vollständiges Backup der Einstellungen.
 
 ## Wartung und Prüfung
 

@@ -51,6 +51,7 @@
     <span id="recovery-status-copy"></span>
     <button type="button" class="m3-btn ripple-host" id="recovery-status-btn">Datenrettung öffnen</button>
   </div>
+  <p class="backup-status" id="backup-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
 
   <div class="tab-bar" id="tab-bar" role="tablist" aria-label="Bereiche" aria-orientation="horizontal">
     <button type="button" class="tab-item active ripple-host" id="tab-future" data-tab="0" role="tab" aria-selected="true" aria-controls="tab-0">
@@ -205,11 +206,15 @@
   <div class="menu-section-title">Daten</div>
   <button type="button" class="menu-popup-item ripple-host" id="import-btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    Importieren
+    Backup oder Ereignisse importieren
+  </button>
+  <button type="button" class="menu-popup-item ripple-host" id="backup-export-btn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Vollständiges Backup exportieren
   </button>
   <button type="button" class="menu-popup-item ripple-host" id="export-btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-    Exportieren
+    Nur Ereignisse exportieren
   </button>
   <button type="button" class="menu-popup-item ripple-host" id="recovery-btn">Datenrettung und Rettungskopien</button>
   <button type="button" class="menu-popup-item danger ripple-host" id="clear-btn">
@@ -367,7 +372,7 @@
 </div>
 
 <div class="snackbar" id="snackbar" role="status" aria-live="polite" aria-atomic="true"></div>
-<input type="file" id="file-input" accept=".json">
+<input type="file" id="file-input" accept=".json,application/json" hidden>
 <input type="file" id="img-file-input" accept="image/*">
 
 <script src="./app.js"></script>
