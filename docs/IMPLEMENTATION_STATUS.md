@@ -30,7 +30,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10) / `de72c0e361d4c895c05893c96a7f3c29d277498e` |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / `65d5cb5e77607cf94d503ee121d1856cbcc834fb` |
 | P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
-| P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | In Arbeit | P01–P12 | Branch `p13-datumssemantik-wartungsablaeufe`; PR-Link nach Erstellung |
+| P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | In Arbeit | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17), Branch `p13-datumssemantik-wartungsablaeufe`; Merge-Commit nach Merge |
 | P14 | Ereignisse suchen und filtern | C1 | Geplant | P11 | — |
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Geplant | P06, P07, P09 | — |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Geplant | P03, P06, P09, P11; P15, falls das Backup bereits existiert | — |
@@ -134,7 +134,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 ### P13 – Datumssemantik und Wartungsabläufe dokumentieren
 
 - **Status:** In Arbeit
-- **PR / Merge-Commit:** Branch `p13-datumssemantik-wartungsablaeufe`; PR-Link nach Erstellung. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **PR / Merge-Commit:** [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17), Branch `p13-datumssemantik-wartungsablaeufe`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
 - **Abschlussbericht:** Datumssemantik, Zeitumstellungsgrenzen, Monats-Clamping, Einheitenreste, Speicher-/Rettungsabläufe, lokale Schrift- und Icon-Wartung sowie ausführenbare Prüfungen werden am aktuellen Code dokumentiert. Erklärende Kommentare erläutern nur bestehende Datumshelfer.
 - **Übergabe an Folgepakete:** Dokumentiert werden ausschließlich abgesicherte Voraussetzungen; praktische Browser-/Zeitzonen-Kompatibilität bleibt ausdrücklich unbestätigt. Änderungen an `app.js` sind App-Shell-Änderungen und erhöhen `CACHE_VERSION` auf `v15`.
 
