@@ -16,9 +16,11 @@
   }
   const readPreference = (key, allowed, fallback) => {
     try {
+      const hasJournalValue = journalPreferences &&
+        Object.prototype.hasOwnProperty.call(journalPreferences, key);
       const journalValue = journalPreferences?.[key];
-      const value = allowed.includes(journalValue)
-        ? journalValue
+      const value = hasJournalValue
+        ? (allowed.includes(journalValue) ? journalValue : fallback)
         : localStorage.getItem(`${namespace}${key}`);
       return allowed.includes(value) ? value : fallback;
     } catch (_) {

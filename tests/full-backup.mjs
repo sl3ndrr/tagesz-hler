@@ -259,7 +259,7 @@ test('früher Theme-Start zeigt während Journalzuständen keinen unbemerkten Pr
     [`${namespace}color`, 'green'],
     [`${namespace}view`, 'compact']
   ]);
-  const before = { theme: 'light', color: 'blue', view: 'cards' };
+  const before = { theme: 'light', color: null, view: 'cards' };
   const target = preferences();
   const journal = {
     schemaVersion: 1,
@@ -278,7 +278,7 @@ test('früher Theme-Start zeigt während Journalzuständen keinen unbemerkten Pr
     JSON,
     URL
   });
-  assert.deepEqual(firstRoot.dataset, before);
+  assert.deepEqual(firstRoot.dataset, { theme: 'light', color: 'purple', view: 'cards' });
 
   journal.state = 'committed';
   storage.setItem(`${namespace}backup-restore:v1`, JSON.stringify(journal));

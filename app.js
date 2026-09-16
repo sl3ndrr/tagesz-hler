@@ -1228,6 +1228,9 @@ class EventRepository {
   }
 
   async deleteRecoveryCopies(expectedCopiesRaw, expectedMetadataRaw) {
+    if (typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked) {
+      return { ok: false, code: 'backup-restore-pending', removed: [], failed: ['Backup-Wiederherstellung ist nicht bereinigt.'] };
+    }
     const lockManager = window.navigator?.locks;
     if (!lockManager || typeof lockManager.request !== 'function') return { ok: false, code: 'lock-unavailable' };
     try {
@@ -4406,6 +4409,11 @@ function readLegacyPreferences() {
 }
 
 function prepareLegacyPreferences() {
+  const restoreBlocked = typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked;
+  const restoreJournal = typeof hasBackupRestoreJournal === 'function' && hasBackupRestoreJournal();
+  if (restoreBlocked || restoreJournal) {
+    return setRecoveryMessage('Alte Einstellungen können erst nach bestätigtem Abschluss oder Rollback der Backup-Wiederherstellung übernommen werden.');
+  }
   const snapshot = readLegacyPreferences();
   if (!snapshot.ok) return setRecoveryMessage('Alte Einstellungen sind nicht lesbar; keine Übernahme.');
   const names = Object.keys(snapshot.values);
@@ -4476,6 +4484,12 @@ function importRecoveryFile(event) {
 }
 
 function prepareRecoveryDeletion(variant) {
+  const restoreBlocked = typeof backupRestoreBlocked !== 'undefined' && backupRestoreBlocked;
+  const restoreJournal = typeof hasBackupRestoreJournal === 'function' && hasBackupRestoreJournal();
+  if (restoreBlocked || restoreJournal) {
+    setRecoveryMessage('Löschung ist gesperrt, bis die Backup-Wiederherstellung bestätigt abgeschlossen oder zurückgerollt wurde.');
+    return;
+  }
   let expectedCopiesRaw;
   let expectedMetadataRaw;
   try {
