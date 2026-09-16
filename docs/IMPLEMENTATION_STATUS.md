@@ -28,8 +28,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P08 | Belastbare Bildverarbeitung und URL-Vorschau | A11, B6 | Gemergt | P06 | [PR #8](https://github.com/sl3ndrr/tagesz-hler/pull/8) / `02f4cb03b032d11fa94b6a9d3a906c30e09e2a90` |
 | P09 | Installationsbezogene Speicherung und Präferenzen | B2, B17 | Gemergt | P02, P04, P07 | [PR #9](https://github.com/sl3ndrr/tagesz-hler/pull/9) / `8bdd7f412ff7274dd99862a3ceab68cb51ac961e` |
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10) / `de72c0e361d4c895c05893c96a7f3c29d277498e` |
-| P11 | Ereignislisten gezielt aktualisieren | B9 | In Arbeit | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13), Branch `p11-ereignislisten-gezielt-aktualisieren`; Merge-Commit nach Merge |
-| P12 | Schriftarten lokal bereitstellen | B5 | In Arbeit | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14), Branch `p12-schriftarten-lokal-bereitstellen`; Merge-Commit nach Merge |
+| P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / `65d5cb5e77607cf94d503ee121d1856cbcc834fb` |
+| P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Geplant | P01–P12 | — |
 | P14 | Ereignisse suchen und filtern | C1 | Geplant | P11 | — |
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Geplant | P06, P07, P09 | — |
@@ -117,20 +117,19 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P11 – Ereignislisten gezielt aktualisieren
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13), Branch `p11-ereignislisten-gezielt-aktualisieren`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13), Merge-Commit `65d5cb5e77607cf94d503ee121d1856cbcc834fb`, getesteter Branch-Commit `7df50f51fe1139902f8db7eb9b9c2647d801d6bc`; [Actions #47](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35011681101) erfolgreich.
 - **Abschlussbericht:** Unveränderte Ereignisse verwenden ihr Zeitmodell und ihren DOM-Knoten weiter. Ereignisänderung, Zeitablauf an einer Zeitgrenze, Tages-/Zeitzonenwechsel, Einheiten-/Ansichtswechsel und Sichtbarkeitswechsel invalidieren gezielt. Differenzen werden je Ansichtsobjekt innerhalb desselben Schritts geteilt; gelöschte Ereignisse entfernen Modellcache und Ansicht.
 - **Übergabe an Folgepakete:** `EventListModelCache` hält höchstens aktive Ereignis-Modelle. `getRenderStats()` liefert die letzte Renderzählung für synthetische Regressionen. `refreshTemporalViews()` ruft den Renderer mit temporaler Invalidierung auf; eine Änderung an `app.js` erhöhte die Shell-Version auf `v12`. Reale Browser-/Scroll-/Mitternachts-/Uhrsprungprüfungen stehen vor Merge aus.
-- **Vorformulierter Nachtrag erst nach tatsächlichem Merge:** Überblick: `| P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #13, tatsächlichen Merge-Commit, letzten getesteten Branch-Commit und den beobachteten CI-Lauf ergänzen. Der Modellcache bleibt auf aktive Ereignisse begrenzt.
+- **Statusnachtrag:** GitHub bestätigt Merge-Commit `65d5cb5e77607cf94d503ee121d1856cbcc834fb`; Überblick und Protokoll führen jetzt den tatsächlichen Merge-Commit, den getesteten Branch-Commit und Actions #47. Der Modellcache bleibt auf aktive Ereignisse begrenzt.
 
 ### P12 – Schriftarten lokal bereitstellen
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14), Branch `p12-schriftarten-lokal-bereitstellen`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14), Merge-Commit `d1305a46bebda6dedf2987d102c37a36be124ef3`, getesteter Branch-Commit `b50a94628416cf01167bcad5de29e9ac8419145a`; [Actions #51](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35058584345) erfolgreich.
 - **Abschlussbericht:** Die externe Google-Fonts-Einbindung wurde durch zwei lokale variable Roboto-Flex-WOFF2-Teilmengen für Latin und Latin Extended ersetzt. Google-Fonts-Preconnects sowie CSP-Hostfreigaben entfallen. Lizenz und Herkunft liegen in `fonts/`; `CACHE_VERSION` ist wegen der App-Shell-Erweiterung `v13`.
 - **Übergabe an Folgepakete:** Jede Änderung an `index.html`, `styles.css` oder lokalen Schriftdateien bleibt eine App-Shell-Änderung und verlangt Precache-Eintrag sowie eine erhöhte `CACHE_VERSION`. Neue Schriften dürfen keinen externen Laufzeitdienst einführen; sie benötigen lokale Dateien, Lizenz/Herkunft und relative URLs. Reale Browser-/DevTools-Netzwerk-/Offline-/schmale-Viewport-Prüfungen stehen vor Merge aus.
-- **Offener Punkt außerhalb P12:** P11 ist laut aktuellem `main` bereits als Merge-Commit `65d5cb5e77607cf94d503ee121d1856cbcc834fb` enthalten, aber Überblick und Paketprotokoll führen noch `In Arbeit`. Dieser Nachtrag gehört in den P11-Statusprozess.
-- **Vorformulierter Nachtrag erst nach tatsächlichem Merge:** Überblick: `| P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / <TATSÄCHLICHER_MERGE_COMMIT> |`. Protokoll: Status `Gemergt`; PR #14, tatsächlichen Merge-Commit, letzten getesteten Branch-Commit und beobachteten CI-Lauf ergänzen. Lokale Roboto-Flex-Dateien samt OFL/Herkunft und App-Shell-Kopplung bleiben erhalten.
+- **Statusnachtrag:** GitHub bestätigt Merge-Commit `d1305a46bebda6dedf2987d102c37a36be124ef3`; Überblick und Protokoll führen jetzt den tatsächlichen Merge-Commit, den getesteten Branch-Commit und Actions #51. Lokale Roboto-Flex-Dateien samt OFL/Herkunft und App-Shell-Kopplung bleiben erhalten.
 
 ### P13 – Datumssemantik und Wartungsabläufe dokumentieren
 
