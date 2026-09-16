@@ -30,8 +30,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P10 | Controller entkoppeln und überflüssigen Zustand entfernen | B12, B16 | Gemergt | P02, P07 | [PR #10](https://github.com/sl3ndrr/tagesz-hler/pull/10) / `de72c0e361d4c895c05893c96a7f3c29d277498e` |
 | P11 | Ereignislisten gezielt aktualisieren | B9 | Gemergt | P03, P05, P10 | [PR #13](https://github.com/sl3ndrr/tagesz-hler/pull/13) / `65d5cb5e77607cf94d503ee121d1856cbcc834fb` |
 | P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
-| P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | In Arbeit | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17), Branch `p13-datumssemantik-wartungsablaeufe`; Merge-Commit nach Merge |
-| P14 | Ereignisse suchen und filtern | C1 | Geplant | P11 | — |
+| P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Gemergt | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17) / `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7` |
+| P14 | Ereignisse suchen und filtern | C1 | In Arbeit | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18), Branch `p14-ereignisse-suchen-filtern`; Merge-Commit nach Merge |
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Geplant | P06, P07, P09 | — |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Geplant | P03, P06, P09, P11; P15, falls das Backup bereits existiert | — |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Geplant | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | — |
@@ -133,17 +133,17 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P13 – Datumssemantik und Wartungsabläufe dokumentieren
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17), Branch `p13-datumssemantik-wartungsablaeufe`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17), Merge-Commit `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7`, getesteter Branch-Commit `b927e64eaff6d076924770d7b84c60ec58bcce03`; [Actions #58](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35111851514) erfolgreich.
 - **Abschlussbericht:** Datumssemantik, Zeitumstellungsgrenzen, Monats-Clamping, Einheitenreste, Speicher-/Rettungsabläufe, lokale Schrift- und Icon-Wartung sowie ausführenbare Prüfungen werden am aktuellen Code dokumentiert. Erklärende Kommentare erläutern nur bestehende Datumshelfer.
 - **Übergabe an Folgepakete:** Dokumentiert werden ausschließlich abgesicherte Voraussetzungen; praktische Browser-/Zeitzonen-Kompatibilität bleibt ausdrücklich unbestätigt. Änderungen an `app.js` sind App-Shell-Änderungen und erhöhen `CACHE_VERSION` auf `v15`.
 
 ### P14 – Ereignisse suchen und filtern
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18), Branch `p14-ereignisse-suchen-filtern`. Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge.
+- **Abschlussbericht:** Lokale Suche über Name/Beschreibung und Filter für Zeitlage sowie Ganztägig/Uhrzeit; Karten und Kompaktansicht verwenden denselben gefilterten Rendererbestand. Trefferzahl, Zurücksetzen und getrennte Leerzustände ergänzen die bestehende Liste ohne Datenänderung.
+- **Übergabe an Folgepakete:** Die Suche normalisiert deutschsprachige Akzente und `ß` zu `ss`; mehrteilige Eingaben sind eine UND-Suche über Name/Beschreibung. Nach Merge tatsächlichen Merge-Commit, getesteten Branch-Commit und CI-Lauf ergänzen.
 
 ### P15 – Vollständiges Backup mit Einstellungen
 
