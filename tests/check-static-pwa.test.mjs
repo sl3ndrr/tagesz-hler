@@ -13,6 +13,7 @@ import './data-recovery.mjs';
 import './image-processing.mjs';
 import './installation-storage.mjs';
 import './service-worker-cache.mjs';
+import './local-fonts.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');
@@ -23,6 +24,7 @@ function fixture() {
     cpSync(resolve(projectRoot, file), resolve(directory, file));
   }
   cpSync(resolve(projectRoot, 'icons'), resolve(directory, 'icons'), { recursive: true });
+  cpSync(resolve(projectRoot, 'fonts'), resolve(directory, 'fonts'), { recursive: true });
   execFileSync('git', ['init', '--quiet'], { cwd: directory });
   execFileSync('git', ['config', 'user.email', 'tests@example.invalid'], { cwd: directory });
   execFileSync('git', ['config', 'user.name', 'PWA-Prüftest'], { cwd: directory });
