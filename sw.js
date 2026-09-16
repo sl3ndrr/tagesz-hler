@@ -1,5 +1,5 @@
 /* Offline-App-Shell. CACHE_VERSION bei Änderungen an statischen Dateien erhöhen. */
-const CACHE_VERSION = 'v12';
+const CACHE_VERSION = 'v13';
 const scopeUrl = new URL(self.registration.scope);
 const CACHE_PREFIX = `tageszaehler:${encodeURIComponent(scopeUrl.pathname)}:shell-`;
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
@@ -9,6 +9,8 @@ const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
+  './fonts/roboto-flex-latin-ext-full-normal.woff2',
+  './fonts/roboto-flex-latin-full-normal.woff2',
   './theme.js',
   './app.js',
   './manifest.webmanifest',

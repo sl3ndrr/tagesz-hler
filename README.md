@@ -57,7 +57,7 @@ Danach <http://localhost:8080/> öffnen. `localhost` gilt für Service Worker al
 
 ## Content-Security-Policy
 
-Die CSP steht als Meta-Policy in `index.html`. Ausführbarer Code und Stylesheets liegen in externen, gleichursprünglichen Dateien; daher sind keine SHA-256-Hashes für Inline-Blöcke mehr nötig. Inline-Event-Handler bleiben durch `script-src-attr 'none'` gesperrt. Google Fonts sind ausschließlich über `fonts.googleapis.com` und `fonts.gstatic.com` freigegeben. Vom Nutzer hinterlegte HTTPS-Bilder bleiben über `img-src` zulässig.
+Die CSP steht als Meta-Policy in `index.html`. Ausführbarer Code und Stylesheets liegen in externen, gleichursprünglichen Dateien; daher sind keine SHA-256-Hashes für Inline-Blöcke mehr nötig. Inline-Event-Handler bleiben durch `script-src-attr 'none'` gesperrt. Roboto Flex wird mit zwei lokalen, relativen WOFF2-Dateien aus `fonts/` geladen; CSP-Freigaben für Google-Fonts-Hosts entfallen. Lizenz und nachvollziehbare Herkunft liegen neben den Schriftdateien. Vom Nutzer hinterlegte HTTPS-Bilder bleiben über `img-src` zulässig.
 
 Trusted Types bleiben für Script-Sinks erzwungen. Ausschließlich die benannte Policy `tageszaehler-sw` ist zugelassen; sie erzeugt nur für den fest codierten Pfad `./sw.js` eine `TrustedScriptURL`. Dadurch kann der Service Worker registriert werden, ohne die Trusted-Types-Erzwingung aufzugeben.
 
@@ -109,7 +109,7 @@ Falls Pages für das Repository noch nicht aktiviert ist:
 
 ## Daten und Datenschutz
 
-Ereignisse und Einstellungen verbleiben im jeweiligen Browserprofil. Das Projekt besitzt kein Backend und überträgt keine Ereignisdaten. Netzwerkzugriffe entstehen für Google Fonts sowie für externe Bild-URLs, die Nutzer selbst hinterlegen.
+Ereignisse und Einstellungen verbleiben im jeweiligen Browserprofil. Das Projekt besitzt kein Backend und überträgt keine Ereignisdaten. Netzwerkzugriffe entstehen nur für externe Bild-URLs, die Nutzer selbst hinterlegen.
 
 Ereignisse, Rettungskopien, Darstellungspräferenzen, Schreibsperre, Broadcast-Kanal und Offline-Shell-Caches verwenden einen stabilen Namensraum aus dem Installationsverzeichnis. Starts über das Verzeichnis und `index.html` sowie Query/Hash führen zum selben Bestand; unterschiedliche Unterpfade derselben Origin bleiben getrennt. Die frühen Theme-Einstellungen lesen ausschließlich die Schlüssel der jeweiligen Installation.
 

@@ -13,6 +13,7 @@ import './data-recovery.mjs';
 import './image-processing.mjs';
 import './installation-storage.mjs';
 import './service-worker-cache.mjs';
+import './local-fonts.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');
