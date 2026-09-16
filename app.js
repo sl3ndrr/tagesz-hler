@@ -103,6 +103,11 @@ const pastList = document.getElementById('past-list');
 const futureCount = document.getElementById('future-count');
 const pastCount = document.getElementById('past-count');
 const nextEventCopy = document.getElementById('next-event-copy');
+const eventSearchInput = document.getElementById('event-search');
+const eventTimeFilter = document.getElementById('event-time-filter');
+const eventKindFilter = document.getElementById('event-kind-filter');
+const eventFilterReset = document.getElementById('event-filter-reset');
+const eventFilterStatus = document.getElementById('event-filter-status');
 const detailFlipClock = document.getElementById('detail-flip-clock');
 const detailProgressWrap = document.getElementById('detail-progress-wrap');
 const detailProgressFill = document.getElementById('detail-progress-fill');
@@ -194,6 +199,11 @@ function init() {
   tabItems.forEach(tab => {
     tab.addEventListener('click', () => setActiveTab(Number(tab.dataset.tab)));
   });
+
+  eventSearchInput.addEventListener('input', renderEvents);
+  eventTimeFilter.addEventListener('change', renderEvents);
+  eventKindFilter.addEventListener('change', renderEvents);
+  eventFilterReset.addEventListener('click', resetEventFilters);
 
   addBtn.addEventListener('click', () => openEditSheet());
   document.addEventListener('click', event => {
@@ -2056,6 +2066,52 @@ function eventDifference(event, model, nowTime) {
     : getDiff(model.targetTime, nowTime, event.units, event.timeZone);
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ß/g, 'ss')
+    .toLocaleLowerCase('de-DE')
+    .trim();
+}
+
+function getEventFilter() {
+  const query = normalizeSearchText(eventSearchInput.value);
+  return {
+    terms: query ? query.split(/\s+/) : [],
+    time: eventTimeFilter.value,
+    kind: eventKindFilter.value
+  };
+}
+
+function hasActiveEventFilter(filter = getEventFilter()) {
+  return filter.terms.length > 0 || filter.time !== 'all' || filter.kind !== 'all';
+}
+
+function matchesEventFilter(event, model, filter) {
+  if (filter.kind !== 'all' && event.kind !== filter.kind) return false;
+  if (filter.time === 'future' && model.isPast) return false;
+  if (filter.time === 'past' && !model.isPast) return false;
+  if (!filter.terms.length) return true;
+  const haystack = normalizeSearchText(`${event.name} ${event.desc}`);
+  return filter.terms.every(term => haystack.includes(term));
+}
+
+function updateEventFilterStatus(matchCount, totalCount, filter) {
+  const noun = totalCount === 1 ? 'Ereignis' : 'Ereignissen';
+  eventFilterStatus.textContent = hasActiveEventFilter(filter)
+    ? `${matchCount} von ${totalCount} ${noun} gefunden.`
+    : `${totalCount} ${noun} gespeichert.`;
+}
+
+function resetEventFilters() {
+  eventSearchInput.value = '';
+  eventTimeFilter.value = 'all';
+  eventKindFilter.value = 'all';
+  renderEvents();
+  eventSearchInput.focus();
+}
+
 function getEventRenderKey(event) {
   return [
     event.name, event.kind, event.date, event.time, event.timeZone,
@@ -2163,7 +2219,7 @@ class EventListRenderer {
     updateLiveSchedulerCadence();
   }
 
-  render(events, nowTime = Date.now(), { forceTemporal = false } = {}) {
+  render(events, nowTime = Date.now(), { forceTemporal = false, filter = getEventFilter() } = {}) {
     const viewerTimeZone = getSystemTimeZone();
     const viewerToday = formatInstantDateKey(nowTime, viewerTimeZone);
     const viewMode = document.documentElement.dataset.view || 'cards';
@@ -2171,7 +2227,8 @@ class EventListRenderer {
       nowTime, viewerTimeZone, viewerToday, forceTemporal
     }, createEventTimeModel);
     const prepared = cacheResult.prepared;
-    const activeIds = new Set(prepared.map(item => item.event.id));
+    const matching = prepared.filter(item => matchesEventFilter(item.event, item.model, filter));
+    const activeIds = new Set(matching.map(item => item.event.id));
     let updatedViews = 0;
 
     this.views.forEach((view, id) => {
@@ -2189,7 +2246,7 @@ class EventListRenderer {
 
     const future = [];
     const past = [];
-    prepared.forEach(item => {
+    matching.forEach(item => {
       let view = this.views.get(item.event.id);
       if (!view) {
         view = this.createView(item.event.id);
@@ -2213,14 +2270,15 @@ class EventListRenderer {
 
     future.sort(comparePreparedEvents);
     past.sort((left, right) => comparePreparedEvents(right, left));
-    this.reconcileList(this.futureContainer, future, false);
-    this.reconcileList(this.pastContainer, past, true);
+    this.reconcileList(this.futureContainer, future, false, { hasEvents: prepared.length > 0, filterActive: hasActiveEventFilter(filter) });
+    this.reconcileList(this.pastContainer, past, true, { hasEvents: prepared.length > 0, filterActive: hasActiveEventFilter(filter) });
 
     setTextIfChanged(futureCount, future.length);
     setTextIfChanged(pastCount, past.length);
     setTextIfChanged(nextEventCopy, future.length
       ? `Als Nächstes: ${future[0].event.name} · ${formatEventBadgeDate(future[0].model.targetLocalDate, future[0].model.viewerToday)}`
       : 'Noch ist alles offen – erschaffe einen Moment, auf den du dich freuen kannst.');
+    updateEventFilterStatus(matching.length, prepared.length, filter);
   }
 
   createView(id) {
@@ -2373,14 +2431,15 @@ class EventListRenderer {
     view.nextUpdateAt = Math.min(view.nextClockUpdateAt, view.nextProgressUpdateAt);
   }
 
-  reconcileList(container, items, isPast) {
+  reconcileList(container, items, isPast, { hasEvents, filterActive }) {
     const emptyKey = isPast ? 'emptyPast' : 'emptyFuture';
     if (items.length === 0) {
       if (!this[emptyKey]) {
+        const noMatches = hasEvents && filterActive;
         this[emptyKey] = createEmptyStateElement(
-          isPast ? 'Noch nichts im Rückblick' : 'Deine Zukunft ist noch ganz offen',
-          isPast ? 'Sobald ein Ereignis erreicht ist, wandert es automatisch hierher.' : 'Lege deinen ersten Moment an – vom Urlaub bis zum persönlichen Meilenstein.',
-          !isPast
+          noMatches ? 'Keine passenden Ereignisse' : isPast ? 'Noch nichts im Rückblick' : 'Deine Zukunft ist noch ganz offen',
+          noMatches ? 'Passe die Suche oder Filter an, um andere Ereignisse anzuzeigen.' : isPast ? 'Sobald ein Ereignis erreicht ist, wandert es automatisch hierher.' : 'Lege deinen ersten Moment an – vom Urlaub bis zum persönlichen Meilenstein.',
+          !isPast && !noMatches
         );
         container.appendChild(this[emptyKey]);
       }
@@ -2429,7 +2488,7 @@ class EventListRenderer {
 }
 
 function renderEvents(nowTime = Date.now(), { temporal = false } = {}) {
-  eventRenderer?.render(eventStore.getEvents(), nowTime, { forceTemporal: temporal });
+  eventRenderer?.render(eventStore.getEvents(), nowTime, { forceTemporal: temporal, filter: getEventFilter() });
   updateLiveSchedulerCadence();
 }
 
