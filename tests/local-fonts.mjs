@@ -20,7 +20,7 @@ test('stellt Roboto Flex ohne Google-Fonts-Anfrage lokal und precached bereit', 
     const path = resolve(projectRoot, 'fonts', file);
     assert.equal(existsSync(path), true, `Lokale Schriftdatei fehlt: ${file}`);
     assert.ok(statSync(path).size > 0, `Lokale Schriftdatei ist leer: ${file}`);
-    assert.match(styles, new RegExp(`url\\('./fonts/${file.replaceAll('.', '\\.')}\\')`));
+    assert.equal(styles.includes(`url('./fonts/${file}')`), true, `Relative Schrift-URL fehlt: ${file}`);
     assert.match(serviceWorker, new RegExp(`'./fonts/${file.replaceAll('.', '\\.')}'`));
   }
 
