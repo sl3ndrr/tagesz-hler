@@ -1674,6 +1674,8 @@ function getZoneOffsetsNearCivilEpoch(civilEpoch, timeZone) {
   return offsets;
 }
 
+// Ordnet gespeicherte Ortszeitfelder einem Instant zu: bei Fold wählt die
+// persistierte earlier/later-Entscheidung, eine DST-Lücke bleibt für Eingaben ungültig.
 function resolveZonedComponents(components, timeZone, disambiguation = 'earlier') {
   if (!isValidTimeZone(timeZone) || !['earlier', 'later'].includes(disambiguation)) {
     return { ok: false, status: 'invalid', candidates: [] };
@@ -2731,6 +2733,8 @@ function resolveCompatibleZonedComponents(components, timeZone) {
   return null;
 }
 
+// Kalenderadditionen bewahren die lokale Uhrzeit der Ereigniszeitzone. Kürzere
+// Monate werden zuvor begrenzt; Lücken verwenden nur für Differenzreste die kompatible Vorwärtsverschiebung.
 function addZonedCalendarUnit(instant, amount, unit, timeZone) {
   if (amount === 0) return instant;
   const parts = getZonedParts(instant, timeZone);
@@ -2765,6 +2769,8 @@ function countWholeInstantUnits(start, end, estimate, adder) {
   return { count, instant: candidate ?? start };
 }
 
+// Die Einheiten werden nacheinander abgetragen: Kalenderanteile zuerst in der
+// Ereigniszeitzone, anschließend feste Stunden-/Minuten-/Sekundenreste.
 function getDiff(target, now, unitsList, timeZone = getSystemTimeZone()) {
   const result = [];
   let start = Math.min(target, now);

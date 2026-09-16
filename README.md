@@ -95,6 +95,67 @@ dann neu aufgebaut. Der Sekundentakt läuft nur, wenn eine sichtbare zeitgenaue
 Karte oder Detailansicht Sekunden beziehungsweise einen laufenden Fortschritt
 anzeigt.
 
+## Datumssemantik und Grenzen
+
+### Ganztägig oder zeitgenau
+
+Ein Ereignis ohne Uhrzeit ist **ganztägig**: Es speichert nur den Kalendertag
+`YYYY-MM-DD` und wird im Kalendertag der betrachtenden Systemzeitzone
+eingeordnet. Es hat keine gespeicherte Ereigniszeitzone. Der Datumsrechner
+arbeitet ebenfalls nur mit solchen Kalendertagen.
+
+Ein Ereignis mit Uhrzeit ist **zeitgenau**. Es speichert Datum, Uhrzeit,
+IANA-Zeitzone und bei einer doppelt vorkommenden Ortszeit die Wahl
+`earlier` (erstes Vorkommen) oder `later` (zweites Vorkommen). Die
+Ereigniszeitzone wird beim Speichern festgehalten; ein späterer Wechsel der
+Systemzeitzone verändert den Zeitpunkt nicht, nur die lokale Anzeige und
+Sortierung aus Sicht des Geräts.
+
+In einer DST-Lücke (eine Ortszeit existiert nicht) lässt die Eingabe kein
+zeitgenaues Ereignis zu. In einem DST-Fold erscheint die Auswahl für erstes
+oder zweites Vorkommen. Beispiel: `2026-10-25 02:30` in
+`Europe/Berlin` kommt zweimal vor; ohne abweichende Auswahl wird das erste
+Vorkommen verwendet. Eine bestehende zeitgenaue Referenz wird als Beginn des
+Referenztags in derselben Ereigniszeitzone aufgelöst und muss vor dem
+Zielzeitpunkt liegen.
+
+### Kalenderanteile, Clamping und Reste
+
+Jahre, Monate, Wochen und Tage sind Kalenderoperationen. Beim Übergang in
+einen kürzeren Monat wird der Tag auf dessen letzten vorhandenen Tag begrenzt:
+`2024-01-31 + 1 Monat = 2024-02-29`,
+`2023-01-31 + 1 Monat = 2023-02-28`. Analog wird der 29. Februar beim
+Hinzufügen eines Jahres in ein Nichtschaltjahr auf den 28. Februar begrenzt.
+
+Die aktivierten Einheiten werden in der festen Reihenfolge Jahre, Monate,
+Wochen, Tage, Stunden, Minuten, Sekunden abgearbeitet. Jede Einheit zählt
+ganze Schritte ab dem nach dem vorigen Schritt verbleibenden Zeitpunkt; der
+Rest geht an die nächste aktivierte Einheit. Beispiel für reine Kalendertage:
+`2023-01-31 → 2023-03-01` mit Monaten und Tagen ergibt
+`1 Monat, 1 Tag`; mit nur Tagen ergibt es `29 Tage`. Bei zeitgenauen
+Ereignissen werden die Kalenderanteile in der gespeicherten Ereigniszeitzone
+gerechnet; erst danach werden Stunden, Minuten und Sekunden als feste
+Millisekundenreste ausgegeben. Über eine Sommerzeitumstellung kann ein
+Kalendertag deshalb nicht zwangsläufig 24 Stunden entsprechen.
+
+Datumswerte akzeptiert die Anwendungsvalidierung nur als vierstellige Jahre
+`0001` bis `9999` mit einem tatsächlich vorhandenen Monatstag und
+Uhrzeiten von `00:00` bis `23:59`. Native Datums- und Zeiteingaben sowie
+Zeitzonenregeln unterscheiden sich zwischen Browsern; sehr alte oder
+ungewöhnliche historische Zeitzonenwechsel sind nicht praktisch
+browserübergreifend bestätigt.
+
+### Browservoraussetzungen
+
+Getestet wird synthetisch mit aktuellem Node.js in GitHub Actions. Für die
+App sind ein sicherer Kontext (HTTPS oder `localhost`), Service Worker,
+Cache Storage, `Intl.DateTimeFormat(..., { timeZone })`, moderne
+JavaScript-APIs und `localStorage` erforderlich. Ereignisänderungen setzen
+zusätzlich Web Locks voraus; ohne diese Unterstützung sperrt die App
+Schreibvorgänge. Browser-, Betriebssystem-, Zeitzonen- und
+Zeitzonendatenbank-Kombinationen sind nicht als Kompatibilitätsmatrix
+praktisch geprüft.
+
 ## Schreibsicherheit und mehrere Tabs
 
 Alle Änderungen am Ereignisbestand laufen über denselben exklusiven Web Lock. Innerhalb der Sperre wird der aktuelle `localStorage`-Stand erneut gelesen, der fachliche Konflikt geprüft und erst danach geschrieben. Neue Ereignisse und Änderungen an unterschiedlichen Ereignissen werden dadurch auf dem frischen Gesamtbestand zusammengeführt. Bei Änderungen desselben Ereignisses, Bearbeiten gegen Löschen sowie einem Import oder dem Löschen aktiver Ereignisse gegen eine parallele Änderung wird der Vorgang abgebrochen; ein geöffneter Bearbeitungsentwurf bleibt erhalten.
@@ -125,9 +186,28 @@ Eine externe Bild-URL wird erst nach 400 ms ohne weitere Eingabe als Vorschau ge
 
 „Daten gezielt löschen“ bietet nach einer zweiten Bestätigung drei Varianten: nur aktive Ereignisse, nur die beiden zugehörigen Rettungsschlüssel (Kopien und Metadaten) oder beides in dieser Reihenfolge. Andere Origin-Daten und Einstellungen bleiben unangetastet. Bei fehlendem Web Lock, zwischenzeitlichen Änderungen oder Speicherfehlern wird kein Erfolg behauptet; nach einem Teilerfolg nennt die App verbliebene Kopien. Der Rohdatenexport ist kein vollständiges Backup der Einstellungen.
 
+## Wartung und Prüfung
+
+Die CI führt für Pull Requests nach `main` die statische PWA-Prüfung und die
+synthetischen Regressionen aus. Lokal können dieselben Prüfungen ohne
+Paketmanager ausgeführt werden:
+
+```bash
+node scripts/check-static-pwa.mjs
+node --test tests/check-static-pwa.test.mjs
+```
+
+Vor einem Release zusätzlich manuell prüfen: frischen Start mit leerem Cache,
+Offline-Neustart nach vollständigem Laden, Update mit geöffnetem Tab,
+Datumsgrenzen (Monatsende, Schaltjahr, DST-Lücke und -Fold), Import/Export mit
+synthetischen Testdaten sowie die Browserkonsole auf CSP- und
+Service-Worker-Fehler. Änderungen an einer Datei der `APP_SHELL` erfordern
+weiterhin in derselben Änderung eine erhöhte `CACHE_VERSION`.
+
 ## Migration
 
-Die Herkunft, Dateizuordnung, CSP-Anpassung und Prüfschritte sind in [docs/MIGRATION.md](docs/MIGRATION.md) dokumentiert.
+Die Herkunft, Dateizuordnung, CSP-Anpassung, lokale Schriftdateien,
+Rettungsabläufe und Prüfschritte sind in [docs/MIGRATION.md](docs/MIGRATION.md) dokumentiert.
 
 ## Lizenz
 
