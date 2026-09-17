@@ -7,6 +7,7 @@ Nach Aktivierung von GitHub Pages ist die Web-App unter <https://sl3ndrr.github.
 ## Funktionen
 
 - sekundengenaue Zähler für zukünftige und vergangene Ereignisse
+- jährliche Geburtstage und Jahrestage mit automatisch nächstem Auftreten
 - Datumsrechner mit Jahren, Monaten, Wochen, Tagen, Stunden, Minuten und Sekunden
 - optionale Beschreibungen und Hintergrundbilder
 - Karten- und Kompaktansicht sowie System-, Hell- und Dunkelmodus
@@ -144,6 +145,71 @@ Uhrzeiten von `00:00` bis `23:59`. Native Datums- und Zeiteingaben sowie
 Zeitzonenregeln unterscheiden sich zwischen Browsern; sehr alte oder
 ungewöhnliche historische Zeitzonenwechsel sind nicht praktisch
 browserübergreifend bestätigt.
+
+### Jährliche Geburtstage und Jahrestage
+
+Im Editor ist „Einzelereignis“ voreingestellt. „Jährlich“ wiederholt ausschließlich
+Monat und Tag des gespeicherten Ursprungsdatums, frühestens in dessen Jahr. Das
+Ursprungsdatum bleibt beim Jahreswechsel unverändert; ein Alter wird nicht
+berechnet. Für einen Geburtstag am 29. Februar deshalb ein tatsächlich gültiges
+Ursprungsdatum mit Schaltjahr eingeben.
+
+- **29. Februar:** in Nichtschaltjahren 28. Februar, im nächsten Schaltjahr wieder
+  29. Februar. Das passt zum vorhandenen Kalender-Clamping und erhält einen
+  Termin in jedem Jahr.
+- **Ganztägig:** Kalendertag des betrachtenden Geräts, ohne gespeicherte Zeitzone.
+  Am Auftreten bleibt der Zähler den ganzen Tag bei null; erst am nächsten Tag
+  zählt er bis zum nächsten Jahr.
+- **Mit Uhrzeit:** dieselbe lokale Uhrzeit in der gespeicherten IANA-Zeitzone in
+  jedem Jahr. Ein Gerätezeitzonenwechsel verändert den Zeitpunkt nicht. Die
+  stets verfügbare Fold-Auswahl gilt auch in späteren Jahren: erstes (`earlier`)
+  oder zweites (`later`) Vorkommen. Eine Zeitlücke wird um ihre Dauer vorwärts
+  verschoben (Berlin 02:30 → 03:30; Lord Howe 02:15 → 02:45). So bleibt auch in
+  einem Umstellungsjahr ein eindeutiger Termin erhalten. Die Detailanzeige nennt
+  den tatsächlich aufgelösten Zeitpunkt und die Verschiebung. Einzelereignisse
+  weisen Zeitlücken weiterhin ab.
+- **Zeitpunkt erreicht:** Am exakten Instant ist der Zähler null; danach folgt
+  das nächste Jahr. Liste, Sortierung, Badges und Detail nutzen dasselbe nächste
+  Auftreten. Es entstehen keine zusätzlichen gespeicherten Ereignisse und keine
+  Historie abgelaufener Wiederholungen.
+- **Fortschritt:** automatisch vom vorherigen Jahrestermin bis zum nächsten,
+  für Ganztag nach Kalendertagen und mit Uhrzeit nach Instants. Der vorjährige
+  Termin ist eine Rechengrenze, auch vor dem Ursprungsjahr. Ein vorhandenes
+  manuelles Referenzdatum muss vor der Umstellung ausdrücklich geleert werden;
+  es wird nicht still verworfen. Beim Wechsel zurück zum Einzelereignis gilt
+  wieder das Ursprungsdatum, das im Editor bei Bedarf angepasst werden kann.
+  Im Jahr 0001 ist ohne darstellbares Vorjahr kein Fortschritt verfügbar. Nach
+  dem letzten Auftreten im Jahr 9999 bleibt der letzte Termin mit sichtbarem
+  Grenzhinweis im Rückblick.
+
+Jahreswechsel, Mitternacht, Uhrsprünge und Sichtbarkeitswechsel verwenden die
+bestehenden Aktualisierungspfade. Im sichtbaren Leerlauf beträgt die maximale
+Prüfkadenz weiterhin 30 Sekunden; sichtbare zeitgenaue Jahresfortschritte laufen
+sekündlich. Synthetische P16-Regressionen: `node --test tests/annual-events.mjs`.
+
+#### Datenformat und ältere Clients
+
+Das einzige neue Ereignisfeld ist `"recurrence": "yearly"`; ohne dieses Feld
+bleibt ein Ereignis einmalig. Speicherung und reiner Ereignisexport verwenden
+bei mindestens einer Wiederholung die Hülle
+`{"schemaVersion":3,"events":[…]}`. Vollbackups mit Wiederholungen tragen
+`"format":"tageszaehler-backup","version":2`. Reine Einzelereignisbestände
+verwenden weiterhin Arrays und Vollbackup Version 1. Beide Exportwege und der
+Ereignisdatei-Ersatz in der Datenrettung erhalten Wiederholungen. Die bestehende
+v2-Speicherhülle für alte Einzelereignisse bleibt lesbar.
+
+Alte v2-/P15-Clients lehnen die neuen Hüllen ab, statt das Wiederholungsfeld
+beim Normalisieren zu verlieren. Unbekannte Schema-/Backupversionen,
+Ereignisfelder und Wiederholungsregeln werden abgewiesen; ein betroffener
+gespeicherter Bestand bleibt im Rohformat erhalten und schreibgeschützt.
+Versionskennzeichen nicht manuell entfernen oder heruntersetzen. Das
+Broadcast-Schreibprotokoll ist Version 3, verwendet aber absichtlich denselben
+installationsbezogenen Channel und Web Lock zur Erkennung alter Tabs. Bereits
+offene, nicht kooperierende oder stumme Alt-Clients sind weiterhin nicht
+vollständig kontrollierbar; alle App-Tabs vor der Umstellung schließen bzw.
+aktualisieren. Es gibt keine automatische Downgrade-Konvertierung in
+Einzelereignisse. Das 8-MiB-Ereignislimit umfasst auch die neue Hülle; das
+Vollbackuplimit bleibt bei 10 MiB.
 
 ### Browservoraussetzungen
 

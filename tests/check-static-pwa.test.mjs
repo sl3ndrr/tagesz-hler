@@ -14,6 +14,7 @@ import './data-recovery.mjs';
 import './image-processing.mjs';
 import './installation-storage.mjs';
 import './full-backup.mjs';
+import './annual-events.mjs';
 import './service-worker-cache.mjs';
 import './local-fonts.mjs';
 

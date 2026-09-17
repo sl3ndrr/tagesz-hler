@@ -1,16 +1,16 @@
 /* ── APP STATE & CONSTANTS ── */
 const ALLOWED_UNITS = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
 const DEFAULT_UNITS = ['years', 'months', 'weeks', 'days', 'seconds'];
-const DATA_SCHEMA_VERSION = 2;
+const DATA_SCHEMA_VERSION = 3;
 // Dieselbe Pfadableitung verwendet der frühe Theme-Bootstrap und der Service Worker.
 const INSTALLATION_NAMESPACE = `tageszaehler:${encodeURIComponent(new URL('./', document.currentScript.src).pathname)}:`;
 const EVENT_WRITE_LOCK_NAME = `${INSTALLATION_NAMESPACE}events-v2-write`;
 const LEGACY_EVENT_WRITE_LOCK_NAME = 'tageszaehler-events-v2-write';
 const EVENT_CHANNEL_NAME = `${INSTALLATION_NAMESPACE}events-v2`;
 const LEGACY_EVENT_CHANNEL_NAME = 'tageszaehler-events-v2';
-const WRITE_PROTOCOL_VERSION = 2;
+const WRITE_PROTOCOL_VERSION = 3;
 const BACKUP_FORMAT = 'tageszaehler-backup';
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 const BACKUP_PREFERENCE_VALUES = Object.freeze({
   theme: ['system', 'light', 'dark'],
   color: ['purple', 'blue', 'green', 'orange'],
@@ -132,6 +132,7 @@ const imageUrlInput = document.getElementById('f-img-url');
 const eventNameInput = document.getElementById('f-name');
 const eventDateInput = document.getElementById('f-date');
 const eventTimeInput = document.getElementById('f-time');
+const eventRecurrenceInput = document.getElementById('f-recurrence');
 const eventRefDateInput = document.getElementById('f-refdate');
 const eventDescriptionInput = document.getElementById('f-desc');
 const eventUnitWrap = document.getElementById('unit-wrap');
@@ -167,6 +168,7 @@ const editorErrorElements = new Map([
   [eventNameInput, document.getElementById('f-name-error')],
   [eventDateInput, document.getElementById('f-date-error')],
   [eventTimeInput, document.getElementById('f-time-error')],
+  [eventRecurrenceInput, document.getElementById('f-recurrence-error')],
   [eventRefDateInput, document.getElementById('f-refdate-error')],
   [eventDescriptionInput, document.getElementById('f-desc-error')],
   [imageUrlInput, document.getElementById('f-img-url-error')]
@@ -495,7 +497,24 @@ function utf8ByteLength(value) {
 }
 
 function serializeEventCollection(events, formatted = false) {
-  return JSON.stringify(events, null, formatted ? 2 : undefined);
+  // Alte Clients lehnen die v3-Hülle ab, statt Wiederholungsfelder wegzuschreiben.
+  const document = events.some(event => event.recurrence === 'yearly')
+    ? { schemaVersion: DATA_SCHEMA_VERSION, events }
+    : events;
+  return JSON.stringify(document, null, formatted ? 2 : undefined);
+}
+
+function hasOnlyKeys(value, keys) {
+  return Object.keys(value).every(key => keys.includes(key));
+}
+
+function normalizeEventDocument(raw, options = {}) {
+  if (Array.isArray(raw)) return normalizeEventCollection(raw, options);
+  if (!raw || typeof raw !== 'object' || raw.schemaVersion !== DATA_SCHEMA_VERSION ||
+      !hasOnlyKeys(raw, ['schemaVersion', 'events']) || !Array.isArray(raw.events)) {
+    return { ok: false, code: 'unsupported-schema', events: [], invalidCount: 0 };
+  }
+  return normalizeEventCollection(raw.events, options);
 }
 
 function hasOptionalString(raw, key) {
@@ -517,6 +536,10 @@ function normalizeEventId(raw, { regenerateId = false } = {}) {
 
 function normalizeEvent(raw, { regenerateId = false } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  if (!hasOnlyKeys(raw, ['id', 'name', 'kind', 'date', 'time', 'timeZone', 'disambiguation', 'refDate', 'desc', 'units', 'img', 'recurrence'])) return null;
+  if (Object.prototype.hasOwnProperty.call(raw, 'recurrence') && !['none', 'yearly'].includes(raw.recurrence)) return null;
+  const annual = raw.recurrence === 'yearly';
+  const recurrence = annual ? { recurrence: 'yearly' } : {};
   if (typeof raw.name !== 'string' || raw.name.length > DATA_LIMITS.maxNameChars) return null;
   if (raw.desc != null && (typeof raw.desc !== 'string' || raw.desc.length > DATA_LIMITS.maxDescriptionChars)) return null;
   if (!Array.isArray(raw.units) || raw.units.length === 0 || raw.units.length > ALLOWED_UNITS.length * 2) return null;
@@ -537,18 +560,23 @@ function normalizeEvent(raw, { regenerateId = false } = {}) {
   if (time == null || refDate == null || id == null || !name || !isValidDateInput(date) || !isValidTimeInput(time) || (hasRefDate && !isValidDateInput(refDate)) || units.length === 0) return null;
   if (!['all-day', 'timed'].includes(kind) || kind !== inferredKind) return null;
   if (raw.img && !img) return null;
+  if (annual && hasRefDate) return null;
 
   if (kind === 'all-day') {
+    if (annual && ((raw.timeZone != null && raw.timeZone !== '') || (raw.disambiguation != null && raw.disambiguation !== ''))) return null;
     if (hasRefDate && compareDateKeys(refDate, date) >= 0) return null;
-    return { id, name, kind, date, time: '', timeZone: '', disambiguation: '', refDate, desc, units, img };
+    return { id, name, kind, date, time: '', timeZone: '', disambiguation: '', refDate, desc, units, img, ...recurrence };
   }
 
   if (raw.timeZone != null && typeof raw.timeZone !== 'string') return null;
+  if (annual && !raw.timeZone) return null;
   const timeZone = raw.timeZone ? raw.timeZone : getSystemTimeZone();
   if (!isValidTimeZone(timeZone)) return null;
   if (raw.disambiguation != null && !['earlier', 'later'].includes(raw.disambiguation)) return null;
   const disambiguation = raw.disambiguation || 'earlier';
-  const target = resolveZonedDateTime(date, time, timeZone, disambiguation);
+  const target = annual
+    ? resolveAnnualDateTime(date, time, timeZone, disambiguation)
+    : resolveZonedDateTime(date, time, timeZone, disambiguation);
   if (!target.ok) return null;
 
   if (hasRefDate) {
@@ -556,7 +584,7 @@ function normalizeEvent(raw, { regenerateId = false } = {}) {
     if (!reference || reference.instant >= target.instant) return null;
   }
 
-  return { id, name, kind, date, time, timeZone, disambiguation, refDate, desc, units, img };
+  return { id, name, kind, date, time, timeZone, disambiguation, refDate, desc, units, img, ...recurrence };
 }
 
 function normalizeEventCollection(rawEvents, { regenerateIds = false } = {}) {
@@ -638,6 +666,7 @@ function validateBackupPreferences(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { ok: false, code: 'preferences-type' };
   }
+  if (!hasOnlyKeys(raw, Object.keys(BACKUP_PREFERENCE_VALUES))) return { ok: false, code: 'preferences-type' };
   const preferences = {};
   for (const [name, allowed] of Object.entries(BACKUP_PREFERENCE_VALUES)) {
     if (typeof raw[name] !== 'string' || !allowed.includes(raw[name])) {
@@ -651,7 +680,7 @@ function validateBackupPreferences(raw) {
 function createFullBackupDocument(events, preferences = readActivePreferences()) {
   return {
     format: BACKUP_FORMAT,
-    version: BACKUP_VERSION,
+    version: events.some(event => event.recurrence === 'yearly') ? BACKUP_VERSION : 1,
     createdAt: new Date().toISOString(),
     data: {
       events,
@@ -665,13 +694,18 @@ function validateFullBackupDocument(raw) {
     return { ok: false, code: 'document-type' };
   }
   if (raw.format !== BACKUP_FORMAT) return { ok: false, code: 'format' };
-  if (raw.version !== BACKUP_VERSION) return { ok: false, code: 'version' };
+  if (![1, BACKUP_VERSION].includes(raw.version)) return { ok: false, code: 'version' };
+  if (!hasOnlyKeys(raw, ['format', 'version', 'createdAt', 'data'])) return { ok: false, code: 'version' };
   if (typeof raw.createdAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(raw.createdAt) ||
       !Number.isFinite(Date.parse(raw.createdAt))) {
     return { ok: false, code: 'created-at' };
   }
   if (!raw.data || typeof raw.data !== 'object' || Array.isArray(raw.data) || !Array.isArray(raw.data.events)) {
     return { ok: false, code: 'data' };
+  }
+  if (!hasOnlyKeys(raw.data, ['events', 'preferences']) ||
+      (raw.version === 1 && raw.data.events.some(event => event?.recurrence != null && event.recurrence !== 'none'))) {
+    return { ok: false, code: 'version' };
   }
   const rawIds = raw.data.events.map(event => event?.id);
   if (rawIds.some(id => typeof id !== 'string') || new Set(rawIds).size !== rawIds.length) {
@@ -873,9 +907,15 @@ class EventRepository {
     if (Array.isArray(parsed)) {
       payload = parsed;
       revision = `data:${hashString(raw)}`;
-    } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.schemaVersion === DATA_SCHEMA_VERSION && Array.isArray(parsed.events)) {
+    } else if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+        [2, DATA_SCHEMA_VERSION].includes(parsed.schemaVersion) && Array.isArray(parsed.events) &&
+        Object.keys(parsed).every(key => ['schemaVersion', 'events', 'revision', 'sourceId'].includes(key))) {
       payload = parsed.events;
-      revision = typeof parsed.revision === 'string' && parsed.revision ? parsed.revision : rawRevision;
+      if (parsed.schemaVersion === 2 && payload.some(event => event?.recurrence != null && event.recurrence !== 'none')) {
+        return this.failureResult(raw, new Error('Wiederholungen benötigen Datenschema 3.'), 'schema-migration', { quarantineOnError, revision: rawRevision });
+      }
+      revision = parsed.schemaVersion === 3 ? `data:${hashString(raw)}`
+        : typeof parsed.revision === 'string' && parsed.revision ? parsed.revision : rawRevision;
       sourceId = typeof parsed.sourceId === 'string' ? parsed.sourceId : null;
     } else {
       return this.failureResult(raw, new Error('Unbekanntes oder nicht unterstütztes Datenschema.'), 'schema-migration', { quarantineOnError, revision: rawRevision });
@@ -1323,7 +1363,7 @@ class EventRepository {
 
     let serialized;
     try {
-      // Das kanonische Array-Format bleibt für noch offene Tabs älterer App-Versionen lesbar.
+      // Bestände mit Wiederholungen benötigen eine von alten Clients abgewiesene Hülle.
       serialized = serializeEventCollection(collection.events);
     } catch (error) {
       return { ok: false, code: 'serialization', error };
@@ -1358,7 +1398,8 @@ class EventRepository {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return `data:${hashString(raw)}`;
-      if (parsed && parsed.schemaVersion === DATA_SCHEMA_VERSION && typeof parsed.revision === 'string' && parsed.revision) return parsed.revision;
+      if (parsed?.schemaVersion === 3) return `data:${hashString(raw)}`;
+      if (parsed && parsed.schemaVersion === 2 && typeof parsed.revision === 'string' && parsed.revision) return parsed.revision;
     } catch (_) {}
     return `raw:${hashString(raw)}`;
   }
@@ -2162,6 +2203,57 @@ function calculateCalendarProgress(targetDate, refDate, currentDate) {
   return total > 0 ? Math.max(0, Math.min(100, ((currentDay - referenceDay) / total) * 100)) : 100;
 }
 
+// Jährlich: Original-Monat/Tag bleiben erhalten. Der 29.02. wird nur für das
+// jeweilige Nichtschaltjahr auf den 28.02. geklemmt, niemals zurückgespeichert.
+function annualDateInYear(event, year) {
+  if (year < 1 || year > 9999) return null;
+  const original = parseDateKey(event.date);
+  return datePartsToKey({
+    year, month: original.month,
+    day: Math.min(original.day, daysInMonth(year, original.month - 1))
+  });
+}
+
+function resolveAnnualDateTime(date, time, timeZone, disambiguation) {
+  const exact = resolveZonedDateTime(date, time, timeZone, disambiguation);
+  if (exact.ok || exact.status !== 'nonexistent') return exact;
+  const instant = resolveCompatibleZonedComponents({ ...parseDateKey(date), ...parseTimeKey(time), second: 0 }, timeZone);
+  return instant == null ? exact : { ok: true, status: 'shifted', instant };
+}
+
+function annualOccurrence(event, year) {
+  const date = annualDateInYear(event, year);
+  if (!date) return null;
+  if (event.kind === 'all-day') return { date, instant: null, status: 'all-day' };
+  const resolution = resolveAnnualDateTime(date, event.time, event.timeZone, event.disambiguation);
+  return resolution.ok ? { date, ...resolution } : null;
+}
+
+function createAnnualTimeModel(event, nowTime, viewerTimeZone, viewerToday) {
+  const today = event.kind === 'timed' ? formatInstantDateKey(nowTime, event.timeZone) : viewerToday;
+  let year = Math.max(parseDateKey(event.date).year, parseDateKey(today).year);
+  let occurrence = annualOccurrence(event, year);
+  if (!occurrence) return null;
+  const hasPassed = value => event.kind === 'all-day'
+    ? compareDateKeys(value.date, viewerToday) < 0
+    : value.instant < nowTime;
+  if (hasPassed(occurrence) && year < 9999) occurrence = annualOccurrence(event, ++year);
+  if (!occurrence) return null;
+  const exhausted = hasPassed(occurrence);
+  const previous = annualOccurrence(event, year - 1);
+  const targetLocalDate = event.kind === 'all-day' ? occurrence.date : formatInstantDateKey(occurrence.instant, viewerTimeZone);
+  return {
+    kind: event.kind, isPast: exhausted, exhausted,
+    targetDate: occurrence.date, targetTime: occurrence.instant, targetLocalDate,
+    sortDay: calendarDayNumber(targetLocalDate),
+    refDate: previous?.date || '', refTime: previous?.instant ?? null,
+    viewerToday, occurrenceStatus: occurrence.status,
+    // Am exakten Instant noch null, danach das nächste Jahr. Ganztag wechselt
+    // erst beim lokalen Tageswechsel über den bestehenden Mitternachtspfad.
+    nextOccurrenceAt: event.kind === 'timed' && !exhausted ? occurrence.instant + 1 : Infinity
+  };
+}
+
 /* ── CALCULATOR ── */
 function initCalculator() {
   const startInput = document.getElementById('calc-start');
@@ -2337,12 +2429,13 @@ function createEventTimeModel(
   viewerTimeZone = getSystemTimeZone(),
   viewerToday = formatInstantDateKey(nowTime, viewerTimeZone)
 ) {
-
+  if (event.recurrence === 'yearly') return createAnnualTimeModel(event, nowTime, viewerTimeZone, viewerToday);
   if (event.kind === 'all-day') {
     return {
       kind: 'all-day',
       isPast: compareDateKeys(event.date, viewerToday) < 0,
       targetTime: null,
+      targetDate: event.date,
       targetLocalDate: event.date,
       sortDay: calendarDayNumber(event.date),
       refTime: null,
@@ -2427,6 +2520,12 @@ function createEmptyStateElement(title, body, allowCreate) {
 }
 
 function eventProgress(event, model, nowTime) {
+  if (event.recurrence === 'yearly') {
+    if (!model.refDate) return null;
+    return event.kind === 'all-day'
+      ? calculateCalendarProgress(model.targetDate, model.refDate, model.viewerToday)
+      : calculateProgress(model.targetTime, model.refTime, nowTime);
+  }
   if (event.refDate === '') return null;
   return event.kind === 'all-day'
     ? calculateCalendarProgress(event.date, event.refDate, model.viewerToday)
@@ -2435,7 +2534,7 @@ function eventProgress(event, model, nowTime) {
 
 function eventDifference(event, model, nowTime) {
   return event.kind === 'all-day'
-    ? getCalendarDateDiff(model.viewerToday, event.date, event.units)
+    ? getCalendarDateDiff(model.viewerToday, model.targetDate, event.units)
     : getDiff(model.targetTime, nowTime, event.units, event.timeZone);
 }
 
@@ -2488,7 +2587,7 @@ function resetEventFilters() {
 function getEventRenderKey(event) {
   return [
     event.name, event.kind, event.date, event.time, event.timeZone,
-    event.disambiguation, event.refDate, event.desc, event.img, event.units.join('|')
+    event.disambiguation, event.refDate, event.desc, event.img, event.units.join('|'), event.recurrence || ''
   ].join('\u001f');
 }
 
@@ -2513,7 +2612,7 @@ class EventListModelCache {
       const eventKey = getEventRenderKey(event);
       const previous = this.entries.get(event.id);
       const eventChanged = !previous || previous.eventKey !== eventKey;
-      const modelChanged = eventChanged || temporalChanged;
+      const modelChanged = eventChanged || temporalChanged || nowTime >= (previous?.model?.nextOccurrenceAt ?? Infinity);
       let model = previous?.model;
 
       activeIds.add(event.id);
@@ -2636,8 +2735,12 @@ class EventListRenderer {
       (item.model.isPast ? past : future).push({ ...item, view });
     });
 
-    this.nextTimedBoundaryAt = future.reduce((next, item) =>
-      item.model.kind === 'timed' ? Math.min(next, item.model.targetTime) : next, Infinity);
+    // Auch ausgefilterte Termine müssen beim Auftreten neu eingeordnet werden.
+    this.nextTimedBoundaryAt = prepared.reduce((next, item) => {
+      const boundary = item.event.recurrence === 'yearly' ? item.model.nextOccurrenceAt
+        : item.model.kind === 'timed' && !item.model.isPast ? item.model.targetTime : Infinity;
+      return Math.min(next, boundary);
+    }, Infinity);
     this.lastTickTime = nowTime;
     this.lastRenderStats = { ...cacheResult.stats, updatedViews };
 
@@ -2704,7 +2807,7 @@ class EventListRenderer {
     view.difference = null;
     view.differenceKey = '';
     setTextIfChanged(view.name, event.name);
-    setTextIfChanged(view.badge, formatEventBadgeDate(model.targetLocalDate, model.viewerToday));
+    setTextIfChanged(view.badge, `${event.recurrence === 'yearly' ? 'Jährlich · ' : ''}${model.exhausted ? 'Datumsgrenze erreicht' : formatEventBadgeDate(model.targetLocalDate, model.viewerToday)}`);
     view.element.classList.toggle('no-image', !event.img);
 
     if (view.imageSource !== event.img) {
@@ -2726,7 +2829,7 @@ class EventListRenderer {
     );
     setAttributeIfChanged(view.element, 'aria-describedby', `${view.badge.id} ${clockSummary.id}`);
 
-    const hasProgress = event.refDate !== '';
+    const hasProgress = event.recurrence === 'yearly' ? Boolean(model.refDate) : event.refDate !== '';
     if (hasProgress && !view.progressWrap) {
       view.progressWrap = document.createElement('div');
       view.progressWrap.className = 'card-progress-wrap';
@@ -2855,7 +2958,7 @@ class EventListRenderer {
 
   needsSecondUpdates() {
     return [...this.views.values()].some(view => view.isVisible && view.event?.kind === 'timed' && (
-      view.event.units.includes('seconds') || view.event.refDate !== ''
+      view.event.units.includes('seconds') || view.event.refDate !== '' || view.event.recurrence === 'yearly'
     ));
   }
 }
@@ -2873,7 +2976,9 @@ function updateDetailLive(nowTime, force = false) {
   const model = createEventTimeModel(event, nowTime);
   if (!model) return;
   const clockDue = force || nowTime >= detailNextClockUpdateAt;
-  const progressDue = event.refDate !== '' && (force || nowTime >= detailNextProgressUpdateAt);
+  if (event.recurrence === 'yearly') updateDetailDate(event, model);
+  const hasProgress = event.recurrence === 'yearly' ? Boolean(model.refDate) : event.refDate !== '';
+  const progressDue = hasProgress && (force || nowTime >= detailNextProgressUpdateAt);
 
   if (clockDue) {
     renderFlipClock(
@@ -2902,10 +3007,10 @@ function updateDetailLive(nowTime, force = false) {
     detailNextProgressUpdateAt = Number.isFinite(progressCadence)
       ? Math.floor(nowTime / progressCadence) * progressCadence + progressCadence
       : Infinity;
-  } else if (event.refDate === '') {
+  } else if (!hasProgress) {
     detailNextProgressUpdateAt = Infinity;
   }
-  detailNextUpdateAt = Math.min(detailNextClockUpdateAt, detailNextProgressUpdateAt);
+  detailNextUpdateAt = Math.min(detailNextClockUpdateAt, detailNextProgressUpdateAt, model.nextOccurrenceAt ?? Infinity);
 }
 
 function getMonotonicTime() {
@@ -2945,7 +3050,7 @@ class TemporalContextTracker {
 function detailNeedsSecondUpdates() {
   if (!sheetState.detailId || !detailSheet.classList.contains('open')) return false;
   const event = eventStore.getEvent(sheetState.detailId);
-  return Boolean(event?.kind === 'timed' && (event.units.includes('seconds') || event.refDate !== ''));
+  return Boolean(event?.kind === 'timed' && (event.units.includes('seconds') || event.refDate !== '' || event.recurrence === 'yearly'));
 }
 
 function getLiveUpdateIntervalMs() {
@@ -2966,7 +3071,10 @@ function tick(force = false) {
     handleTemporalContextRefresh(now);
     return;
   }
-  if (eventRenderer?.hasTimedBoundaryCrossed(now)) eventRenderer.render(eventStore.getEvents(), now, { forceTemporal: true });
+  if (eventRenderer?.hasTimedBoundaryCrossed(now)) {
+    eventRenderer.render(eventStore.getEvents(), now, { forceTemporal: true });
+    force = true;
+  }
   eventRenderer?.updateLive(now, force);
   updateDetailLive(now, force);
   updateLiveSchedulerCadence();
@@ -3449,24 +3557,43 @@ function populateDetailSheet(ev) {
   const heroBg = document.getElementById('detail-hero-bg');
   heroBg.style.backgroundImage = ev.img ? `url(${JSON.stringify(ev.img)})` : 'linear-gradient(145deg, hsl(var(--hue-primary), 48%, 30%), hsl(var(--hue-primary), 38%, 17%))';
 
-  const dateLabel = formatCalendarDate(ev.date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  if (ev.kind === 'all-day') {
-    document.getElementById('detail-date').textContent = `${dateLabel} · ganztägig`;
-  } else {
-    const resolution = resolveZonedDateTime(ev.date, ev.time, ev.timeZone, ev.disambiguation);
-    const occurrence = resolution.status === 'ambiguous'
-      ? ` · ${ev.disambiguation === 'later' ? 'zweites' : 'erstes'} Vorkommen`
-      : '';
-    document.getElementById('detail-date').textContent = `${dateLabel}, ${ev.time} Uhr · ${ev.timeZone}${occurrence}`;
-  }
+  updateDetailDate(ev, createEventTimeModel(ev));
 
   const descRow = document.getElementById('detail-desc-row');
   descRow.hidden = !ev.desc;
   document.getElementById('detail-desc').textContent = ev.desc || '';
+}
 
-  if (ev.refDate !== '') {
+function updateDetailDate(ev, model) {
+  const annual = ev.recurrence === 'yearly';
+  const date = annual && model ? model.targetDate : ev.date;
+  const prefix = annual ? model?.exhausted ? 'Letztes darstellbares Auftreten: ' : 'Nächstes Auftreten: ' : '';
+  const dateLabel = formatCalendarDate(date, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  if (ev.kind === 'all-day') {
+    setTextIfChanged(document.getElementById('detail-date'), `${prefix}${dateLabel} · ganztägig`);
+  } else {
+    const resolution = annual
+      ? resolveAnnualDateTime(date, ev.time, ev.timeZone, ev.disambiguation)
+      : resolveZonedDateTime(date, ev.time, ev.timeZone, ev.disambiguation);
+    const occurrence = resolution.status === 'ambiguous'
+      ? ` · ${ev.disambiguation === 'later' ? 'zweites' : 'erstes'} Vorkommen`
+      : '';
+    const actual = resolution.status === 'shifted'
+      ? new Intl.DateTimeFormat('de-DE', { timeZone: ev.timeZone, dateStyle: 'long', timeStyle: 'short' }).format(new Date(resolution.instant))
+      : `${dateLabel}, ${ev.time} Uhr`;
+    setTextIfChanged(document.getElementById('detail-date'), `${prefix}${actual} · ${ev.timeZone}${occurrence}${resolution.status === 'shifted' ? ' · wegen Zeitlücke vorwärts verschoben' : ''}`);
+  }
+  const recurrenceCopy = document.getElementById('detail-recurrence');
+  recurrenceCopy.hidden = !annual;
+  if (annual) setTextIfChanged(recurrenceCopy,
+    `Jährlich ab ${formatCalendarDate(ev.date, { day: '2-digit', month: '2-digit', year: 'numeric' })}. 29. Februar: in Nichtschaltjahren 28. Februar. ${ev.kind === 'all-day' ? 'Ganztägig nach dem Kalendertag des Geräts; heute bleibt der Zähler bei null.' : `Feste Zeitzone ${ev.timeZone}; bei doppelter Uhrzeit immer ${ev.disambiguation === 'later' ? 'zweites' : 'erstes'} Vorkommen, Zeitlücken werden um ihre Dauer vorwärts verschoben. Nach dem Zeitpunkt zählt das nächste Jahr.`} Fortschritt vom vorherigen Jahrestermin. ${model?.exhausted ? 'Nach dem Jahr 9999 kann kein nächstes Auftreten dargestellt werden.' : ''}`.trim());
+
+  const refDate = annual ? model?.refDate || '' : ev.refDate;
+  if (refDate !== '') {
     detailProgressWrap.hidden = false;
-    document.getElementById('detail-progress-label').textContent = `Fortschritt seit ${formatCalendarDate(ev.refDate, { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    setTextIfChanged(document.getElementById('detail-progress-label'), annual
+      ? 'Fortschritt seit dem vorherigen Jahrestermin'
+      : `Fortschritt seit ${formatCalendarDate(refDate, { day: '2-digit', month: '2-digit', year: 'numeric' })}`);
     detailProgressWrap.setAttribute('aria-label', `Fortschritt bis ${ev.name}`);
   } else {
     detailProgressWrap.hidden = true;
@@ -3493,10 +3620,12 @@ function openEditSheet(id = null) {
   eventNameInput.value = ev?.name || '';
   eventDateInput.value = ev?.date || '';
   eventTimeInput.value = ev?.time || '';
+  eventRecurrenceInput.value = ev?.recurrence || 'none';
   eventRefDateInput.value = ev?.refDate || '';
   eventDescriptionInput.value = ev?.desc || '';
   dstChoiceInput.value = ev?.disambiguation || 'earlier';
   resetEditorValidation();
+  updateRecurrenceEditor();
   updateDateTimeDisambiguation();
 
   document.querySelectorAll('#unit-wrap .unit-chip').forEach(chip => {
@@ -3638,9 +3767,22 @@ function closeEditSheet() {
   }
 }
 
+function updateRecurrenceEditor() {
+  const annual = eventRecurrenceInput.value === 'yearly';
+  document.getElementById('f-recurrence-hint').hidden = !annual;
+  const hint = document.getElementById('f-refdate-hint');
+  hint.textContent = annual
+    ? 'Der Fortschritt läuft automatisch vom vorherigen Jahrestermin bis zum nächsten. Ein vorhandenes Referenzdatum bitte vor dem Speichern ausdrücklich leeren.'
+    : sheetState.editBaseEvent?.recurrence === 'yearly'
+      ? 'Als Einzelereignis gilt das oben gespeicherte Ursprungsdatum. Passe es bei Bedarf an; ein Referenzdatum ist wieder optional.'
+      : '';
+  hint.hidden = !hint.textContent;
+}
+
 function updateDateTimeDisambiguation() {
   const date = eventDateInput.value;
   const time = eventTimeInput.value;
+  const annual = eventRecurrenceInput.value === 'yearly';
   const timeZone = isValidTimeZone(sheetState.editTimeZone) ? sheetState.editTimeZone : getSystemTimeZone();
   eventTimeInput.setCustomValidity('');
   timeZoneHint.classList.remove('error');
@@ -3663,7 +3805,9 @@ function updateDateTimeDisambiguation() {
     return { ok: false, status: 'invalid' };
   }
 
-  const resolution = resolveZonedDateTime(date, time, timeZone, dstChoiceInput.value);
+  const resolution = annual
+    ? resolveAnnualDateTime(date, time, timeZone, dstChoiceInput.value)
+    : resolveZonedDateTime(date, time, timeZone, dstChoiceInput.value);
   if (!resolution.ok && resolution.status === 'nonexistent') {
     dstChoiceField.hidden = true;
     eventTimeInput.setCustomValidity('Diese Uhrzeit existiert wegen der Zeitumstellung nicht.');
@@ -3673,7 +3817,8 @@ function updateDateTimeDisambiguation() {
     dstChoiceField.hidden = false;
     timeZoneHint.textContent = `Diese Uhrzeit kommt in ${timeZone} zweimal vor. Bitte ein Vorkommen wählen.`;
   } else {
-    dstChoiceField.hidden = true;
+    dstChoiceField.hidden = !annual;
+    if (resolution.status === 'shifted') timeZoneHint.textContent = `Zeitzone: ${timeZone}. Diese Ortszeit wird wegen einer Zeitlücke um deren Dauer vorwärts verschoben.`;
   }
   return resolution;
 }
@@ -3700,9 +3845,10 @@ function resetEditorValidation() {
 function handleEditorInput(event) {
   const field = event.target;
   if (editorErrorElements.has(field)) clearEditorError(field);
-  if (field === eventDateInput || field === eventTimeInput || field === dstChoiceInput) {
+  if (field === eventDateInput || field === eventTimeInput || field === dstChoiceInput || field === eventRecurrenceInput) {
     clearEditorError(eventTimeInput);
     clearEditorError(eventRefDateInput);
+    updateRecurrenceEditor();
     updateDateTimeDisambiguation();
   }
   editFormStatus.textContent = '';
@@ -3715,6 +3861,7 @@ function validateEditorForm({ focusFirst = true } = {}) {
   const date = eventDateInput.value;
   const time = eventTimeInput.value;
   const refDate = eventRefDateInput.value;
+  const recurrence = eventRecurrenceInput.value;
   const desc = eventDescriptionInput.value.trim();
   const imgUrlInput = imageUrlInput.value.trim();
   const units = Array.from(eventUnitWrap.querySelectorAll('.unit-chip.selected')).map(chip => chip.dataset.unit);
@@ -3727,6 +3874,7 @@ function validateEditorForm({ focusFirst = true } = {}) {
     if (errorElement) errorElement.textContent = message;
     invalidTargets.push(focusTarget);
   };
+  if (!['none', 'yearly'].includes(recurrence)) invalidate(eventRecurrenceInput, 'Bitte Einzelereignis oder jährlich auswählen.');
 
   if (!name) invalidate(eventNameInput, 'Bitte einen Namen eingeben.');
   else if (name.length > DATA_LIMITS.maxNameChars || eventNameInput.validity.tooLong) {
@@ -3766,7 +3914,9 @@ function validateEditorForm({ focusFirst = true } = {}) {
   if (hasInvalidRefDateInput) invalidate(eventRefDateInput, 'Bitte ein vollständiges, gültiges Referenzdatum eingeben.');
   else if (!validRefDate) invalidate(eventRefDateInput, 'Bitte ein gültiges Referenzdatum auswählen.');
 
-  if (validDate && validRefDate && hasRefDate) {
+  if (recurrence === 'yearly' && hasRefDate) {
+    invalidate(eventRefDateInput, 'Bei jährlichen Ereignissen ist der Fortschritt automatisch. Bitte das Referenzdatum ausdrücklich leeren.');
+  } else if (validDate && validRefDate && hasRefDate) {
     if (kind === 'all-day' && compareDateKeys(refDate, date) >= 0) {
       invalidate(eventRefDateInput, 'Das Referenzdatum muss vor dem Ereignistag liegen.');
     } else if (kind === 'timed' && target.ok) {
@@ -3805,7 +3955,7 @@ function validateEditorForm({ focusFirst = true } = {}) {
 
   return {
     valid: true,
-    values: { name, date, time, refDate, desc, units, kind, timeZone, disambiguation, normalizedImageUrl }
+    values: { name, date, time, recurrence, refDate, desc, units, kind, timeZone, disambiguation, normalizedImageUrl }
   };
 }
 
@@ -3817,14 +3967,14 @@ async function saveEvent() {
   }
   const validation = validateEditorForm();
   if (!validation.valid) return false;
-  const { name, date, time, refDate, desc, units, kind, timeZone, disambiguation, normalizedImageUrl } = validation.values;
+  const { name, date, time, recurrence, refDate, desc, units, kind, timeZone, disambiguation, normalizedImageUrl } = validation.values;
 
   let image = imgData;
   if (normalizedImageUrl) image = normalizedImageUrl;
 
   const event = normalizeEvent({
     id: sheetState.editId || createEventId(),
-    name, kind, date, time, timeZone, disambiguation, refDate, desc, units, img: image
+    name, kind, date, time, recurrence, timeZone, disambiguation, refDate, desc, units, img: image
   });
   if (!event) {
     showSnackbar('Ereignis konnte nicht gespeichert werden. Eingaben prüfen.');
@@ -4459,8 +4609,8 @@ function importRecoveryFile(event) {
       const raw = String(reader.result || '');
       if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Datei überschreitet 8 MiB.');
       const data = JSON.parse(raw);
-      const collection = normalizeEventCollection(data, { regenerateIds: true });
-      if (!collection.ok || collection.invalidCount) throw new Error('Datei enthält kein vollständig gültiges Ereignis-Array.');
+      const collection = normalizeEventDocument(data, { regenerateIds: true });
+      if (!collection.ok || collection.invalidCount) throw new Error('Datei enthält kein vollständig unterstütztes Ereignisschema. Bitte eine passende App-Version verwenden.');
       await validateEmbeddedImages(collection.events);
       requestRecoveryConfirmation(
         `Beschädigte aktive Daten mit ${collection.events.length} gültigen Ereignissen aus der Datei ersetzen? Der aktive Rohbestand wird überschrieben; vorhandene Rettungskopien bleiben erhalten. Exportiere aktive Rohdaten vorher, falls sie noch benötigt werden.`,
@@ -4609,7 +4759,7 @@ function exportFullBackup() {
     const document = createFullBackupDocument(eventStore.getEvents(), readActivePreferences());
     const validated = validateFullBackupDocument(document);
     if (!validated.ok) throw new Error(`Backup kann nicht erstellt werden (${validated.code}).`);
-    downloadJsonDocument(validated.serialized, `tageszaehler_backup_v${BACKUP_VERSION}_${localDateInput()}.json`);
+    downloadJsonDocument(validated.serialized, `tageszaehler_backup_v${validated.backup.version}_${localDateInput()}.json`);
     setMenuOpen(false);
     updateBackupStatus(`Vollständiges Backup mit ${validated.events.length} Ereignis${validated.events.length === 1 ? '' : 'sen'} und Darstellungseinstellungen exportiert.`);
   } catch (error) {
@@ -4638,16 +4788,16 @@ function backupValidationMessage(code) {
 }
 
 async function importLegacyEventArray(data) {
-  const collection = normalizeEventCollection(data, { regenerateIds: true });
+  const collection = normalizeEventDocument(data, { regenerateIds: true });
   if (!collection.ok) throw new Error(`Importlimit oder Datenschema verletzt: ${collection.code}.`);
   if (collection.invalidCount) throw new Error(`${collection.invalidCount} ungültige Ereignisse gefunden.`);
   await validateEmbeddedImages(collection.events);
-  if (!confirm(`${collection.events.length} Ereignis${collection.events.length === 1 ? '' : 'se'} aus dem bisherigen Ereignisformat importieren und aktuelle Ereignisse ersetzen? Darstellungseinstellungen bleiben unverändert.`)) {
+  if (!confirm(`${collection.events.length} Ereignis${collection.events.length === 1 ? '' : 'se'} importieren und aktuelle Ereignisse ersetzen? Darstellungseinstellungen bleiben unverändert.`)) {
     updateBackupStatus('Import abgebrochen; Ereignisse und Einstellungen blieben unverändert.');
     return;
   }
   const imported = await eventController.importEvents(collection.events);
-  if (imported) updateBackupStatus('Bisheriger Ereignisexport importiert. Darstellungseinstellungen blieben unverändert.');
+  if (imported) updateBackupStatus('Ereignisexport einschließlich vorhandener jährlicher Wiederholungen importiert. Darstellungseinstellungen blieben unverändert.');
 }
 
 async function restoreFullBackup(validated) {
@@ -4707,6 +4857,9 @@ function importData(event) {
       const data = JSON.parse(raw);
       if (Array.isArray(data)) {
         if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Der bisherige Ereignisexport überschreitet 8 MiB.');
+        await importLegacyEventArray(data);
+      } else if (data && Object.prototype.hasOwnProperty.call(data, 'schemaVersion')) {
+        if (utf8ByteLength(raw) > DATA_LIMITS.maxEventDataBytes) throw new Error('Der Ereignisexport überschreitet 8 MiB.');
         await importLegacyEventArray(data);
       } else {
         const validated = validateFullBackupDocument(data);

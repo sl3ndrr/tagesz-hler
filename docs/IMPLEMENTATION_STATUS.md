@@ -3,7 +3,7 @@
 Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzungsplans. Sie wird mit jeder Umsetzung im selben Pull Request aktualisiert. Folgepakete prüfen den aktuellen `main` und lesen zusätzlich die verlinkten Abschlussberichte der direkten Voraussetzungen.
 
 **Ausgangsstand:** `081d5abf3e04f85b4b00d9df3f8af1d2c64cd454`  
-**Stand:** 2026-09-16  
+**Stand:** 2026-09-17
 **Statuswerte:** `Geplant` · `In Arbeit` · `Gemergt` · `Blockiert` · `Entfällt`
 
 ## Arbeitsregeln
@@ -33,7 +33,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Gemergt | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17) / `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7` |
 | P14 | Ereignisse suchen und filtern | C1 | Gemergt | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18) / `8a3b4634afe0637f51937d73592f393f53cc012d` |
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
-| P16 | Jährlich wiederkehrende Ereignisse | C2 | Geplant | P03, P06, P09, P11; P15, falls das Backup bereits existiert | — |
+| P16 | Jährlich wiederkehrende Ereignisse | C2 | In Arbeit | P03, P06, P09, P11; P15, falls das Backup bereits existiert | PR-Link folgt nach Erstellung; noch kein Merge |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Geplant | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | — |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
 
@@ -151,13 +151,17 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 - **PR / Merge-Commit:** [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), tatsächlicher Merge-Commit `<TATSÄCHLICHER_MERGE_COMMIT>`, getesteter Branch-Commit `8e1f7a89ddafe2f8a0c270cd6f92faca16f57a76`; [Actions #65](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35116571362) erfolgreich, 84/84 Regressionen grün, Deploy im Pull Request übersprungen.
 - **Abschlussbericht:** Versioniertes Vollbackup (`tageszaehler-backup`, Version 1) für Ereignisse sowie Theme, Farbe und Ansicht; bisherige Ereignis-Arrays bleiben importierbar. Die Wiederherstellung validiert Datei, Bilder, Größen und Präferenztypen vollständig vor produktiven Schreibzugriffen und verwendet ein installationsbezogenes, per Read-back bestätigtes Rollback-Journal. App-Shell-Version `v17`.
 - **Übergabe an Folgepakete:** Das Journal stellt keine echte `localStorage`-Mehrschlüsseltransaktion dar. Es ermöglicht bestätigten Commit oder sichtbaren Rollback beim Start; kann die Rücknahme nicht bestätigt werden, bleiben Schreibzugriffe gesperrt. Ereignisse sind auf 8 MiB, vollständige Backup-Dateien auf 10 MiB UTF-8 begrenzt. P07-Rohdaten und Quarantänekopien werden nicht in das Vollbackup aufgenommen, ersetzt oder gelöscht.
+- **Offener Statusnachtrag, bei P16 erkannt:** Die oben noch enthaltenen Platzhalter sind unvollständig. GitHub bestätigt PR #19 als gemergt mit `53bf80c6592136184edebb880ceaba6498110181`, einem Vorfahren des für P16 geprüften `main` `6e555a61738fa4443cc9e9946efc9695845d9a4e`. Der Status `Gemergt` und die fachliche Grundlage sind bestätigt; tatsächlichen P15-Merge-Commit in Überblick und P15-Protokoll nachtragen. Keine fachliche Blockierung von P16.
 
 ### P16 – Jährlich wiederkehrende Ereignisse
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** PR-Link folgt nach Erstellung; kein Merge erfolgt. Ausgangs-`main`: `6e555a61738fa4443cc9e9946efc9695845d9a4e`. Bestätigte Voraussetzungen: P03 `af1998b62e7c7e8d4aba4634da1b771708829e6b`, P06 `c07cb664a102dc7b1f97afa762113729087f1d9e`, P09 `8bdd7f412ff7274dd99862a3ceab68cb51ac961e`, P11 `65d5cb5e77607cf94d503ee121d1856cbcc834fb`, P15 `53bf80c6592136184edebb880ceaba6498110181`.
+- **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Optionales `recurrence: 'yearly'` führt durch Editor, Normalisierung, Kalender-/Zeitmodell, Sortierung, Zähler, Detailanzeige, Jahresfortschritt sowie Ereignisexport, Vollbackup und P07-Dateiersatz. 29. Februar wird je Nichtschaltjahr auf 28. Februar geklemmt; Ganztag folgt dem Gerätetag, Uhrzeit der gespeicherten Zone. Fold-Wahl gilt jährlich, Lücken werden um ihre Dauer vorwärts verschoben. App-Shell `v18`, unveränderte Precache-Liste und Cache-Strategie.
+- **Prüfstand:** Lokale Ausgangsbasis mit exakt dem Git-Baum von `main`: 84/84 Regressionen erfolgreich. P16: 19 synthetische Regressionen einschließlich produktiver Editor-/Renderer-/Importpfade, Schema-/Backup-Rundlauf, Rollback und Kalendergrenzen. Gesamte Prüfhülle und tatsächlicher Branch-CI-Lauf werden vor Abschluss in der PR-Beschreibung mit geprüftem Commit und Lauf-Link nachgeführt. Reale Browserprüfung nicht ausgeführt: der verfügbare Browser blockiert die lokale Vorschau mit `ERR_BLOCKED_BY_CLIENT`. Reale Mehrtab-, Offline-, native Datumseingabe-, Tastatur- und Screenreaderprüfung bleiben vor Merge offen.
+- **Übergabe an Folgepakete:** Ursprungsdatum bleibt unverändert und begrenzt das erste Jahr. Ganztag hält null bis Tagesende; zeitgenau hält null am Instant und wechselt danach zum Folgejahr. Fortschritt läuft zwischen vorherigem und nächstem Jahrestermin; manuelle Referenz ist bei jährlich nicht zulässig und muss ausdrücklich geleert werden. Am Ende des Datumsbereichs 9999 bleibt der letzte Termin mit Grenzhinweis sichtbar. Schema 3 schützt Bestände/Ereignisexporte mit Wiederholung, Vollbackup Version 2 schützt deren Backup; reine Einzelbestände behalten Arrays/Backup v1, v2-Speicherhüllen bleiben lesbar. Unbekannte Felder/Versionen/Regeln werden abgewiesen. Schreibprotokoll 3 behält denselben installationsbezogenen Channel/Lock; nicht kooperierende stumme Alt-Tabs bleiben ein Restrisiko. P17 muss die dokumentierte Schaltags-/DST-Semantik berücksichtigen, ohne sie still zu ändern.
+- **Planabweichungen / offene Punkte:** Kein Git-Transport im Terminal (HTTP 403); sämtliche Repository-Dateien wurden über den GitHub-Connector aus dem bestätigten Commit materialisiert, Binärdateien gegen ihre Blob-SHAs geprüft und der vollständige lokale Baum gegen `c1107c268407c74960e37808f8782cb1af160d0f` abgeglichen. Branch/Commit/PR verwenden GitHub-Aktionen. Kein fehlendes `IMPLEMENTATION_STATUS.md`, kein `AGENTS.md`, `.editorconfig` beachtet. Der Paketprompt enthält keine gesonderte Liste „Anzuhängende Dateien“. P15-Statusnachtrag ist oben als offener Punkt dokumentiert. Keine Scope-Erweiterung und keine offenen fachlichen Fragen.
+- **Vorformulierter Nachtrag – ausschließlich nach tatsächlichem Merge:** Überblick auf `Gemergt` setzen und `PR-Link / <TATSÄCHLICHER_MERGE_COMMIT>` eintragen. Im P16-Protokoll: `Status: Gemergt; PR / Merge-Commit: PR-Link, tatsächlicher Merge-Commit <TATSÄCHLICHER_MERGE_COMMIT>, getesteter Branch-Commit <LETZTER_GETESTETER_BRANCH_COMMIT>; <BEOBACHTETER_CI_LAUF_LINK>, <BEOBACHTETER_CI_STATUS>.` Die final beobachteten Werte stehen im PR-Abschlussbericht; nicht durch vermutete Ergebnisse ersetzen.
 
 ### P17 – Kalenderexport als ICS
 
@@ -165,6 +169,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 - **PR / Merge-Commit:** —
 - **Abschlussbericht:** —
 - **Übergabe an Folgepakete:** —
+- **Offene Formatentscheidung aus P16:** Bei vorhandenen jährlichen Wiederholungen sind 29.02. → 28.02. in Nichtschaltjahren, feste Ereigniszone, persistierte Fold-Wahl und vorwärts verschobene Lücken abzubilden bzw. unterstützte Exportgrenzen ausdrücklich zu benennen. Eine einfache jährliche Kalenderregel allein garantiert diese Semantik nicht. P16 erweitert den ICS-Scope nicht.
 
 ### P18 – Installation und Direktzugriffe verbessern
 
