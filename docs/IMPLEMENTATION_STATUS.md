@@ -34,7 +34,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P14 | Ereignisse suchen und filtern | C1 | Gemergt | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18) / `8a3b4634afe0637f51937d73592f393f53cc012d` |
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `53bf80c6592136184edebb880ceaba6498110181` |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Gemergt | P03, P06, P09, P11; P15, falls das Backup bereits existiert | [PR #21](https://github.com/sl3ndrr/tagesz-hler/pull/21) / `fca279e17399c552e7c2c9896c5f60b3d6d854aa` |
-| P17 | Kalenderexport als ICS | C3 (ICS) | In Arbeit | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / noch kein Merge |
+| P17 | Kalenderexport als ICS | C3 (ICS) | Gemergt | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
 
 ## Paketprotokoll
@@ -165,8 +165,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P17 – Kalenderexport als ICS
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23); kein Merge erfolgt. Ausgangs-`main`: `be20a2b0c65241b8df8201c8ef39830eb5303ff9`. Bestätigte Voraussetzungen: P03 `af1998b62e7c7e8d4aba4634da1b771708829e6b`, P06 `c07cb664a102dc7b1f97afa762113729087f1d9e`, P16 `fca279e17399c552e7c2c9896c5f60b3d6d854aa`.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23), tatsächlicher Merge-Commit `<TATSÄCHLICHER_MERGE_COMMIT>`, getesteter Branch-Commit `a11e4163ef5a552a8481d49fa687fa5b65239e67`; [Actions #76](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35353618746) erfolgreich, statische PWA-Prüfung und 107/107 Regressionen erfolgreich, Deploy übersprungen.
 - **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Lokaler RFC-5545-orientierter UTF-8-Export mit stabilen UIDs, CRLF/75-Oktett-Faltung und Textmaskierung; Ganztage als Datum, einzelne Uhrzeiten als eindeutige UTC-Instants. Jährliche Regeln erhalten P16-Schaltag, Ereigniszone, Fold-Wahl und Lückenverschiebung durch RRULE plus gezielte EXDATE/UTC-RDATE-Korrekturen bis 9999. JSON-Export, Vollbackup und lokale Daten bleiben unverändert; App-Shell `v19`.
 - **Prüfstand:** Syntaxprüfungen und 4/4 P17-Regressionen erfolgreich; 105/105 lokal ausführbare Regressionen erfolgreich. Der vollständige lokale statische Lauf scheitert ausschließlich an nicht materialisierten, unveränderten PNG-/WOFF2-Assets. [Actions #75](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35353413189) auf Branch-Commit `231641e2bc099689f1967307578841c3f69f3157` tatsächlich beobachtet: statische PWA-Prüfung und 107/107 Regressionen erfolgreich, Deploy übersprungen. Reale Browser-/Download-/Offline-/Tastatur-/Screenreader- und Apple-/Google-/Outlook-Importprüfungen nicht ausgeführt.
 - **Übergabe an Folgepakete:** Jährliche Uhrzeitserien setzen beim Import die IANA-Zeitzonendatenbank des Kalenderprogramms voraus; keine bis 9999 ausgeschriebene VTIMEZONE. Viele DST-Sonderjahre können Exportdauer und Dateigröße erhöhen. ICS-Import, Konten und Synchronisation bleiben außerhalb des Scopes. Der zuvor offene P15-Merge-Platzhalter ist mit `53bf80c6592136184edebb880ceaba6498110181` berichtigt.
