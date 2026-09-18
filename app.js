@@ -331,6 +331,17 @@ async function init() {
   if (dataLoadWarning) showSnackbar(dataLoadWarning);
   updateRecoveryStatus();
   updateBackupStatus(backupStartupMessage, backupRestoreBlocked);
+  applyDirectStart();
+}
+
+function applyDirectStart() {
+  const action = new URLSearchParams(window.location.search).get('action');
+  if (action === 'new-event') {
+    openEditSheet();
+  } else if (action === 'calculator') {
+    setActiveTab(2);
+    document.getElementById('calc-start')?.focus();
+  }
 }
 
 function setActiveTab(index) {
