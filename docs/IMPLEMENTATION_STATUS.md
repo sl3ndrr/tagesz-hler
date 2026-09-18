@@ -35,7 +35,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `53bf80c6592136184edebb880ceaba6498110181` |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Gemergt | P03, P06, P09, P11; P15, falls das Backup bereits existiert | [PR #21](https://github.com/sl3ndrr/tagesz-hler/pull/21) / `fca279e17399c552e7c2c9896c5f60b3d6d854aa` |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Gemergt | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
-| P18 | Installation und Direktzugriffe verbessern | C4 | In Arbeit | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / noch kein Merge |
+| P18 | Installation und Direktzugriffe verbessern | C4 | Gemergt | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
 
 ## Paketprotokoll
 
@@ -174,8 +174,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P18 – Installation und Direktzugriffe verbessern
 
-- **Status:** In Arbeit
-- **PR / Merge-Commit:** [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25); Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge ergänzen.
+- **Status:** Gemergt
+- **PR / Merge-Commit:** [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25), tatsächlicher Merge-Commit `<TATSÄCHLICHER_MERGE_COMMIT>`, getesteter Branch-Commit `3611571d6302f4b8b6c07d5905f610e0894c490b`; [Actions #85](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35357257497) erfolgreich, Deploy übersprungen.
 - **Abschlussbericht:** Manifest-Screenshot mit synthetischen Beispieldaten und Herkunftsnachweis, relative Direktzugriffe für den vorhandenen Ereigniseditor und Rechner sowie eine eng begrenzte Verarbeitung von `action=new-event` und `action=calculator`. Unbekannte Parameter werden ignoriert. Screenshot-Asset in der App-Shell, `CACHE_VERSION` `v20`; keine neue Cache-Strategie.
 - **Übergabe an Folgepakete:** Weitere Direktstarts nur relativ und über eine bekannte Parameterliste ergänzen; unbekannte Werte wirkungslos lassen. Ersetzte Screenshot-Assets benötigen einen aktualisierten Herkunftsnachweis, einen App-Shell-Eintrag und eine erhöhte Cache-Version. [Actions #83](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35356969628) auf `6cb92df5ea996b92b2f7e9143981f900c4f68df1` erfolgreich; reale installierte/offline Browserprüfungen bleiben offen.
 - **Offener Punkt außerhalb P18:** P17 steht im Überblick auf `Gemergt`, enthält aber weiterhin den Merge-Commit-Platzhalter `<TATSÄCHLICHER_MERGE_COMMIT>`. Der tatsächliche Merge-Status und -Commit sind im zugehörigen Statusprozess zu verifizieren und nachzutragen.
