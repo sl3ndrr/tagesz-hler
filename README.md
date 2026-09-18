@@ -211,6 +211,32 @@ aktualisieren. Es gibt keine automatische Downgrade-Konvertierung in
 Einzelereignisse. Das 8-MiB-Ereignislimit umfasst auch die neue Hülle; das
 Vollbackuplimit bleibt bei 10 MiB.
 
+#### Kalenderexport (ICS)
+
+„Kalender exportieren“ erzeugt lokal im Browser eine UTF-8-kodierte
+iCalendar-Datei (`.ics`); gespeicherte Ereignisse und die beiden JSON-Exportwege
+bleiben unverändert. Ganztage werden als `VALUE=DATE`, einzelne Uhrzeitereignisse
+als eindeutige UTC-Instants und jährliche Uhrzeitereignisse als lokale Serie in
+der gespeicherten IANA-Zeitzone ausgegeben. Titel und Beschreibung werden nach
+RFC 5545 maskiert, Inhaltszeilen nach höchstens 75 UTF-8-Oktetten gefaltet und
+mit CRLF abgeschlossen.
+
+Jährliche Ereignisse beginnen am unveränderten Ursprungsdatum. Für den 29.
+Februar bildet `BYMONTHDAY=28,29;BYSETPOS=-1` die P16-Regel ab: in
+Nichtschaltjahren gilt der 28. Februar, in Schaltjahren wieder der 29. Februar.
+Bei jährlichen Uhrzeiten ergänzen `EXDATE` und UTC-`RDATE` genau die Jahre, in
+denen eine DST-Lücke vorwärts verschoben oder die gespeicherte spätere
+Fold-Instanz gewählt wird. Dadurch bleibt die unterstützte P16-Semantik bis zur
+Datumsgrenze 9999 erhalten; bei sehr vielen solchen Serien kann der Export
+entsprechend groß werden und länger dauern.
+
+Die Datei bettet keine vollständigen `VTIMEZONE`-Definitionen bis zum Jahr 9999
+ein. Jährliche Uhrzeitserien setzen deshalb voraus, dass das importierende
+Kalenderprogramm den angegebenen IANA-`TZID` aus seiner Zeitzonendatenbank
+kennt. Ein ICS-Import, Kalenderkonten und Synchronisation gehören nicht zu
+dieser Funktion. Praktische Importe in unterschiedliche Kalenderprogramme
+sind zusätzlich zur synthetischen Serializer-Prüfung manuell zu kontrollieren.
+
 ### Browservoraussetzungen
 
 Getestet wird synthetisch mit aktuellem Node.js in GitHub Actions. Für die

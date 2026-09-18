@@ -3,7 +3,7 @@
 Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzungsplans. Sie wird mit jeder Umsetzung im selben Pull Request aktualisiert. Folgepakete prüfen den aktuellen `main` und lesen zusätzlich die verlinkten Abschlussberichte der direkten Voraussetzungen.
 
 **Ausgangsstand:** `081d5abf3e04f85b4b00d9df3f8af1d2c64cd454`  
-**Stand:** 2026-09-17
+**Stand:** 2026-09-18
 **Statuswerte:** `Geplant` · `In Arbeit` · `Gemergt` · `Blockiert` · `Entfällt`
 
 ## Arbeitsregeln
@@ -32,9 +32,9 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P12 | Schriftarten lokal bereitstellen | B5 | Gemergt | P04 | [PR #14](https://github.com/sl3ndrr/tagesz-hler/pull/14) / `d1305a46bebda6dedf2987d102c37a36be124ef3` |
 | P13 | Datumssemantik und Wartungsabläufe dokumentieren | B18 | Gemergt | P01–P12 | [PR #17](https://github.com/sl3ndrr/tagesz-hler/pull/17) / `b3e572c0126709b15eadb4ae97f8bd601eaa0ab7` |
 | P14 | Ereignisse suchen und filtern | C1 | Gemergt | P11 | [PR #18](https://github.com/sl3ndrr/tagesz-hler/pull/18) / `8a3b4634afe0637f51937d73592f393f53cc012d` |
-| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
+| P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `53bf80c6592136184edebb880ceaba6498110181` |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Gemergt | P03, P06, P09, P11; P15, falls das Backup bereits existiert | [PR #21](https://github.com/sl3ndrr/tagesz-hler/pull/21) / `fca279e17399c552e7c2c9896c5f60b3d6d854aa` |
-| P17 | Kalenderexport als ICS | C3 (ICS) | Geplant | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | — |
+| P17 | Kalenderexport als ICS | C3 (ICS) | In Arbeit | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / noch kein Merge |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
 
 ## Paketprotokoll
@@ -148,10 +148,10 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 ### P15 – Vollständiges Backup mit Einstellungen
 
 - **Status:** Gemergt
-- **PR / Merge-Commit:** [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), tatsächlicher Merge-Commit `<TATSÄCHLICHER_MERGE_COMMIT>`, getesteter Branch-Commit `8e1f7a89ddafe2f8a0c270cd6f92faca16f57a76`; [Actions #65](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35116571362) erfolgreich, 84/84 Regressionen grün, Deploy im Pull Request übersprungen.
+- **PR / Merge-Commit:** [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19), tatsächlicher Merge-Commit `53bf80c6592136184edebb880ceaba6498110181`, getesteter Branch-Commit `8e1f7a89ddafe2f8a0c270cd6f92faca16f57a76`; [Actions #65](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35116571362) erfolgreich, 84/84 Regressionen grün, Deploy im Pull Request übersprungen.
 - **Abschlussbericht:** Versioniertes Vollbackup (`tageszaehler-backup`, Version 1) für Ereignisse sowie Theme, Farbe und Ansicht; bisherige Ereignis-Arrays bleiben importierbar. Die Wiederherstellung validiert Datei, Bilder, Größen und Präferenztypen vollständig vor produktiven Schreibzugriffen und verwendet ein installationsbezogenes, per Read-back bestätigtes Rollback-Journal. App-Shell-Version `v17`.
 - **Übergabe an Folgepakete:** Das Journal stellt keine echte `localStorage`-Mehrschlüsseltransaktion dar. Es ermöglicht bestätigten Commit oder sichtbaren Rollback beim Start; kann die Rücknahme nicht bestätigt werden, bleiben Schreibzugriffe gesperrt. Ereignisse sind auf 8 MiB, vollständige Backup-Dateien auf 10 MiB UTF-8 begrenzt. P07-Rohdaten und Quarantänekopien werden nicht in das Vollbackup aufgenommen, ersetzt oder gelöscht.
-- **Offener Statusnachtrag, bei P16 erkannt:** Die oben noch enthaltenen Platzhalter sind unvollständig. GitHub bestätigt PR #19 als gemergt mit `53bf80c6592136184edebb880ceaba6498110181`, einem Vorfahren des für P16 geprüften `main` `6e555a61738fa4443cc9e9946efc9695845d9a4e`. Der Status `Gemergt` und die fachliche Grundlage sind bestätigt; tatsächlichen P15-Merge-Commit in Überblick und P15-Protokoll nachtragen. Keine fachliche Blockierung von P16.
+- **Statusnachtrag:** Der zuvor offene Platzhalter wurde mit dem von GitHub bestätigten Merge-Commit `53bf80c6592136184edebb880ceaba6498110181` berichtigt.
 
 ### P16 – Jährlich wiederkehrende Ereignisse
 
@@ -165,11 +165,12 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P17 – Kalenderexport als ICS
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
-- **Offene Formatentscheidung aus P16:** Bei vorhandenen jährlichen Wiederholungen sind 29.02. → 28.02. in Nichtschaltjahren, feste Ereigniszone, persistierte Fold-Wahl und vorwärts verschobene Lücken abzubilden bzw. unterstützte Exportgrenzen ausdrücklich zu benennen. Eine einfache jährliche Kalenderregel allein garantiert diese Semantik nicht. P16 erweitert den ICS-Scope nicht.
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23); kein Merge erfolgt. Ausgangs-`main`: `be20a2b0c65241b8df8201c8ef39830eb5303ff9`. Bestätigte Voraussetzungen: P03 `af1998b62e7c7e8d4aba4634da1b771708829e6b`, P06 `c07cb664a102dc7b1f97afa762113729087f1d9e`, P16 `fca279e17399c552e7c2c9896c5f60b3d6d854aa`.
+- **Abschlussbericht:** Vollständiger Bericht in der PR-Beschreibung. Lokaler RFC-5545-orientierter UTF-8-Export mit stabilen UIDs, CRLF/75-Oktett-Faltung und Textmaskierung; Ganztage als Datum, einzelne Uhrzeiten als eindeutige UTC-Instants. Jährliche Regeln erhalten P16-Schaltag, Ereigniszone, Fold-Wahl und Lückenverschiebung durch RRULE plus gezielte EXDATE/UTC-RDATE-Korrekturen bis 9999. JSON-Export, Vollbackup und lokale Daten bleiben unverändert; App-Shell `v19`.
+- **Prüfstand:** Syntaxprüfungen und 4/4 P17-Regressionen erfolgreich; 105/105 lokal ausführbare Regressionen erfolgreich. Der vollständige lokale statische Lauf scheitert ausschließlich an nicht materialisierten, unveränderten PNG-/WOFF2-Assets. [Actions #75](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35353413189) auf Branch-Commit `231641e2bc099689f1967307578841c3f69f3157` tatsächlich beobachtet: statische PWA-Prüfung und 107/107 Regressionen erfolgreich, Deploy übersprungen. Reale Browser-/Download-/Offline-/Tastatur-/Screenreader- und Apple-/Google-/Outlook-Importprüfungen nicht ausgeführt.
+- **Übergabe an Folgepakete:** Jährliche Uhrzeitserien setzen beim Import die IANA-Zeitzonendatenbank des Kalenderprogramms voraus; keine bis 9999 ausgeschriebene VTIMEZONE. Viele DST-Sonderjahre können Exportdauer und Dateigröße erhöhen. ICS-Import, Konten und Synchronisation bleiben außerhalb des Scopes. Der zuvor offene P15-Merge-Platzhalter ist mit `53bf80c6592136184edebb880ceaba6498110181` berichtigt.
+- **Vorformulierter Nachtrag – ausschließlich nach tatsächlichem Merge:** Überblick auf `Gemergt` setzen und [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` eintragen. Im P17-Protokoll: `Status: Gemergt; PR / Merge-Commit: https://github.com/sl3ndrr/tagesz-hler/pull/23, tatsächlicher Merge-Commit <TATSÄCHLICHER_MERGE_COMMIT>, getesteter Branch-Commit <LETZTER_GETESTETER_BRANCH_COMMIT>; <BEOBACHTETER_CI_LAUF_LINK>, <BEOBACHTETER_CI_STATUS>.` Offene praktische Prüfungen beibehalten, sofern sie nicht tatsächlich ausgeführt wurden.
 
 ### P18 – Installation und Direktzugriffe verbessern
 
