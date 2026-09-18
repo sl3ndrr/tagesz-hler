@@ -35,7 +35,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P15 | Vollständiges Backup mit Einstellungen | C3 (Backup) | Gemergt | P06, P07, P09 | [PR #19](https://github.com/sl3ndrr/tagesz-hler/pull/19) / `53bf80c6592136184edebb880ceaba6498110181` |
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Gemergt | P03, P06, P09, P11; P15, falls das Backup bereits existiert | [PR #21](https://github.com/sl3ndrr/tagesz-hler/pull/21) / `fca279e17399c552e7c2c9896c5f60b3d6d854aa` |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Gemergt | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
-| P18 | Installation und Direktzugriffe verbessern | C4 | Geplant | P04, P05, P12 | — |
+| P18 | Installation und Direktzugriffe verbessern | C4 | In Arbeit | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / noch kein Merge |
 
 ## Paketprotokoll
 
@@ -174,7 +174,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 ### P18 – Installation und Direktzugriffe verbessern
 
-- **Status:** Geplant
-- **PR / Merge-Commit:** —
-- **Abschlussbericht:** —
-- **Übergabe an Folgepakete:** —
+- **Status:** In Arbeit
+- **PR / Merge-Commit:** [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25); Merge-Commit und Status `Gemergt` erst nach tatsächlichem Merge ergänzen.
+- **Abschlussbericht:** Manifest-Screenshot mit synthetischen Beispieldaten und Herkunftsnachweis, relative Direktzugriffe für den vorhandenen Ereigniseditor und Rechner sowie eine eng begrenzte Verarbeitung von `action=new-event` und `action=calculator`. Unbekannte Parameter werden ignoriert. Screenshot-Asset in der App-Shell, `CACHE_VERSION` `v20`; keine neue Cache-Strategie.
+- **Übergabe an Folgepakete:** Weitere Direktstarts nur relativ und über eine bekannte Parameterliste ergänzen; unbekannte Werte wirkungslos lassen. Ersetzte Screenshot-Assets benötigen einen aktualisierten Herkunftsnachweis, einen App-Shell-Eintrag und eine erhöhte Cache-Version. Branch-CI und reale installierte/offline Browserprüfungen im PR-Abschlussbericht nachtragen.
+- **Vorformulierter Nachtrag – ausschließlich nach tatsächlichem Merge:** Überblick: `| P18 | Installation und Direktzugriffe verbessern | C4 | Gemergt | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / \`<TATSÄCHLICHER_MERGE_COMMIT>\` |`. Protokoll: **Status:** Gemergt. **PR / Merge-Commit:** [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25), tatsächlicher Merge-Commit \`<TATSÄCHLICHER_MERGE_COMMIT>\`, getesteter Branch-Commit \`<LETZTER_GETESTETER_BRANCH_COMMIT>\`; \`<BEOBACHTETER_CI_LAUF_LINK>\`, \`<BEOBACHTETER_CI_STATUS>\`. Nicht ausgeführte reale Browser-/Offline-Prüfungen beibehalten.
