@@ -18,6 +18,7 @@ import './annual-events.mjs';
 import './calendar-export.mjs';
 import './service-worker-cache.mjs';
 import './local-fonts.mjs';
+import './installation-shortcuts.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');
