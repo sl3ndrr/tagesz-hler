@@ -503,6 +503,8 @@ textarea.m3-input { resize: vertical; min-height: 88px; padding-top: 22px; }
 .menu-popup-item { width: 100%; border: 0; background: transparent; font-family: var(--font); text-align: left; padding: 12px 18px; font-size: .9rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--md-sys-color-on-surface); transition: background var(--ts); touch-action: manipulation; }
 .menu-popup-item:hover { background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent); }
 .menu-popup-item svg { width: 20px; height: 20px; stroke: var(--md-sys-color-on-surface-variant); }
+.menu-item-copy { display: flex; flex-direction: column; gap: 2px; }
+.menu-item-hint { color: var(--md-sys-color-on-surface-variant); font-size: .75rem; font-weight: 400; }
 .menu-popup-item.danger { color: var(--md-sys-color-error); border-top: 1px solid var(--md-sys-color-outline-variant); margin-top: 8px; }
 .menu-popup-item.danger svg { stroke: var(--md-sys-color-error); }
 

@@ -15,6 +15,7 @@ import './image-processing.mjs';
 import './installation-storage.mjs';
 import './full-backup.mjs';
 import './annual-events.mjs';
+import './calendar-export.mjs';
 import './service-worker-cache.mjs';
 import './local-fonts.mjs';
 

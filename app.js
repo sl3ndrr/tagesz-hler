@@ -11,6 +11,7 @@ const LEGACY_EVENT_CHANNEL_NAME = 'tageszaehler-events-v2';
 const WRITE_PROTOCOL_VERSION = 3;
 const BACKUP_FORMAT = 'tageszaehler-backup';
 const BACKUP_VERSION = 2;
+const ICALENDAR_PRODID = '-//Tageszaehler//Kalenderexport//DE';
 const BACKUP_PREFERENCE_VALUES = Object.freeze({
   theme: ['system', 'light', 'dark'],
   color: ['purple', 'blue', 'green', 'orange'],
@@ -306,6 +307,7 @@ async function init() {
     recoveryReturnFocus = null;
   });
   document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('calendar-export-btn').addEventListener('click', exportCalendar);
   document.getElementById('backup-export-btn').addEventListener('click', exportFullBackup);
   document.getElementById('import-btn').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', importData);
@@ -4714,6 +4716,138 @@ async function confirmRecoveryAction() {
 }
 
 /* ── IMPORT / EXPORT ── */
+function escapeICalendarText(value) {
+  return String(value)
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+}
+
+function foldICalendarLine(line) {
+  const segments = [];
+  let segment = '';
+  let bytes = 0;
+  let limit = 75;
+  for (const character of line) {
+    const characterBytes = utf8ByteLength(character);
+    if (segment && bytes + characterBytes > limit) {
+      segments.push(segment);
+      segment = '';
+      bytes = 0;
+      limit = 74;
+    }
+    segment += character;
+    bytes += characterBytes;
+  }
+  segments.push(segment);
+  return segments.join('\r\n ');
+}
+
+function formatICalendarDate(dateKey) {
+  return dateKey.replaceAll('-', '');
+}
+
+function formatICalendarLocalDateTime(dateKey, timeKey) {
+  return `${formatICalendarDate(dateKey)}T${timeKey.replace(':', '')}00`;
+}
+
+function formatICalendarUtcDateTime(instant) {
+  return new Date(instant).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+}
+
+function createICalendarUid(event) {
+  return `${hashString(`${INSTALLATION_NAMESPACE}|${event.id}`)}@tageszaehler.local`;
+}
+
+function annualICalendarRule(event) {
+  const { month, day } = parseDateKey(event.date);
+  if (month === 2 && day === 29) {
+    return 'FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1';
+  }
+  return `FREQ=YEARLY;BYMONTH=${month};BYMONTHDAY=${day}`;
+}
+
+function annualICalendarCorrections(event) {
+  if (event.kind !== 'timed') return { excluded: [], included: [] };
+  const excluded = [];
+  const included = [];
+  const firstYear = parseDateKey(event.date).year;
+  for (let year = firstYear; year <= 9999; year++) {
+    const date = annualDateInYear(event, year);
+    const base = resolveZonedDateTime(date, event.time, event.timeZone, 'earlier');
+    const desired = resolveAnnualDateTime(date, event.time, event.timeZone, event.disambiguation);
+    if (!desired.ok) throw new Error(`Jährliches Auftreten kann nicht als Kalendertermin aufgelöst werden (${date}).`);
+    const needsGapCorrection = !base.ok && base.status === 'nonexistent';
+    const needsFoldCorrection = base.ok && base.status === 'ambiguous' && desired.instant !== base.instant;
+    if (!needsGapCorrection && !needsFoldCorrection) continue;
+    excluded.push(formatICalendarLocalDateTime(date, event.time));
+    included.push(formatICalendarUtcDateTime(desired.instant));
+  }
+  return { excluded, included };
+}
+
+function serializeICalendar(events, nowTime = Date.now()) {
+  const stamp = formatICalendarUtcDateTime(nowTime);
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    `PRODID:${ICALENDAR_PRODID}`,
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+
+  events.forEach(event => {
+    lines.push('BEGIN:VEVENT', `UID:${createICalendarUid(event)}`, `DTSTAMP:${stamp}`);
+    if (event.kind === 'all-day') {
+      lines.push(`DTSTART;VALUE=DATE:${formatICalendarDate(event.date)}`);
+    } else if (event.recurrence === 'yearly') {
+      lines.push(`DTSTART;TZID=${event.timeZone}:${formatICalendarLocalDateTime(event.date, event.time)}`);
+    } else {
+      const target = resolveZonedDateTime(event.date, event.time, event.timeZone, event.disambiguation);
+      lines.push(`DTSTART:${formatICalendarUtcDateTime(target.instant)}`);
+    }
+    lines.push(`SUMMARY:${escapeICalendarText(event.name)}`);
+    if (event.desc) lines.push(`DESCRIPTION:${escapeICalendarText(event.desc)}`);
+    lines.push('TRANSP:TRANSPARENT');
+
+    if (event.recurrence === 'yearly') {
+      lines.push(`RRULE:${annualICalendarRule(event)}`);
+      const corrections = annualICalendarCorrections(event);
+      if (corrections.excluded.length) {
+        lines.push(`EXDATE;TZID=${event.timeZone}:${corrections.excluded.join(',')}`);
+        lines.push(`RDATE:${corrections.included.join(',')}`);
+      }
+    }
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return `${lines.map(foldICalendarLine).join('\r\n')}\r\n`;
+}
+
+function exportCalendar() {
+  try {
+    const events = eventStore.getEvents();
+    const data = serializeICalendar(events);
+    const blob = new Blob([data], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `tageszaehler_kalender_${localDateInput()}.ics`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMenuOpen(false);
+    showSnackbar(`${events.length} Ereignis${events.length === 1 ? '' : 'se'} als Kalender exportiert.`);
+  } catch (error) {
+    console.error('Kalenderexport fehlgeschlagen:', error);
+    setMenuOpen(false);
+    showSnackbar('Kalenderexport fehlgeschlagen. Die lokalen Ereignisse bleiben unverändert.');
+  }
+}
+
 function exportData() {
   const events = eventStore.getEvents();
   const data = serializeEventCollection(events, true);
