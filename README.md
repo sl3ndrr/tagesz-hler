@@ -70,6 +70,21 @@ Bei Änderungen keine Inline-Skripte oder Inline-Stylesheet-Blöcke hinzufügen.
 
 Ein neuer Worker überspringt die Wartephase nicht. Er wird erst aktiv, wenn keine Tabs der bisherigen Version mehr geöffnet sind. Die App meldet ein bereitstehendes Update zugänglich über die vorhandene Statusmeldung. Falls eine Aktivierung außerhalb dieses Ablaufs erzwungen wird, lädt die App nicht automatisch neu und lässt offene Eingaben bestehen. Sonstige gleichursprüngliche GET-Anfragen werden ohne Runtime-Cache direkt aus dem Netz geladen; fehlgeschlagene oder unvollständige Precache-Installationen werden verworfen. Bei Änderungen an ausgelieferten statischen Dateien muss `CACHE_VERSION` in `sw.js` erhöht werden.
 
+### Installation und Direktzugriffe
+
+Das Manifest enthält einen echten, mit synthetischen Beispieldaten erstellten
+Screenshot sowie die optionalen Direktzugriffe „Neues Ereignis“ und „Rechner“.
+Unterstützende Browser können diese beim Installieren oder im App-Kontext
+anzeigen. Die Ziele bleiben relativ zum GitHub-Pages-Unterpfad:
+`./?action=new-event` öffnet den vorhandenen Ereigniseditor,
+`./?action=calculator` den vorhandenen Rechner. Andere oder unbekannte
+`action`-Werte werden ohne Änderung des normalen Starts ignoriert.
+
+Der Screenshot und seine Herkunft sind in
+[`screenshots/README.md`](screenshots/README.md) dokumentiert. Er gehört zur
+versionierten App-Shell und steht nach einem erfolgreichen Erstladen auch
+offline bereit.
+
 ## GitHub Pages
 
 Jeder Push auf `main` startet `.github/workflows/deploy-pages.yml`. Der Workflow paketiert nur die statischen Laufzeitdateien; ein Build findet nicht statt.
