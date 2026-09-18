@@ -1589,6 +1589,19 @@ select.m3-input + .m3-field-label {
   background: var(--md-sys-color-error-container);
 }
 .backup-status[hidden] { display: none; }
+.recurrence-note {
+  margin-top: 10px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: .8125rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.editor-recurrence-note {
+  margin: -6px 0 22px;
+  padding: 14px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-high);
+}
 .recovery-dialog {
   width: min(92vw, 640px);
   max-height: 88dvh;

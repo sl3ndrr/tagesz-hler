@@ -94,7 +94,7 @@ function fixture() {
     freezeEvents: events => events,
     eventsEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right)
   });
-  const helpers = app.slice(helperStart, helperEnd);
+  const helpers = app.slice(app.indexOf('function hasOnlyKeys('), app.indexOf('function normalizeEventDocument(')) + app.slice(helperStart, helperEnd);
   const repository = app.slice(repositoryStart, repositoryEnd);
   vm.runInContext(`${helpers}\n${repository}\nthis.Repository = EventRepository; this.api = { createFullBackupDocument, validateFullBackupDocument, readBackupRestoreJournal, rollbackBackupRestoreJournal, recoverInterruptedBackupRestore }; `, context);
   return { context, storage, keys };

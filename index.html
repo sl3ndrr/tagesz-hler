@@ -281,6 +281,7 @@
         <div class="detail-row-body">
           <div class="detail-row-label">Datum &amp; Uhrzeit</div>
           <div class="detail-row-value" id="detail-date"></div>
+          <p class="recurrence-note" id="detail-recurrence" hidden></p>
         </div>
       </div>
       <div class="detail-row" id="detail-desc-row" hidden>
@@ -319,6 +320,15 @@
     </div>
     <p class="field-error" id="f-date-error"></p>
     <div class="m3-field">
+      <select class="m3-input" id="f-recurrence" aria-describedby="f-recurrence-hint f-recurrence-error">
+        <option value="none">Einzelereignis</option>
+        <option value="yearly">Jährlich (Geburtstag / Jahrestag)</option>
+      </select>
+      <label class="m3-field-label" for="f-recurrence">Wiederholung</label>
+    </div>
+    <p class="recurrence-note editor-recurrence-note" id="f-recurrence-hint" hidden>Das Datum ist der Ursprung; frühere Jahre werden nicht gezählt. Der 29. Februar fällt in Nichtschaltjahren auf den 28. Februar. Ohne Uhrzeit gilt der Kalendertag des Geräts und heute bleibt der Zähler bei null. Mit Uhrzeit bleibt die angezeigte Zeitzone gespeichert: Bei doppelter Uhrzeit gilt jedes Jahr die gewählte Instanz, bei einer Zeitlücke wird um deren Dauer vorwärts verschoben. Nach dem Zeitpunkt zählt das nächste Jahr. Fortschritt: vom vorherigen Jahrestermin bis zum nächsten.</p>
+    <p class="field-error" id="f-recurrence-error"></p>
+    <div class="m3-field">
       <input class="m3-input" type="time" id="f-time" aria-describedby="f-time-zone-hint f-time-error">
       <label class="m3-field-label" for="f-time">Uhrzeit (optional)</label>
     </div>
@@ -332,9 +342,10 @@
       <label class="m3-field-label" for="f-dst-choice">Mehrdeutige Uhrzeit</label>
     </div>
     <div class="m3-field">
-      <input class="m3-input" type="date" id="f-refdate" aria-describedby="f-refdate-error">
+      <input class="m3-input" type="date" id="f-refdate" aria-describedby="f-refdate-hint f-refdate-error">
       <label class="m3-field-label" for="f-refdate">Referenzdatum (für Progress, optional)</label>
     </div>
+    <p class="field-support" id="f-refdate-hint" hidden></p>
     <p class="field-error" id="f-refdate-error"></p>
     <div class="m3-field">
       <textarea class="m3-input" id="f-desc" placeholder=" " maxlength="4000" aria-describedby="f-desc-error"></textarea>
