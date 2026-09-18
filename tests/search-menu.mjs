@@ -5,6 +5,7 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const markup = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 function fixture() {
   let focus = null;
@@ -182,4 +183,13 @@ test('P19: Eingaben bündeln Rendern und Zurücksetzen verwirft ausstehende Eing
   assert.equal(f.timers.size, 1);
   f.run('resetEventFilters()');
   assert.equal(f.timers.size, 0);
+});
+
+
+test('P19: Neue Häkchen überschreiben das versteckte Basissymbol des Editors', () => {
+  assert.match(styles, /\.chip-check \{ display: none;/);
+  assert.match(styles, /\.filter-chip \.chip-check \{ display: block;/);
+  assert.match(styles, /#menu-popup \.color-btn \.chip-check \{ display: block;/);
+  assert.match(styles, /\.filter-chip\[aria-pressed="true"\] \.chip-check \{[^}]*transform: scale\(1\)/);
+  assert.match(styles, /\.color-btn:not\(\.active\) \.chip-check \{ visibility: hidden;/);
 });

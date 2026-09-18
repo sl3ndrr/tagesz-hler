@@ -1586,7 +1586,7 @@ select.m3-input + .m3-field-label {
 .filter-chip:nth-child(3) { --chip-index: 2; }
 .filter-chip:nth-child(4) { --chip-index: 3; }
 .search-dock.open .filter-chip { opacity: 1; transform: translateY(0); transition-delay: calc(var(--chip-index) * var(--md-duration-chip-stagger)); }
-.filter-chip .chip-check { width: 0; height: 20px; transform: scale(0); transition: width var(--md-duration-short-4) var(--md-transition-spring), transform var(--md-duration-short-4) var(--md-transition-spring); }
+.filter-chip .chip-check { display: block; width: 0; height: 20px; transform: scale(0); transition: width var(--md-duration-short-4) var(--md-transition-spring), transform var(--md-duration-short-4) var(--md-transition-spring); }
 .filter-chip[aria-pressed="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; animation: filter-chip-select var(--md-duration-medium-2) var(--md-transition-spring); }
 .filter-chip[aria-pressed="true"] .chip-check { width: 20px; transform: scale(1); }
 @keyframes filter-chip-select { 0%, 100% { border-radius: var(--md-sys-shape-corner-full); } 40% { border-radius: var(--md-sys-shape-corner-small); } }
@@ -1614,7 +1614,7 @@ select.m3-input + .m3-field-label {
 #menu-popup :is(.theme-btn, .view-btn)[aria-checked="true"] { flex: 1.15; border-radius: var(--md-sys-shape-corner-full); background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 #menu-popup .color-btn { display: grid; place-items: center; border: 0; border-radius: var(--md-sys-shape-corner-full); box-shadow: none; outline: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
 #menu-popup .color-btn:not(.active) .chip-check { visibility: hidden; }
-#menu-popup .color-btn .chip-check { width: 24px; height: 24px; }
+#menu-popup .color-btn .chip-check { display: block; width: 24px; height: 24px; }
 #menu-popup .color-btn:focus-visible { outline: 2px solid var(--md-sys-color-on-surface); outline-offset: 3px; }
 .menu-data-link { margin-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant); }
 .menu-data-link > svg:last-child { margin-left: auto; }
