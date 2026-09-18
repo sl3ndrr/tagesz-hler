@@ -1,5 +1,5 @@
 /* Offline-App-Shell. CACHE_VERSION bei Änderungen an statischen Dateien erhöhen. */
-const CACHE_VERSION = 'v19';
+const CACHE_VERSION = 'v20';
 const scopeUrl = new URL(self.registration.scope);
 const CACHE_PREFIX = `tageszaehler:${encodeURIComponent(scopeUrl.pathname)}:shell-`;
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
@@ -14,6 +14,7 @@ const APP_SHELL = [
   './theme.js',
   './app.js',
   './manifest.webmanifest',
+  './screenshots/tageszaehler-beispiel-1363x936.png',
   './icons/favicon-32.png',
   './icons/apple-touch-icon-180.png',
   './icons/icon-192.png',
