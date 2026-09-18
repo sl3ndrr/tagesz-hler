@@ -138,9 +138,9 @@ test('installiert nur eine vollständige App-Shell und nutzt relative Pages-Unte
 
   await worker.dispatchExtendable('install');
 
-  assert.equal(requested.length, 14);
+  assert.equal(requested.length, 15);
   assert.ok(requested.every(url => url.startsWith(worker.scope)));
-  assert.equal(worker.caches.putCalls.length, 14);
+  assert.equal(worker.caches.putCalls.length, 15);
   assert.deepEqual(await worker.caches.keys(), [cacheName(worker.scope, 'v6')]);
 });
 
