@@ -40,5 +40,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "./screenshots/tageszaehler-beispiel-1363x936.png",
+      "sizes": "1363x936",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tageszähler mit synthetischem Beispielereignis"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Neues Ereignis",
+      "short_name": "Neu",
+      "description": "Öffnet direkt den Editor für ein neues Ereignis.",
+      "url": "./?action=new-event"
+    },
+    {
+      "name": "Rechner",
+      "short_name": "Rechner",
+      "description": "Öffnet den Datumsrechner.",
+      "url": "./?action=calculator"
+    }
   ]
 }

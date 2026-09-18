@@ -18,6 +18,7 @@ import './annual-events.mjs';
 import './calendar-export.mjs';
 import './service-worker-cache.mjs';
 import './local-fonts.mjs';
+import './installation-shortcuts.mjs';
 
 const projectRoot = resolve(import.meta.dirname, '..');
 const checker = resolve(projectRoot, 'scripts/check-static-pwa.mjs');
@@ -29,6 +30,7 @@ function fixture() {
   }
   cpSync(resolve(projectRoot, 'icons'), resolve(directory, 'icons'), { recursive: true });
   cpSync(resolve(projectRoot, 'fonts'), resolve(directory, 'fonts'), { recursive: true });
+  cpSync(resolve(projectRoot, 'screenshots'), resolve(directory, 'screenshots'), { recursive: true });
   execFileSync('git', ['init', '--quiet'], { cwd: directory });
   execFileSync('git', ['config', 'user.email', 'tests@example.invalid'], { cwd: directory });
   execFileSync('git', ['config', 'user.name', 'PWA-Prüftest'], { cwd: directory });
