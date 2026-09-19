@@ -16,6 +16,24 @@ Nach Aktivierung von GitHub Pages ist die Web-App unter <https://sl3ndrr.github.
 - installierbare PWA mit Offline-App-Shell
 - strikte Content-Security-Policy ohne Inline-JavaScript
 
+## Suche und Filter
+
+Die Lupe in der App-Bar öffnet die Ereignissuche über den Listen. Im Ruhezustand nimmt sie nur den Platz eines Icons ein. Du kannst die Suche auch mit `/` oder `Strg`/`Cmd` + `K` öffnen, sofern kein Eingabefeld, Menü oder Dialog aktiv ist. Schließen funktioniert über die Lupe, den Schließen-Button oder `Escape`; der Fokus kehrt zur Lupe zurück. Im Rechner ist die Suche ausgeblendet.
+
+Die Suche berücksichtigt Name und Beschreibung, ignoriert Groß-/Kleinschreibung und normalisiert Akzente sowie `ß` zu `ss`. Mehrere Begriffe müssen alle vorkommen. Der erklärende Hinweis erscheint nur bei mehreren Begriffen ohne Treffer. Eingaben werden nach 120 ms Ruhe verarbeitet.
+
+Die Chips „Kommend“/„Vergangen“ und „Ganztägig“/„Mit Uhrzeit“ sind innerhalb ihres Paares exklusiv. Noch einmal auf einen ausgewählten Chip tippen hebt den Filter dieser Gruppe auf. Alle Chips sind regulär per Tab erreichbar. „Zurücksetzen“ leert Suchtext und Chips und fokussiert das Suchfeld.
+
+Filter bleiben beim Schließen und beim Tabwechsel erhalten, werden aber nicht gespeichert. Eine geschlossene, aktive Suche ist am Punkt auf der Lupe, ihrer zugänglichen Beschriftung und dem Treffertext unter der Listenüberschrift erkennbar.
+
+## Einstellungen und Daten
+
+Das Menü zeigt zunächst Darstellung, vier Akzentfarben und Ansicht sowie gegebenenfalls „App installieren“. Darstellung und Ansicht sind verbundene Auswahlgruppen: Pfeiltasten wechseln die Auswahl, `Home`/`End` springen zum ersten/letzten Eintrag. Die gewählte Akzentfarbe zeigt ein Häkchen.
+
+„Daten & Sicherung“ öffnet die zweite Ebene mit vollständigem Backup, Ereignis- und Kalenderexport, Import sowie Datenrettung. „Daten gezielt löschen“ steht optisch abgesetzt am Ende dieser Ebene. Die bestehenden Bestätigungen und Datenformate bleiben erhalten.
+
+Auf breiten Bildschirmen öffnet sich ein Popover, bis 600 px ein modales Bottom-Sheet. Du kannst es über den Schließen-Button, den Hintergrund, `Escape` oder durch Ziehen am Griff nach unten schließen. `Escape` führt aus „Daten & Sicherung“ zunächst zu den Einstellungen zurück. Beim erneuten Öffnen beginnt das Menü immer dort. Nach dem separaten Rettungsdialog kehrt der Fokus zum Einstellungsbutton zurück.
+
 ## Technische Entscheidungen
 
 Das Projekt bleibt bewusst bei Vanilla HTML, CSS und JavaScript ohne Paketmanager oder Build-Schritt. Dadurch ist die ausgelieferte Version direkt prüfbar, es gibt keine Laufzeit- oder Build-Abhängigkeiten und die gehostete URL kann später unverändert durch eine Trusted Web Activity verwendet werden.
@@ -307,7 +325,7 @@ Bei Quota-, Browser- oder nicht kooperierenden Alttab-Fehlern kann auch die
 Rücknahme scheitern. Dieser Zustand wird dauerhaft angezeigt und sperrt weitere
 Schreibzugriffe, bis ein späterer Start die Bereinigung bestätigen kann.
 
-Über „Datenrettung und Rettungskopien“ im Menü oder die dauerhaft sichtbare Fehlermeldung lassen sich der unveränderte aktive Rohbestand und lesbare Quarantänekopien getrennt exportieren. Bei beschädigten oder teilweise ungültigen aktiven Daten bleiben Änderungen gesperrt, bis gültige Ereignisse aus einer ausdrücklich gewählten Quelle oder einer vollständig validierten JSON-Datei nach Bestätigung über den Web-Lock-Schreibpfad übernommen werden. Ungültige Einträge werden dabei nicht still in den neuen aktiven Bestand übernommen; exportiere die Rohdaten vorher. Frühere Rettungskopien bleiben nach erfolgreicher Wiederherstellung erhalten. Dieser Rohdatenrettungsweg bleibt vom Vollbackup getrennt und wird durch dessen Wiederherstellung nicht gelöscht.
+Über „Daten & Sicherung“ → „Datenrettung und Rettungskopien“ im Menü oder die dauerhaft sichtbare Fehlermeldung lassen sich der unveränderte aktive Rohbestand und lesbare Quarantänekopien getrennt exportieren. Bei beschädigten oder teilweise ungültigen aktiven Daten bleiben Änderungen gesperrt, bis gültige Ereignisse aus einer ausdrücklich gewählten Quelle oder einer vollständig validierten JSON-Datei nach Bestätigung über den Web-Lock-Schreibpfad übernommen werden. Ungültige Einträge werden dabei nicht still in den neuen aktiven Bestand übernommen; exportiere die Rohdaten vorher. Frühere Rettungskopien bleiben nach erfolgreicher Wiederherstellung erhalten. Dieser Rohdatenrettungsweg bleibt vom Vollbackup getrennt und wird durch dessen Wiederherstellung nicht gelöscht.
 
 „Daten gezielt löschen“ bietet nach einer zweiten Bestätigung drei Varianten: nur aktive Ereignisse, nur die beiden zugehörigen Rettungsschlüssel (Kopien und Metadaten) oder beides in dieser Reihenfolge. Andere Origin-Daten und Einstellungen bleiben unangetastet. Bei fehlendem Web Lock, zwischenzeitlichen Änderungen oder Speicherfehlern wird kein Erfolg behauptet; nach einem Teilerfolg nennt die App verbliebene Kopien. Der unveränderte Rohdatenexport ist weiterhin kein vollständiges Backup der Einstellungen.
 

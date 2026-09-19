@@ -51,7 +51,8 @@ class Element {
   addEventListener() {}
   focus() {}
   querySelectorAll() { return this.chips || []; }
-  querySelector() { return this.chips?.[0] || null; }
+  querySelector(selector) { return this.queryElements?.get(selector) || this.chips?.[0] || null; }
+  contains(element) { return element === this || this.children.some(child => child.contains(element)); }
 }
 
 function fixture() {
@@ -92,8 +93,8 @@ function fixture() {
     EventListRenderer, TemporalContextTracker, resolveZonedDateTime, getZonedParts, validateEditorForm,
     updateDateTimeDisambiguation, updateRecurrenceEditor, saveEvent, updateDetailDate,
     importLegacyEventArray, importData, importRecoveryFile, recoverInterruptedBackupRestore, STORAGE_KEYS, preferenceKey })`);
-  el('event-time-filter').value = 'all';
-  el('event-kind-filter').value = 'all';
+  el('search-toggle-btn').queryElements = new Map([['.icon-btn-dot', new Element()]]);
+  el('menu-popup').queryElements = new Map([['.menu-levels', new Element()]]);
   el('f-recurrence').value = 'none';
   el('f-dst-choice').value = 'earlier';
   el('unit-wrap').chips = [{ dataset: { unit: 'days' } }];

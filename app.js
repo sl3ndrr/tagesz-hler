@@ -116,8 +116,20 @@ const futureCount = document.getElementById('future-count');
 const pastCount = document.getElementById('past-count');
 const nextEventCopy = document.getElementById('next-event-copy');
 const eventSearchInput = document.getElementById('event-search');
-const eventTimeFilter = document.getElementById('event-time-filter');
-const eventKindFilter = document.getElementById('event-kind-filter');
+const eventFilterState = { time: 'all', kind: 'all' };
+const searchToggleBtn = document.getElementById('search-toggle-btn');
+const searchDock = document.getElementById('event-search-panel');
+const searchClearBtn = document.getElementById('event-search-clear');
+const filterChips = Array.from(document.querySelectorAll('.filter-chip'));
+const searchHint = document.getElementById('event-search-hint');
+const listCaptions = Array.from(document.querySelectorAll('.section-caption'));
+const defaultListCaptions = listCaptions.map(caption => caption.textContent);
+const mobileMenuQuery = window.matchMedia('(max-width: 600px)');
+let searchDockOpen = false;
+let searchCloseTimer = null;
+let searchInputTimer = null;
+let menuLevel = 'root';
+let menuModalActive = false;
 const eventFilterReset = document.getElementById('event-filter-reset');
 const eventFilterStatus = document.getElementById('event-filter-status');
 const detailFlipClock = document.getElementById('detail-flip-clock');
@@ -190,6 +202,13 @@ async function init() {
   initCalculator();
   initSheetGestures(detailSheet);
   initSheetGestures(editSheet);
+  initSheetGestures(menuPopup, () => setMenuOpen(false));
+  mobileMenuQuery.addEventListener?.('change', syncMenuPresentation);
+  syncMenuPresentation();
+  const appBar = document.querySelector('.app-bar');
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--app-bar-height', `${appBar.getBoundingClientRect().height}px`);
+  }).observe(appBar);
   if (document.readyState === 'complete') registerServiceWorker();
   else window.addEventListener('load', registerServiceWorker, { once: true });
   temporalContextTracker = new TemporalContextTracker();
@@ -218,9 +237,31 @@ async function init() {
     tab.addEventListener('click', () => setActiveTab(Number(tab.dataset.tab)));
   });
 
-  eventSearchInput.addEventListener('input', renderEvents);
-  eventTimeFilter.addEventListener('change', renderEvents);
-  eventKindFilter.addEventListener('change', renderEvents);
+  eventSearchInput.addEventListener('input', () => {
+    clearTimeout(searchInputTimer);
+    searchClearBtn.hidden = !eventSearchInput.value;
+    searchInputTimer = setTimeout(() => renderEvents(), 120);
+  });
+  searchToggleBtn.addEventListener('click', () => setSearchDockOpen(!searchDockOpen));
+  document.getElementById('event-search-close').addEventListener('click', () => setSearchDockOpen(false));
+  searchClearBtn.addEventListener('click', () => {
+    clearTimeout(searchInputTimer);
+    eventSearchInput.value = '';
+    renderEvents();
+    eventSearchInput.focus();
+  });
+  filterChips.forEach(chip => chip.addEventListener('click', () => {
+    const { filter, value } = chip.dataset;
+    eventFilterState[filter] = eventFilterState[filter] === value ? 'all' : value;
+    syncFilterChips();
+    renderEvents();
+  }));
+  document.getElementById('menu-close-btn').addEventListener('click', () => setMenuOpen(false));
+  document.getElementById('menu-data-btn').addEventListener('click', () => setMenuLevel('data'));
+  document.getElementById('menu-back-btn').addEventListener('click', () => setMenuLevel('root'));
+  document.querySelectorAll('.theme-options, .view-options').forEach(group => {
+    group.addEventListener('keydown', handleRadioGroupKeydown);
+  });
   eventFilterReset.addEventListener('click', resetEventFilters);
 
   addBtn.addEventListener('click', () => openEditSheet());
@@ -244,8 +285,8 @@ async function init() {
   editForm.addEventListener('change', handleEditorInput);
 
   backdrop.addEventListener('click', () => {
-    closeSheets();
-    setMenuOpen(false);
+    if (menuPopup.classList.contains('open')) setMenuOpen(false);
+    else closeSheets();
   });
   document.addEventListener('click', (e) => {
     if (!menuPopup.contains(e.target) && !e.target.closest('#menu-btn')) setMenuOpen(false);
@@ -360,6 +401,8 @@ function setActiveTab(index) {
     panel.setAttribute('aria-hidden', String(!isActive));
   });
   addBtn.hidden = index === 2;
+  if (index === 2 && searchDockOpen) setSearchDockOpen(false, false);
+  searchToggleBtn.hidden = index === 2;
   if (index === 2) updateCalculator();
   scheduleTabIndicatorUpdate();
 }
@@ -369,14 +412,111 @@ function updateTabOrientation() {
   scheduleTabIndicatorUpdate();
 }
 
+function setSearchDockOpen(open, restoreFocus = true) {
+  if (open && (activeTab === 2 || recoveryDialog.open || getOpenSheet() || menuPopup.classList.contains('open'))) return;
+  clearTimeout(searchCloseTimer);
+  searchDockOpen = open;
+  searchDock.inert = !open;
+  searchDock.setAttribute('aria-hidden', String(!open));
+  document.querySelector('.app-bar').classList.toggle('search-open', open);
+  if (open) {
+    searchDock.hidden = false;
+    // Anfangshöhe messen, bevor der Grid-Morph beginnt.
+    void searchDock.offsetHeight;
+    searchDock.classList.add('open');
+    eventSearchInput.focus({ preventScroll: true });
+  } else {
+    clearTimeout(searchInputTimer);
+    renderEvents();
+    searchDock.classList.remove('open');
+    const duration = getComputedStyle(searchDock).getPropertyValue('--md-duration-short-4');
+    searchCloseTimer = setTimeout(() => { if (!searchDockOpen) searchDock.hidden = true; }, reducedMotionQuery.matches ? 0 : parseFloat(duration));
+    if (restoreFocus && activeTab !== 2) searchToggleBtn.focus({ preventScroll: true });
+  }
+  updateSearchTriggerState();
+}
+
+function syncFilterChips() {
+  filterChips.forEach(chip => {
+    chip.setAttribute('aria-pressed', String(eventFilterState[chip.dataset.filter] === chip.dataset.value));
+  });
+}
+
+function updateSearchTriggerState() {
+  const active = hasActiveEventFilter();
+  searchToggleBtn.setAttribute('aria-expanded', String(searchDockOpen));
+  searchToggleBtn.setAttribute('aria-label', searchDockOpen ? 'Suche schließen' : active ? 'Suche öffnen, Filter aktiv' : 'Suche öffnen');
+  searchToggleBtn.querySelector('.icon-btn-dot').hidden = !active || searchDockOpen;
+  searchClearBtn.hidden = !eventSearchInput.value;
+  eventFilterReset.hidden = !active;
+  listCaptions.forEach((caption, index) => {
+    caption.textContent = active && !searchDockOpen ? eventFilterStatus.textContent : defaultListCaptions[index];
+  });
+}
+
+function setMenuLevel(level, focus = true) {
+  menuLevel = level;
+  menuPopup.querySelector('.menu-levels').dataset.level = level;
+  ['root', 'data'].forEach(name => {
+    const panel = document.getElementById(`menu-${name}`);
+    panel.inert = name !== level;
+    panel.setAttribute('aria-hidden', String(name !== level));
+  });
+  document.getElementById('menu-data-btn').setAttribute('aria-expanded', String(level === 'data'));
+  if (focus) document.getElementById(level === 'data' ? 'menu-back-btn' : 'menu-data-btn').focus();
+}
+
+function syncMenuPresentation() {
+  const open = menuPopup.classList.contains('open');
+  const modal = open && mobileMenuQuery.matches;
+  menuPopup.classList.toggle('sheet', mobileMenuQuery.matches);
+  menuPopup.toggleAttribute('aria-modal', modal);
+  if (modal) menuPopup.setAttribute('aria-modal', 'true');
+  const dataPanel = document.getElementById('menu-data');
+  if (modal) dataPanel.setAttribute('aria-modal', 'true');
+  else dataPanel.removeAttribute('aria-modal');
+  if (modal !== menuModalActive) {
+    setModalBackgroundInert(modal);
+    menuModalActive = modal;
+    backdrop.classList.toggle('open', modal);
+    document.body.classList.toggle('modal-open', modal);
+  }
+  menuPopup.inert = !open;
+}
+
 function setMenuOpen(open) {
+  const wasOpen = menuPopup.classList.contains('open');
+  if (open && (recoveryDialog.open || editSheet.classList.contains('open') || detailSheet.classList.contains('open'))) return;
   const menuButton = document.getElementById('menu-btn');
   menuPopup.classList.toggle('open', open);
   menuPopup.setAttribute('aria-hidden', String(!open));
-  menuPopup.inert = !open;
   menuButton.setAttribute('aria-expanded', String(open));
   menuButton.setAttribute('aria-label', open ? 'Einstellungen schließen' : 'Einstellungen öffnen');
-  if (open) requestAnimationFrame(() => menuPopup.querySelector('button:not([hidden])')?.focus());
+  if (!open) {
+    setMenuLevel('root', false);
+    menuPopup.classList.remove('dragging');
+    menuPopup.style.transform = '';
+  }
+  syncMenuPresentation();
+  if (open) requestAnimationFrame(() => {
+    if (menuPopup.classList.contains('open')) menuPopup.querySelector('.theme-btn[aria-checked="true"]')?.focus();
+  });
+  else if (wasOpen && menuPopup.contains(document.activeElement)) menuButton.focus();
+}
+
+function handleRadioGroupKeydown(event) {
+  const buttons = Array.from(event.currentTarget.querySelectorAll('[role="radio"]'));
+  const index = buttons.indexOf(document.activeElement);
+  if (index < 0) return;
+  let next;
+  if (event.key === 'Home') next = 0;
+  else if (event.key === 'End') next = buttons.length - 1;
+  else if (['ArrowRight', 'ArrowDown'].includes(event.key)) next = (index + 1) % buttons.length;
+  else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) next = (index - 1 + buttons.length) % buttons.length;
+  else return;
+  event.preventDefault();
+  buttons[next].click();
+  buttons[next].focus();
 }
 
 /* ── PREFERENCES ── */
@@ -421,7 +561,8 @@ function setTheme(theme, persist = true) {
   document.querySelectorAll('.theme-btn').forEach(btn => {
     const active = btn.dataset.themeVal === theme;
     btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
+    btn.setAttribute('aria-checked', String(active));
+    btn.tabIndex = active ? 0 : -1;
   });
   const status = persist ? persistPreference('theme', theme) : { ok: true };
   updateThemeColor();
@@ -447,7 +588,8 @@ function setView(view, persist = true) {
   document.querySelectorAll('.view-btn').forEach(btn => {
     const active = btn.dataset.viewVal === view;
     btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
+    btn.setAttribute('aria-checked', String(active));
+    btn.tabIndex = active ? 0 : -1;
   });
   if (eventRenderer && eventStore) renderEvents();
   return persist ? persistPreference('view', view) : { ok: true };
@@ -2564,8 +2706,8 @@ function getEventFilter() {
   const query = normalizeSearchText(eventSearchInput.value);
   return {
     terms: query ? query.split(/\s+/) : [],
-    time: eventTimeFilter.value,
-    kind: eventKindFilter.value
+    time: eventFilterState.time,
+    kind: eventFilterState.kind
   };
 }
 
@@ -2591,8 +2733,10 @@ function updateEventFilterStatus(matchCount, totalCount, filter) {
 
 function resetEventFilters() {
   eventSearchInput.value = '';
-  eventTimeFilter.value = 'all';
-  eventKindFilter.value = 'all';
+  clearTimeout(searchInputTimer);
+  eventFilterState.time = 'all';
+  eventFilterState.kind = 'all';
+  syncFilterChips();
   renderEvents();
   eventSearchInput.focus();
 }
@@ -2978,6 +3122,8 @@ class EventListRenderer {
 
 function renderEvents(nowTime = Date.now(), { temporal = false } = {}) {
   eventRenderer?.render(eventStore.getEvents(), nowTime, { forceTemporal: temporal, filter: getEventFilter() });
+  updateSearchTriggerState();
+  searchHint.hidden = getEventFilter().terms.length < 2 || !eventFilterStatus.textContent.startsWith('0 von ');
   updateLiveSchedulerCadence();
 }
 
@@ -3675,6 +3821,7 @@ function setModalBackgroundInert(shouldBeInert) {
 function getOpenSheet() {
   if (editSheet.classList.contains('open')) return editSheet;
   if (detailSheet.classList.contains('open')) return detailSheet;
+  if (menuModalActive) return menuPopup;
   return null;
 }
 
@@ -3686,7 +3833,7 @@ const focusableSelector = [
 
 function getFocusableElements(container) {
   return Array.from(container.querySelectorAll(focusableSelector)).filter(element => {
-    if (!(element instanceof HTMLElement) || element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    if (!(element instanceof HTMLElement) || element.tabIndex < 0 || element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
     const style = getComputedStyle(element);
     return style.visibility !== 'hidden' && style.display !== 'none' && element.getClientRects().length > 0;
   });
@@ -4008,7 +4155,7 @@ async function deleteCurrentEvent() {
 }
 
 /* ── SHEET GESTURES / ACCESSIBILITY ── */
-function initSheetGestures(sheet) {
+function initSheetGestures(sheet, dismiss = closeSheets) {
   const handle = sheet.querySelector('.sheet-handle');
   if (!handle) return;
   let startY = 0;
@@ -4034,8 +4181,8 @@ function initSheetGestures(sheet) {
     try { handle.releasePointerCapture(pointerId); } catch (_) {}
     pointerId = null;
     sheet.classList.remove('dragging');
-    if (deltaY > 90) {
-      closeSheets();
+    if (deltaY > 90 && event.type !== 'pointercancel') {
+      dismiss();
     } else {
       sheet.style.transform = '';
     }
@@ -4048,12 +4195,16 @@ function handleGlobalKeydown(event) {
   if (recoveryDialog.open) return;
   if (event.key === 'Escape') {
     if (menuPopup.classList.contains('open')) {
-      setMenuOpen(false);
-      document.getElementById('menu-btn').focus();
+      event.preventDefault();
+      if (menuLevel === 'data') setMenuLevel('root');
+      else setMenuOpen(false);
     } else if (editSheet.classList.contains('open')) {
       closeEditSheet();
     } else if (detailSheet.classList.contains('open')) {
       closeSheets();
+    } else if (searchDockOpen) {
+      event.preventDefault();
+      setSearchDockOpen(false);
     }
     return;
   }
@@ -4062,6 +4213,15 @@ function handleGlobalKeydown(event) {
     return;
   }
 
+  const target = document.activeElement;
+  const editing = target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+  const searchShortcut = (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey)
+    || (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey) && !event.altKey);
+  if (searchShortcut && !event.isComposing && !editing && activeTab !== 2 && !getOpenSheet() && !menuPopup.classList.contains('open') && !document.querySelector('dialog[open]')) {
+    event.preventDefault();
+    setSearchDockOpen(true);
+    return;
+  }
   const focusedTab = document.activeElement;
   if (!(focusedTab instanceof HTMLElement) || !focusedTab.matches('[role="tab"]') || !tabBar.contains(focusedTab)) return;
   const vertical = tabBar.getAttribute('aria-orientation') === 'vertical';
