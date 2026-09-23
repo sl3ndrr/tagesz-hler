@@ -1776,3 +1776,106 @@ select.m3-input + .m3-field-label {
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 3px;
 }
+
+@layer overrides {
+.app-footer { display: flex; justify-content: center; margin-top: 40px; }
+.version-btn {
+  min-width: 48px;
+  min-height: 48px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font: inherit;
+  font-size: var(--md-sys-typescale-label-medium-size);
+  font-variant-numeric: tabular-nums;
+  opacity: .85;
+  cursor: pointer;
+  transition: opacity var(--md-duration-short-4) var(--md-transition-emphasized), background-color var(--md-duration-short-4) var(--md-transition-emphasized);
+}
+.version-btn:hover, .version-btn:focus-visible { opacity: 1; background: var(--md-sys-color-surface-container); }
+.version-btn:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 2px; }
+
+.about-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 64px);
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-menu-sheet);
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-elevation-4);
+}
+.about-dialog[open] { animation: about-enter var(--md-duration-medium-2) var(--md-transition-emphasized-decelerate) both; }
+.about-dialog.closing { animation: about-exit var(--md-duration-short-3) var(--md-transition-emphasized-accelerate) both; }
+.about-dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 60%, transparent); animation: about-fade-in var(--md-duration-medium-2) both; }
+.about-dialog.closing::backdrop { animation: about-fade-out var(--md-duration-short-3) both; }
+@keyframes about-enter { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes about-exit { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.96); } }
+@keyframes about-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes about-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.about-dialog-inner { padding: 0 24px 24px; }
+.about-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  margin: 0 -24px;
+  padding: 24px 72px 18px 24px;
+  background: var(--md-sys-color-surface-container-low);
+}
+.about-header p, .about-header h2, .about-changelog h3 { margin: 0; }
+.about-eyebrow { font-size: var(--md-sys-typescale-label-medium-size); font-weight: var(--md-sys-typescale-label-medium-weight); color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: .08em; }
+.about-version { font-size: var(--md-sys-typescale-headline-large-size); font-weight: 680; letter-spacing: -.03em; line-height: var(--md-sys-typescale-headline-large-line-height); }
+.about-date { font-size: var(--md-sys-typescale-body-medium-size); color: var(--md-sys-color-on-surface-variant); }
+.about-summary { margin-top: 8px !important; font-size: var(--md-sys-typescale-body-large-size); }
+.about-summary[hidden] { display: none; }
+#about-close-btn { position: absolute; top: 20px; right: 20px; min-width: 48px; min-height: 48px; }
+.about-changelog { padding-top: 12px; }
+.about-changelog h3 { margin-bottom: 16px; font-size: var(--md-sys-typescale-title-large-size); }
+.changelog-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.changelog-item { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: start; gap: 12px; animation: about-row-in var(--md-duration-medium-2) var(--md-transition-emphasized-decelerate) both; animation-delay: calc(var(--item-index) * 25ms); }
+@keyframes about-row-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.changelog-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0 10px; border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-full); font-size: var(--md-sys-typescale-label-medium-size); font-weight: var(--md-sys-typescale-label-medium-weight); white-space: nowrap; }
+.changelog-badge[data-kind="neu"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.changelog-badge[data-kind="verbessert"] { background: var(--md-sys-color-tertiary-container); color: var(--md-sys-color-on-tertiary-container); }
+.changelog-badge[data-kind="behoben"] { background: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface-variant); }
+.changelog-text { min-width: 0; font-size: var(--md-sys-typescale-body-large-size); line-height: var(--md-sys-typescale-body-large-line-height); overflow-wrap: anywhere; }
+.about-older-release { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; }
+.about-older-release summary { min-height: 48px; cursor: pointer; font-size: var(--md-sys-typescale-body-medium-size); color: var(--md-sys-color-on-surface); }
+.about-older-release .changelog-list { padding-top: 8px; }
+.about-actions { display: flex; justify-content: flex-end; margin-top: 28px; }
+.about-actions .m3-btn { flex: none; min-height: 48px; padding-inline: 24px; border-radius: var(--md-sys-shape-corner-full); }
+.about-dialog :focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 2px; }
+}
+
+@media (max-width: 600px) {
+  @layer overrides {
+    .about-dialog { position: fixed; inset: auto 0 0; width: 100%; max-height: calc(100dvh - 32px); margin: 0; border-radius: var(--md-sys-shape-corner-menu-sheet) var(--md-sys-shape-corner-menu-sheet) 0 0; border-bottom: 0; }
+    .about-dialog-inner { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @layer overrides {
+    .about-dialog[open] { animation: about-fade-in var(--md-duration-short-3) both; }
+    .about-dialog.closing { animation: about-fade-out var(--md-duration-short-3) both; }
+    .changelog-item { animation: about-fade-in var(--md-duration-short-3) both; animation-delay: 0ms; }
+  }
+}
+@media (prefers-contrast: more) {
+  @layer overrides {
+    .version-btn { opacity: 1; }
+    .about-dialog, .changelog-badge { border: 2px solid var(--md-sys-color-outline); }
+  }
+}
+@media (forced-colors: active) {
+  @layer overrides {
+    .version-btn { opacity: 1; color: ButtonText; }
+    .about-dialog, .changelog-badge { border-color: CanvasText; }
+    .version-btn:focus-visible, .about-dialog :focus-visible { outline-color: Highlight; }
+  }
+}

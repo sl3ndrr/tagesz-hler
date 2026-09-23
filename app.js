@@ -12,6 +12,27 @@ const WRITE_PROTOCOL_VERSION = 3;
 const BACKUP_FORMAT = 'tageszaehler-backup';
 const BACKUP_VERSION = 2;
 const ICALENDAR_PRODID = '-//Tageszaehler//Kalenderexport//DE';
+/* Neue Veröffentlichung: Eintrag vorne ergänzen und CACHE_VERSION in sw.js erhöhen. */
+const APP_RELEASES = [
+  {
+    version: '1.0',
+    date: '2026-09-19',
+    summary: 'Erste öffentliche Version.',
+    changes: [
+      { kind: 'neu', text: 'Sekundengenaue Zähler für kommende und vergangene Ereignisse' },
+      { kind: 'neu', text: 'Jährliche Geburtstage und Jahrestage mit automatisch nächstem Termin' },
+      { kind: 'neu', text: 'Datumsrechner für den kalendergenauen Abstand zweier Daten' },
+      { kind: 'neu', text: 'Suche und Filter über Name, Beschreibung, Zeitlage und Art' },
+      { kind: 'neu', text: 'Kartenansicht und Kompaktansicht, System-, Hell- und Dunkelmodus mit vier Akzentfarben' },
+      { kind: 'neu', text: 'Vollständiges Backup, Ereignisimport und Kalenderexport als ICS-Datei' },
+      { kind: 'neu', text: 'Datenrettung mit Rettungskopien und prüfbaren Rohdatenquellen' },
+      { kind: 'neu', text: 'Installierbare App mit Offline-Betrieb' },
+      { kind: 'neu', text: 'Alle Ereignisdaten bleiben lokal auf dem Gerät' }
+    ]
+  }
+];
+const APP_VERSION = APP_RELEASES[0].version;
+const CHANGE_KINDS = Object.freeze({ neu: 'Neu', verbessert: 'Verbessert', behoben: 'Behoben' });
 const BACKUP_PREFERENCE_VALUES = Object.freeze({
   theme: ['system', 'light', 'dark'],
   color: ['purple', 'blue', 'green', 'orange'],
@@ -157,6 +178,9 @@ const calcResultStatus = document.getElementById('calc-result-status');
 const offlineStatus = document.getElementById('offline-status');
 const recoveryStatus = document.getElementById('recovery-status');
 const recoveryDialog = document.getElementById('recovery-dialog');
+const versionBtn = document.getElementById('version-btn');
+const aboutDialog = document.getElementById('about-dialog');
+let aboutCloseTimer = null;
 const recoverySource = document.getElementById('recovery-source');
 const recoveryMessage = document.getElementById('recovery-message');
 const recoveryConfirmation = document.getElementById('recovery-confirmation');
@@ -189,6 +213,7 @@ const editorErrorElements = new Map([
 
 /* ── INITIALIZE ── */
 async function init() {
+  initAboutDialog();
   const startupRecovery = await recoverInterruptedBackupRestore();
   backupRestoreBlocked = !startupRecovery.ok;
   backupStartupMessage = startupRecovery.message || '';
@@ -413,8 +438,99 @@ function updateTabOrientation() {
   scheduleTabIndicatorUpdate();
 }
 
+function formatReleaseDate(isoDate) {
+  return new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: 'UTC' })
+    .format(new Date(`${isoDate}T00:00:00Z`));
+}
+
+function createReleaseDate(release) {
+  const date = document.createElement('time');
+  date.dateTime = release.date;
+  date.textContent = formatReleaseDate(release.date);
+  return date;
+}
+
+function createChangelog(release) {
+  const list = document.createElement('ul');
+  list.className = 'changelog-list';
+  release.changes.forEach((change, index) => {
+    const item = document.createElement('li');
+    item.className = 'changelog-item';
+    item.style.setProperty('--item-index', Math.min(index, 7));
+    const badge = document.createElement('span');
+    badge.className = 'changelog-badge';
+    const kind = Object.hasOwn(CHANGE_KINDS, change.kind) ? change.kind : 'verbessert';
+    badge.dataset.kind = kind;
+    badge.textContent = CHANGE_KINDS[kind];
+    const copy = document.createElement('span');
+    copy.className = 'changelog-text';
+    copy.textContent = change.text;
+    item.append(badge, copy);
+    list.appendChild(item);
+  });
+  return list;
+}
+
+function renderAboutDialog() {
+  const latest = APP_RELEASES[0];
+  versionBtn.textContent = APP_VERSION;
+  versionBtn.setAttribute('aria-label', `Version ${APP_VERSION} – Änderungen anzeigen`);
+  document.getElementById('about-heading').textContent = latest.version;
+  const dateLine = aboutDialog.querySelector('.about-date');
+  dateLine.replaceChildren('Veröffentlicht am ', createReleaseDate(latest));
+  const summary = aboutDialog.querySelector('.about-summary');
+  summary.textContent = latest.summary || '';
+  summary.hidden = !latest.summary;
+  const releases = document.getElementById('about-release-list');
+  releases.replaceChildren(createChangelog(latest));
+  APP_RELEASES.slice(1).forEach(release => {
+    const details = document.createElement('details');
+    details.className = 'about-older-release';
+    const heading = document.createElement('summary');
+    heading.append(`Version ${release.version} · `, createReleaseDate(release));
+    details.append(heading, createChangelog(release));
+    releases.appendChild(details);
+  });
+}
+
+function closeAboutDialog() {
+  if (!aboutDialog.open || aboutDialog.classList.contains('closing')) return;
+  aboutDialog.classList.add('closing');
+  aboutCloseTimer = setTimeout(() => aboutDialog.close(), reducedMotionQuery.matches ? 0 : 150);
+}
+
+function openAboutDialog() {
+  if (aboutDialog.open || recoveryDialog.open) return;
+  if (editSheet.classList.contains('open') || detailSheet.classList.contains('open')) closeSheets(false);
+  if (menuPopup.classList.contains('open')) setMenuOpen(false);
+  if (searchDockOpen) setSearchDockOpen(false, false);
+  aboutDialog.showModal();
+  document.getElementById('about-close-btn').focus();
+}
+
+function initAboutDialog() {
+  renderAboutDialog();
+  versionBtn.addEventListener('click', openAboutDialog);
+  document.getElementById('about-close-btn').addEventListener('click', closeAboutDialog);
+  document.getElementById('about-close-bottom-btn').addEventListener('click', closeAboutDialog);
+  aboutDialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    closeAboutDialog();
+  });
+  aboutDialog.addEventListener('click', event => {
+    if (event.target !== aboutDialog) return;
+    const rect = aboutDialog.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeAboutDialog();
+  });
+  aboutDialog.addEventListener('close', () => {
+    clearTimeout(aboutCloseTimer);
+    aboutDialog.classList.remove('closing');
+    restoreModalFocus(versionBtn);
+  });
+}
+
 function setSearchDockOpen(open, restoreFocus = true) {
-  if (open && (activeTab === 2 || recoveryDialog.open || getOpenSheet() || menuPopup.classList.contains('open'))) return;
+  if (open && (activeTab === 2 || recoveryDialog.open || aboutDialog.open || getOpenSheet() || menuPopup.classList.contains('open'))) return;
   clearTimeout(searchCloseTimer);
   searchDockOpen = open;
   searchDock.inert = !open;
@@ -484,7 +600,7 @@ function syncMenuPresentation() {
 
 function setMenuOpen(open) {
   const wasOpen = menuPopup.classList.contains('open');
-  if (open && (recoveryDialog.open || editSheet.classList.contains('open') || detailSheet.classList.contains('open'))) return;
+  if (open && (recoveryDialog.open || aboutDialog.open || editSheet.classList.contains('open') || detailSheet.classList.contains('open'))) return;
   if (open && searchDockOpen) setSearchDockOpen(false, false);
   const menuButton = document.getElementById('menu-btn');
   menuPopup.classList.toggle('open', open);
@@ -3898,10 +4014,10 @@ function hideSheets(restoreFocus = true, resetIds = true) {
   if (restoreFocus) restoreModalFocus(focusTarget);
 }
 
-function closeSheets() {
+function closeSheets(restoreFocus = true) {
   abortImageProcessing();
   cancelImagePreview();
-  hideSheets(true, true);
+  hideSheets(restoreFocus, true);
   sheetState.editId = null;
   sheetState.editBaseEvent = null;
   sheetState.editTimeZone = null;
@@ -4191,7 +4307,7 @@ function initSheetGestures(sheet, dismiss = closeSheets) {
 }
 
 function handleGlobalKeydown(event) {
-  if (recoveryDialog.open) return;
+  if (recoveryDialog.open || aboutDialog.open) return;
   if (event.key === 'Escape') {
     if (menuPopup.classList.contains('open')) {
       event.preventDefault();

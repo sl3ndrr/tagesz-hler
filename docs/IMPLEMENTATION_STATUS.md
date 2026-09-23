@@ -36,7 +36,8 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P16 | Jährlich wiederkehrende Ereignisse | C2 | Gemergt | P03, P06, P09, P11; P15, falls das Backup bereits existiert | [PR #21](https://github.com/sl3ndrr/tagesz-hler/pull/21) / `fca279e17399c552e7c2c9896c5f60b3d6d854aa` |
 | P17 | Kalenderexport als ICS | C3 (ICS) | Gemergt | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Gemergt | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
-| P19 | Suche und Menü neu gestalten (Material 3 Expressive) | Platzbedarf, Menüstruktur | In Arbeit | P05, P11, P14 | [PR #27](https://github.com/sl3ndrr/tagesz-hler/pull/27) / noch nicht gemergt |
+| P19 | Suche und Menü neu gestalten (Material 3 Expressive) | Platzbedarf, Menüstruktur | Gemergt | P05, P11, P14 | [PR #27](https://github.com/sl3ndrr/tagesz-hler/pull/27) / `4a5cc9d918d8b7be9e898d333942089107a1e9e5` |
+| P20 | Versionsanzeige und Changelog | Produktversion und Veröffentlichung | In Arbeit | keine | PR in Vorbereitung / noch nicht gemergt |
 
 ## Paketprotokoll
 
@@ -197,3 +198,17 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 - **Restrisiken:** Visuelle Abnahme und reale Screenreader-/Touch-/Browserprüfungen sind offen; synthetische Tests belegen nicht das Layout und den gerenderten Kontrast aller Zustände. Die vorhandenen P02/P07-Risiken zu alten, nicht kooperierenden Tabs bleiben unverändert. Kein neuer persistenter Filterzustand und keine Änderung an Datenformaten.
 - **Offene Fragen:** Keine fachlichen Fragen; die oben benannte manuelle Abnahme steht aus.
 - **Übergabe nach Merge:** Erst nach tatsächlichem Merge Status auf `Gemergt` setzen und PR-Link, tatsächlichen Merge-Commit, getesteten Branch-Commit sowie beobachteten CI-Lauf ergänzen. Weitere App-Shell-Änderungen benötigen weiterhin eine höhere Cache-Version.
+
+- **Statusnachtrag zu P19 (P20):** GitHub bestätigt [PR #27](https://github.com/sl3ndrr/tagesz-hler/pull/27) als gemergt mit Merge-Commit `4a5cc9d918d8b7be9e898d333942089107a1e9e5`. Der dort dokumentierte abschließende Branch-Commit ist `056c0ee76d7abc60202871060352525bf80c828d`, [Actions #90](https://github.com/sl3ndrr/tagesz-hler/actions/runs/35380898571) erfolgreich. Die veraltete Überblickszeile ist berichtigt; historische Vor-Merge-Angaben im Protokoll bleiben als damaliger Prüfstand erhalten.
+
+### P20 – Versionsanzeige und Changelog
+
+- **Status:** In Arbeit – Implementierung und lokale Prüfungen abgeschlossen; Review, Browserabnahme und Merge stehen aus.
+- **Ausgangsstand:** `main` bei `c8fa7b95771cfe14e428ffbc778bf3b261e6c90e`; P19 ist laut GitHub gemergt. Der lokale Ausgangsbaum wurde mit GitHub-Tree `cb4bfe6b1b35b25772835acf57f35058e72e71fe` abgeglichen.
+- **PR / Merge-Commit:** PR in Vorbereitung; Branch `codex/p20-versionsanzeige-changelog`. Kein Merge-Commit.
+- **Änderungen und Gründe:** Ein ruhiger Textknopf in der Fußzeile aller Tabs öffnet einen nativen Dialog. `APP_RELEASES` in `app.js` liefert Nummer, lokalisiertes Datum, Kurztext, Änderungszeilen und bei späteren Versionen eingeklappte ältere Protokolle. Die Changelog-Knoten entstehen mit `createElement` und `textContent`; Escape, beide Schließen-Knöpfe und der Backdrop stellen den Fokus auf den Auslöser zurück. Geöffnete Sheets oder Menüs werden vorher geschlossen. `CACHE_VERSION` steigt vom tatsächlichen `v23` auf `v24`.
+- **Betroffene Dateien/Funktionen:** `index.html` (Fußzeile und Dialoghüllen), `styles.css` (Auslöser, Dialog, Bottom-Sheet, Bewegungs- und Kontrastpräferenzen), `app.js` (`APP_RELEASES`, `renderAboutDialog`, `openAboutDialog`, `closeAboutDialog`, Tastatur- und Menüschutz), `sw.js`, `README.md`, `tests/app-releases.mjs`, bestehende Test-Fixtures und dieser Statusbericht.
+- **Ausgeführte Tests:** `node --test tests/`: 123/123 erfolgreich. `node scripts/check-static-pwa.mjs`: erfolgreich, auch mit `PWA_BASE_SHA` gegen den lokalen Ausgangscommit. `node --check app.js`, `node --check sw.js`, `git diff --check`: erfolgreich. Quelltextauszug im VM-Kontext validiert Datenmodell und aktuelle Versionsnummer. Bestehende P19- und Datenrettungs-Fixtures berücksichtigen den neuen Dialog.
+- **Manuelle / visuelle Tests:** Nicht ausgeführt; ein lokaler Browser ist nicht installiert. Vor Merge am Gerät prüfen: 390 × 780 px mit FAB/Tab-Leiste, Tastatur und Fokus einschließlich Backdrop/Escape, Scrollen und Sticky-Kopf, vier Akzente hell/dunkel, reduzierte Bewegung, hoher Kontrast, erzwungene Farben sowie Offline-Update.
+- **Entscheidungen / Planabweichungen:** Der Textknopf nutzt `opacity: .85` statt `.6`, damit der gedämpfte Text auf hellen und dunklen Flächen lesbar bleibt. Tonale Badge-Flächen verwenden die geforderten Tokens; eine Kontur aus `--md-sys-color-outline` hebt ihre Begrenzung mit mehr als 3:1 vom Dialog ab, da die tonalen Füllungen selbst weniger als 3:1 Abstand haben. `v24` folgt dem tatsächlichen `v23` statt der im Auftrag vorausgesetzten `v21`. Die P19-Statuszeile wurde nach GitHub-Abgleich berichtigt.
+- **Restrisiken / offene Fragen:** Gerendertes Layout, Fokusablauf in echten Browsern und Badge-Kontrast unter Systemeinstellungen sind nicht praktisch geprüft. Keine offenen fachlichen Fragen. Nach Merge sind tatsächlicher Merge-Commit und beobachteter CI-Stand einzutragen; vorab keine Platzhalter als Fakten übernehmen.

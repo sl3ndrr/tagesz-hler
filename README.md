@@ -34,6 +34,10 @@ Das Menü zeigt zunächst Darstellung, vier Akzentfarben und Ansicht sowie gegeb
 
 Auf breiten Bildschirmen öffnet sich ein Popover, bis 600 px ein modales Bottom-Sheet. Du kannst es über den Schließen-Button, den Hintergrund, `Escape` oder durch Ziehen am Griff nach unten schließen. `Escape` führt aus „Daten & Sicherung“ zunächst zu den Einstellungen zurück. Beim erneuten Öffnen beginnt das Menü immer dort. Nach dem separaten Rettungsdialog kehrt der Fokus zum Einstellungsbutton zurück.
 
+## Versionierung
+
+Die dezente Versionsnummer am Ende jedes Bereichs öffnet einen Dialog mit Datum und Änderungen. Version, Datum und Änderungsprotokoll stehen in `APP_RELEASES` in `app.js`; eine neue Veröffentlichung wird dort vorne ergänzt. `CACHE_VERSION` in `sw.js` ist ein unabhängiger interner Zähler für die Offline-App-Shell. Bei Änderungen an ausgelieferten Dateien wird dieser Zähler erhöht, auch wenn die angezeigte Produktversion gleich bleibt.
+
 ## Technische Entscheidungen
 
 Das Projekt bleibt bewusst bei Vanilla HTML, CSS und JavaScript ohne Paketmanager oder Build-Schritt. Dadurch ist die ausgelieferte Version direkt prüfbar, es gibt keine Laufzeit- oder Build-Abhängigkeiten und die gehostete URL kann später unverändert durch eine Trusted Web Activity verwendet werden.
