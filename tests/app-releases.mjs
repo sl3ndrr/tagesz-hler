@@ -21,10 +21,11 @@ test('Versionsmodell enthält gültige Veröffentlichungen und die aktuelle Numm
   });
 });
 
-test('sichtbare Version wird ausschließlich zur Laufzeit im Header gesetzt', () => {
+test('sichtbare Version wird ausschließlich zur Laufzeit im Einstellungsmenü gesetzt', () => {
   const html = readFileSync(resolve(root, 'index.html'), 'utf8');
   const header = html.match(/<header\b[^>]*class="app-bar"[^>]*>[\s\S]*?<\/header>/)?.[0] || '';
-  assert.match(header, /id="version-btn"[^>]*aria-controls="about-dialog"/);
+  assert.match(html, /id="menu-root"[\s\S]*?id="version-btn"[^>]*aria-controls="about-dialog"/);
+  assert.doesNotMatch(header, /id="version-btn"/);
   assert.match(html, /id="about-dialog"[^>]*aria-labelledby="about-heading"/);
   assert.doesNotMatch(html, /<footer\b[^>]*class="app-footer"/);
   assert.doesNotMatch(html, /<button[^>]*id="version-btn"[^>]*>\s*1\.0/);

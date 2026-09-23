@@ -36,7 +36,7 @@ Auf breiten Bildschirmen öffnet sich ein Popover, bis 600 px ein modales Bottom
 
 ## Versionierung
 
-Die dezente Versionsnummer im Bereich von Logo und Titel öffnet einen Dialog mit Datum und Änderungen. Version, Datum und Änderungsprotokoll stehen in `APP_RELEASES` in `app.js`; eine neue Veröffentlichung wird dort vorne ergänzt. `CACHE_VERSION` in `sw.js` ist ein unabhängiger interner Zähler für die Offline-App-Shell. Bei Änderungen an ausgelieferten Dateien wird dieser Zähler erhöht, auch wenn die angezeigte Produktversion gleich bleibt.
+Die dezente Versionsnummer im Einstellungsmenü öffnet einen Dialog mit Datum und Änderungen. Version, Datum und Änderungsprotokoll stehen in `APP_RELEASES` in `app.js`; eine neue Veröffentlichung wird dort vorne ergänzt. `CACHE_VERSION` in `sw.js` ist ein unabhängiger interner Zähler für die Offline-App-Shell. Bei Änderungen an ausgelieferten Dateien wird dieser Zähler erhöht, auch wenn die angezeigte Produktversion gleich bleibt.
 
 ## Technische Entscheidungen
 
