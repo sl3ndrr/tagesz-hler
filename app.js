@@ -290,6 +290,7 @@ async function init() {
   });
   document.addEventListener('click', (e) => {
     if (!menuPopup.contains(e.target) && !e.target.closest('#menu-btn')) setMenuOpen(false);
+    if (searchDockOpen && !searchDock.contains(e.target) && !e.target.closest('#search-toggle-btn')) setSearchDockOpen(false, false);
   });
   document.addEventListener('keydown', handleGlobalKeydown);
   document.addEventListener('focusin', keepFocusInsideOpenSheet);
@@ -472,9 +473,6 @@ function syncMenuPresentation() {
   menuPopup.classList.toggle('sheet', mobileMenuQuery.matches);
   menuPopup.toggleAttribute('aria-modal', modal);
   if (modal) menuPopup.setAttribute('aria-modal', 'true');
-  const dataPanel = document.getElementById('menu-data');
-  if (modal) dataPanel.setAttribute('aria-modal', 'true');
-  else dataPanel.removeAttribute('aria-modal');
   if (modal !== menuModalActive) {
     setModalBackgroundInert(modal);
     menuModalActive = modal;
@@ -487,6 +485,7 @@ function syncMenuPresentation() {
 function setMenuOpen(open) {
   const wasOpen = menuPopup.classList.contains('open');
   if (open && (recoveryDialog.open || editSheet.classList.contains('open') || detailSheet.classList.contains('open'))) return;
+  if (open && searchDockOpen) setSearchDockOpen(false, false);
   const menuButton = document.getElementById('menu-btn');
   menuPopup.classList.toggle('open', open);
   menuPopup.setAttribute('aria-hidden', String(!open));
