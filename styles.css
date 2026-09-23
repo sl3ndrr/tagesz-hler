@@ -1665,7 +1665,17 @@ select.m3-input + .m3-field-label {
 @media (min-width: 700px) { .search-dock { padding-inline: 10px; } }
 @media (max-width: 479px) { .app-bar .brand-mark { display: none; } }
 @media (min-width: 900px) {
-  .app-bar { position: sticky; background: var(--md-sys-color-background); }
+  .app-bar { position: sticky; background: transparent; }
+  .app-bar::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    left: calc(-1 * (var(--nav-rail-width) + 28px));
+    width: 100vw;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--md-sys-color-background);
+  }
   .search-dock { padding-inline: 0; max-width: var(--app-max-width); margin-inline: auto; }
 }
 
