@@ -202,5 +202,5 @@ test('Rettungsdialog besitzt eindeutige Labels, Fokusziele und Abbrechen', () =>
   assert.match(app, /restoreModalFocus\(recoveryReturnFocus\)/);
   assert.match(app, /function cancelRecoveryConfirmation\(\) \{\s*recoveryPendingAction = null;/);
   assert.match(app, /document\.getElementById\('recovery-cancel-btn'\)\.focus\(\)/);
-  assert.match(app, /function handleGlobalKeydown\(event\) \{\s*if \(recoveryDialog\.open\) return;/);
+  assert.match(app, /function handleGlobalKeydown\(event\) \{\s*if \(recoveryDialog\.open \|\| aboutDialog\.open\) return;/);
 });

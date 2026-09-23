@@ -41,7 +41,7 @@ function fixture() {
     listCaptions: [el('caption')], defaultListCaptions: ['Standard'], reducedMotionQuery: { matches: false },
     menuPopup: el('menu-popup'), menuLevel: 'root', menuModalActive: false,
     mobileMenuQuery: { matches: true }, backdrop: el('backdrop'),
-    recoveryDialog: { open: false }, editSheet: el('edit-sheet'), detailSheet: el('detail-sheet'),
+    recoveryDialog: { open: false }, aboutDialog: { open: false }, editSheet: el('edit-sheet'), detailSheet: el('detail-sheet'),
     getOpenSheet: () => null, setModalBackgroundInert: inert => { el('app').inert = inert; },
     renderEvents: () => vm.runInContext('updateEventFilterStatus(2, 5, getEventFilter()); updateSearchTriggerState();', context)
   });
