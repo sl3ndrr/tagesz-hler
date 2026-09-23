@@ -37,7 +37,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 | P17 | Kalenderexport als ICS | C3 (ICS) | Gemergt | P03, P06; P16 bei vorhandenen jährlichen Wiederholungen | [PR #23](https://github.com/sl3ndrr/tagesz-hler/pull/23) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
 | P18 | Installation und Direktzugriffe verbessern | C4 | Gemergt | P04, P05, P12 | [PR #25](https://github.com/sl3ndrr/tagesz-hler/pull/25) / `<TATSÄCHLICHER_MERGE_COMMIT>` |
 | P19 | Suche und Menü neu gestalten (Material 3 Expressive) | Platzbedarf, Menüstruktur | Gemergt | P05, P11, P14 | [PR #27](https://github.com/sl3ndrr/tagesz-hler/pull/27) / `4a5cc9d918d8b7be9e898d333942089107a1e9e5` |
-| P20 | Versionsanzeige und Changelog | Produktversion und Veröffentlichung | In Arbeit | keine | PR in Vorbereitung / noch nicht gemergt |
+| P20 | Versionsanzeige und Changelog | Produktversion und Veröffentlichung | In Arbeit | keine | [PR #30](https://github.com/sl3ndrr/tagesz-hler/pull/30) / noch nicht gemergt |
 
 ## Paketprotokoll
 
@@ -205,7 +205,7 @@ Diese Datei ist die zentrale Übergabe zwischen den Arbeitspaketen des Umsetzung
 
 - **Status:** In Arbeit – Implementierung und lokale Prüfungen abgeschlossen; Review, Browserabnahme und Merge stehen aus.
 - **Ausgangsstand:** `main` bei `c8fa7b95771cfe14e428ffbc778bf3b261e6c90e`; P19 ist laut GitHub gemergt. Der lokale Ausgangsbaum wurde mit GitHub-Tree `cb4bfe6b1b35b25772835acf57f35058e72e71fe` abgeglichen.
-- **PR / Merge-Commit:** PR in Vorbereitung; Branch `codex/p20-versionsanzeige-changelog`. Kein Merge-Commit.
+- **PR / Merge-Commit:** [PR #30](https://github.com/sl3ndrr/tagesz-hler/pull/30), Branch `codex/p20-versionsanzeige-changelog`, erster Implementierungscommit `09394b807ef1659bb7724c97909e528db02a4222`. Kein Merge-Commit.
 - **Änderungen und Gründe:** Ein ruhiger Textknopf in der Fußzeile aller Tabs öffnet einen nativen Dialog. `APP_RELEASES` in `app.js` liefert Nummer, lokalisiertes Datum, Kurztext, Änderungszeilen und bei späteren Versionen eingeklappte ältere Protokolle. Die Changelog-Knoten entstehen mit `createElement` und `textContent`; Escape, beide Schließen-Knöpfe und der Backdrop stellen den Fokus auf den Auslöser zurück. Geöffnete Sheets oder Menüs werden vorher geschlossen. `CACHE_VERSION` steigt vom tatsächlichen `v23` auf `v24`.
 - **Betroffene Dateien/Funktionen:** `index.html` (Fußzeile und Dialoghüllen), `styles.css` (Auslöser, Dialog, Bottom-Sheet, Bewegungs- und Kontrastpräferenzen), `app.js` (`APP_RELEASES`, `renderAboutDialog`, `openAboutDialog`, `closeAboutDialog`, Tastatur- und Menüschutz), `sw.js`, `README.md`, `tests/app-releases.mjs`, bestehende Test-Fixtures und dieser Statusbericht.
 - **Ausgeführte Tests:** `node --test tests/`: 123/123 erfolgreich. `node scripts/check-static-pwa.mjs`: erfolgreich, auch mit `PWA_BASE_SHA` gegen den lokalen Ausgangscommit. `node --check app.js`, `node --check sw.js`, `git diff --check`: erfolgreich. Quelltextauszug im VM-Kontext validiert Datenmodell und aktuelle Versionsnummer. Bestehende P19- und Datenrettungs-Fixtures berücksichtigen den neuen Dialog.
