@@ -104,7 +104,7 @@ test('P19: Menüwechsel setzt Inertheit, Rückfokus und mobilen Modalzustand', (
   assert.equal(f.el('app').inert, true);
   assert.equal(f.el('menu-root').inert, true);
   assert.equal(f.el('menu-data').inert, false);
-  assert.equal(f.el('menu-data').getAttribute('aria-modal'), 'true');
+  assert.equal(f.el('menu-popup').getAttribute('aria-modal'), 'true');
   assert.equal(f.focus(), f.el('menu-back-btn'));
   f.run('setMenuLevel("root")');
   assert.equal(f.focus(), f.el('menu-data-btn'));
@@ -113,7 +113,7 @@ test('P19: Menüwechsel setzt Inertheit, Rückfokus und mobilen Modalzustand', (
   assert.equal(f.el('app').inert, false);
   assert.equal(f.el('menu-popup').inert, true);
   f.run('mobileMenuQuery.matches = false; setMenuOpen(true)');
-  assert.equal(f.el('menu-data').getAttribute('aria-modal'), undefined);
+  assert.equal(f.el('menu-popup').getAttribute('aria-modal'), undefined);
 });
 
 test('P19: Pfeiltasten, Home und End wechseln Radioauswahl und Fokus', () => {
@@ -130,28 +130,34 @@ test('P19: Pfeiltasten, Home und End wechseln Radioauswahl und Fokus', () => {
 
 test('P19: Datenaktionen liegen ausschließlich auf Ebene zwei, alle IDs bleiben eindeutig', () => {
   const data = markup.slice(markup.indexOf('id="menu-data"'), markup.indexOf('<div class="backdrop"'));
-  for (const id of ['backup-export-btn', 'export-btn', 'calendar-export-btn', 'import-btn', 'recovery-btn', 'clear-btn']) {
+  for (const id of ['install-btn', 'backup-export-btn', 'export-btn', 'calendar-export-btn', 'import-btn', 'recovery-btn', 'clear-btn']) {
     assert.ok(data.includes(`id="${id}"`));
     assert.equal(markup.split(`id="${id}"`).length, 2);
   }
+  assert.match(data, /class="menu-group menu-danger-group"[^>]+aria-labelledby="danger-heading"/);
+  assert.match(data, /id="recovery-btn"[\s\S]*<\/section>\s*<section class="menu-group menu-danger-group"[\s\S]*id="clear-btn"/);
+  assert.match(source, /async clearAll\(\) \{\s*this\.ui\.openRecovery\(\)/);
+  assert.match(source, /function prepareRecoveryDeletion\(variant\)/);
+  assert.match(markup, /id="recovery-confirm-btn"/);
   assert.doesNotMatch(markup, /event-time-filter|event-kind-filter|class="event-filter"/);
   assert.match(markup, /id="event-search"[^>]+aria-label="Ereignisse durchsuchen"/);
+  assert.match(markup, /id="search-toggle-btn" class="search-anchor/);
+  assert.match(styles, /\.search-dock \{\s*position: fixed/);
   assert.equal((markup.match(/role="radio"/g) || []).length, 5);
   assert.doesNotMatch(markup, /<style| style=| onclick=/);
 });
 
 
-test('P19: Escape schließt Datenebene, Menü und danach Suche in dieser Reihenfolge', () => {
+test('P19: Menüüffnung schließt die Suche, Escape führt über Datenebene zurück', () => {
   const f = fixture();
   f.context.event = { key: 'Escape', preventDefault() {} };
   f.run('setSearchDockOpen(true); setMenuOpen(true); setMenuLevel("data"); handleGlobalKeydown(event)');
   assert.equal(f.run('menuLevel'), 'root');
   assert.equal(f.el('menu-popup').classList.contains('open'), true);
-  assert.equal(f.run('searchDockOpen'), true);
+  assert.equal(f.run('searchDockOpen'), false);
   f.run('handleGlobalKeydown(event)');
   assert.equal(f.el('menu-popup').classList.contains('open'), false);
-  assert.equal(f.run('searchDockOpen'), true);
-  f.run('handleGlobalKeydown(event)');
+  f.run('setSearchDockOpen(true); handleGlobalKeydown(event)');
   assert.equal(f.run('searchDockOpen'), false);
 });
 
