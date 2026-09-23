@@ -21,9 +21,18 @@ test('Versionsmodell enthält gültige Veröffentlichungen und die aktuelle Numm
   });
 });
 
-test('sichtbare Version wird ausschließlich zur Laufzeit gesetzt', () => {
+test('sichtbare Version wird ausschließlich zur Laufzeit im Header gesetzt', () => {
   const html = readFileSync(resolve(root, 'index.html'), 'utf8');
-  assert.match(html, /id="version-btn"[^>]*aria-controls="about-dialog"/);
+  const header = html.match(/<header\b[^>]*class="app-bar"[^>]*>[\s\S]*?<\/header>/)?.[0] || '';
+  assert.match(header, /id="version-btn"[^>]*aria-controls="about-dialog"/);
   assert.match(html, /id="about-dialog"[^>]*aria-labelledby="about-heading"/);
+  assert.doesNotMatch(html, /<footer\b[^>]*class="app-footer"/);
   assert.doesNotMatch(html, /<button[^>]*id="version-btn"[^>]*>\s*1\.0/);
+});
+
+test('Über-Dialog zentriert sich und verwischt den Backdrop', () => {
+  const css = readFileSync(resolve(root, 'styles.css'), 'utf8');
+  assert.match(css, /\.about-dialog\s*\{[\s\S]*?margin:\s*auto;/);
+  assert.match(css, /\.about-dialog::backdrop\s*\{[\s\S]*?backdrop-filter:\s*blur\(8px\)/);
+  assert.match(css, /\.about-dialog::backdrop\s*\{[\s\S]*?-webkit-backdrop-filter:\s*blur\(8px\)/);
 });
