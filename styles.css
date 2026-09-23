@@ -732,7 +732,7 @@ button[hidden], [hidden] { display: none !important; }
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
 }
-.app-bar-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.app-bar-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .brand-mark {
   width: 46px;
   height: 46px;
@@ -1747,6 +1747,7 @@ select.m3-input + .m3-field-label {
 }
 .recovery-dialog {
   width: min(92vw, 640px);
+  margin: auto;
   max-height: 88dvh;
   padding: 0;
   border: 1px solid var(--md-sys-color-outline-variant);
@@ -1778,27 +1779,30 @@ select.m3-input + .m3-field-label {
 }
 
 @layer overrides {
-.app-footer { display: flex; justify-content: center; margin-top: 40px; }
 .version-btn {
-  min-width: 48px;
-  min-height: 48px;
-  padding-inline: 14px;
+  flex: 0 0 auto;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
   border: 0;
   border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
   font: inherit;
-  font-size: var(--md-sys-typescale-label-medium-size);
+  font-size: .75rem;
   font-variant-numeric: tabular-nums;
-  opacity: .85;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
-  transition: opacity var(--md-duration-short-4) var(--md-transition-emphasized), background-color var(--md-duration-short-4) var(--md-transition-emphasized);
+  touch-action: manipulation;
+  transition: background-color var(--md-duration-short-4) var(--md-transition-emphasized), color var(--md-duration-short-4) var(--md-transition-emphasized);
 }
-.version-btn:hover, .version-btn:focus-visible { opacity: 1; background: var(--md-sys-color-surface-container); }
+.version-btn:hover, .version-btn:focus-visible { background: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface); }
 .version-btn:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 2px; }
 
 .about-dialog {
   width: min(520px, calc(100vw - 32px));
+  margin: auto;
   max-width: none;
   max-height: calc(100dvh - 64px);
   padding: 0;
@@ -1811,12 +1815,23 @@ select.m3-input + .m3-field-label {
 }
 .about-dialog[open] { animation: about-enter var(--md-duration-medium-2) var(--md-transition-emphasized-decelerate) both; }
 .about-dialog.closing { animation: about-exit var(--md-duration-short-3) var(--md-transition-emphasized-accelerate) both; }
-.about-dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 60%, transparent); animation: about-fade-in var(--md-duration-medium-2) both; }
+.about-dialog::backdrop {
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 68%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: about-fade-in var(--md-duration-medium-2) both;
+}
 .about-dialog.closing::backdrop { animation: about-fade-out var(--md-duration-short-3) both; }
 @keyframes about-enter { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 @keyframes about-exit { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.96); } }
-@keyframes about-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes about-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes about-fade-in {
+  from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+}
+@keyframes about-fade-out {
+  from { opacity: 1; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  to { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+}
 .about-dialog-inner { padding: 0 24px 24px; }
 .about-header {
   position: sticky;
@@ -1863,6 +1878,7 @@ select.m3-input + .m3-field-label {
   @layer overrides {
     .about-dialog[open] { animation: about-fade-in var(--md-duration-short-3) both; }
     .about-dialog.closing { animation: about-fade-out var(--md-duration-short-3) both; }
+    .about-dialog::backdrop, .about-dialog.closing::backdrop { animation: none; }
     .changelog-item { animation: about-fade-in var(--md-duration-short-3) both; animation-delay: 0ms; }
   }
 }
@@ -1876,6 +1892,14 @@ select.m3-input + .m3-field-label {
   @layer overrides {
     .version-btn { opacity: 1; color: ButtonText; }
     .about-dialog, .changelog-badge { border-color: CanvasText; }
+    .about-dialog::backdrop { background: rgb(0 0 0 / .8); forced-color-adjust: none; }
     .version-btn:focus-visible, .about-dialog :focus-visible { outline-color: Highlight; }
+  }
+}
+
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @layer overrides {
+    .about-dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 78%, transparent); }
   }
 }
