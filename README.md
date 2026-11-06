@@ -359,3 +359,9 @@ Rettungsabläufe und Prüfschritte sind in [docs/MIGRATION.md](docs/MIGRATION.md
 ## Lizenz
 
 Dieses Projekt steht unter der [MIT-Lizenz](LICENSE).
+
+## Mitwirkende
+
+[<img src="https://avatars.githubusercontent.com/u/267193182?s=64&v=4" width="32" height="32" alt="Codex-Profilbild">](https://github.com/codex)
+
+[Codex](https://github.com/codex) hat zu diesem Projekt beigetragen.
